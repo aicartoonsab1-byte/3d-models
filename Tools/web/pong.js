@@ -236,6 +236,7 @@
       c.fillText(`до ${this.to} очков · вы — ${who[1]}: мышь или ↑↓ · клик — порыв Ветра${this.t < this.gustReady ? " (копится)" : ""}`, ui.width / 2, S * 19);
       for (const f of this.fx) { c.globalAlpha = 1 - f.t / 1.4; c.font = M ? `${Math.round(S * 7)}px Pangolin, sans-serif` : `italic ${Math.round(S * 7)}px "Cormorant Garamond", serif`; c.fillStyle = M ? "#141414" : "#efece6"; c.fillText(f.text, ui.width / 2, ui.height * 0.35 - f.t * 20 * S); c.globalAlpha = 1; }
       c.textAlign = "left";
+      bubble.rects = [];
       if (this.say && this.t < this.say.until) {
         const shown = Math.min(this.say.text.length, Math.ceil((this.t - this.say.start) * T.CPS));
         bubble(this.say.text, (this.me.x - 30) * SP, (Math.min(300, this.me.y + 14) - 20) * SP, false, S, shown);

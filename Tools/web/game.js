@@ -95,6 +95,7 @@
   try { voiceMode = localStorage.getItem("sharik_voice_mode") || "natural"; } catch (e) { }
   function voiceScore(v) {
     let sc = 0;
+    if (/maxim|максим/i.test(v.name)) sc += 20;                  // «бот Максим» (IVONA/Polly Maxim), если установлен в системе
     if (/natural|neural|online/i.test(v.name)) sc += 4;          // нейро-голоса (Edge, Windows 11)
     if (/google/i.test(v.name)) sc += 2;
     if (/svetlana|dmitry|dariya|milena|yuri|irina|pavel/i.test(v.name)) sc += 1;
@@ -110,7 +111,7 @@
     } catch (e) { ruVoices = []; ruVoice = null; }
     const pick = document.getElementById("voicepick");
     if (pick) {
-      pick.innerHTML = ruVoices.length ? ruVoices.map((v) => `<option value="${v.name.replace(/"/g, "&quot;")}">${v.name}${voiceScore(v) >= 4 ? " ★" : ""}</option>`).join("")
+      pick.innerHTML = ruVoices.length ? ruVoices.map((v) => `<option value="${v.name.replace(/"/g, "&quot;")}">${v.name}${/maxim|максим/i.test(v.name) ? " 🤖" : voiceScore(v) >= 4 ? " ★" : ""}</option>`).join("")
         : `<option value="">нет русского голоса в системе</option>`;
       if (ruVoice) pick.value = ruVoice.name;
       pick.disabled = !ruVoices.length;
@@ -131,6 +132,7 @@
         const excite = (k - 0.5) * (mood === "sad" || mood === "pray" ? -0.3 : 0.4);   // сила эмоции слышна
         let pitch = mv[0] + excite * 0.5, rate = mv[1] * (1 + excite * 0.5);
         if (voiceMode === "squeaky") pitch = mood === "glitch" ? 0.2 : Math.min(2, pitch + 0.75);
+        else if (/maxim|максим/i.test(ruVoice.name)) { pitch = mood === "glitch" ? 0.7 : 1; rate = 1 + excite * 0.3; }   // бот Максим — ровно, по-роботски
         u.voice = ruVoice; u.lang = ruVoice.lang; u.pitch = Math.max(0, Math.min(2, pitch)); u.rate = Math.max(0.5, Math.min(1.8, rate)); u.volume = 1;
         speechSynthesis.cancel(); speechSynthesis.speak(u);
         if (voiceMode === "squeaky" && Math.random() < 0.3) squeak(text.length / T.CPS * 0.9 + 0.2);
@@ -721,6 +723,7 @@
       // карточка-глава: сюжет уровня словами героя/рассказчика, потом уровень
       const txt = L.data.chapter || (CAMP.id !== "sharik" ? L.data.storyBeat || "" : "");
       this.card = txt ? { title: L.data.title, head: CAMP.chapterHead || "", text: txt, t: 0, need: 3 + txt.length / 16 } : null;
+      if (this.card) this.big = null;
       if (this.card) NARR.read(this.card.text); else NARR.level();
     },
     closeCard() { if (!this.card) return; this.card = null; NARR.hush(); NARR.level(); },
@@ -979,7 +982,9 @@
     const maxW = Math.min(ui.width * 0.42, 360 * S / 3.2), lines = wrap(c, text, maxW);
     const w = Math.max(...lines.map((l) => c.measureText(l).width)) + fs * 1.2, h = lines.length * fs * 1.25 + fs * 0.8;
     let x = anchorX - w * (thought ? 0.5 : 0.3), y = bottomY - h;
+    if (NARR.bandTop != null) y = Math.min(y, NARR.bandTop - h - 10);
     x = Math.max(6, Math.min(ui.width - w - 6, x)); y = Math.max(6, y);
+    bubble.rects.push({ x, y, w, h });
     const gc = glowState.c;
     if (styleName === "mult") return multBubble(c, text, lines, x, y, w, h, fs, anchorX, thought, shown);
     c.fillStyle = thought ? "rgba(5,5,6,0.55)" : "rgba(8,8,9,0.86)"; c.fillRect(x, y, w, h);
@@ -1023,6 +1028,7 @@
   function renderUI() {
     const c = uctx, S = ui.width / 320, SP = ui.width / T.VW;   // S — масштаб шрифтов, SP — экранные позиции
     c.clearRect(0, 0, ui.width, ui.height);
+    bubble.rects = [];
     c.textAlign = "left";
     // облачка
     if (ball.visible || brain.say) {
@@ -1044,6 +1050,8 @@
       const b = trapBounds(t), p = toScreen((b.x0 + b.x1) / 2, b.y1 + 0.35);
       const ready = !t.disabled && game.time >= t.ready;
       const s = fs * 1.35, awake = t.awake > 0;
+      const lx = p.x * SP, ly = p.y * SP;
+      if (bubble.rects.some((r) => lx + s / 2 > r.x && lx - s / 2 < r.x + r.w && ly + s / 2 > r.y && ly - s / 2 < r.y + r.h)) continue;
       if (awake) {   // проснулся: коралловая рамка и полоска оставшегося бодрствования
         const full = t.kind === "boss" ? T.AWAKE_BOSS : T.AWAKE_TRAP;
         c.fillStyle = "#e8c27a"; c.fillRect(p.x * SP - s / 2 - 3, p.y * SP - s / 2 - 3, s + 6, s + 6);

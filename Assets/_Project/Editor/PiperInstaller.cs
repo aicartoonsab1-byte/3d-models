@@ -26,8 +26,30 @@ namespace Sharik.EditorTools
         [MenuItem("Шарик/Голос/Установить Piper: Ирина (женский)")] static void Irina() => Install("irina");
         [MenuItem("Шарик/Голос/Установить Piper: Руслан (мужской)")] static void Ruslan() => Install("ruslan");
 
+        [MenuItem("Шарик/Голос/Бот Максим — голос Windows (IVONA Maxim)")]
+        static void MaximSystem()
+        {
+            string voices = SystemVoice.ListVoices(SystemVoice.PowerShell64) + "\n" + (File.Exists(SystemVoice.PowerShell32) ? SystemVoice.ListVoices(SystemVoice.PowerShell32) : "");
+            Debug.Log("[Шарик] Голоса Windows:\n" + voices);
+            bool has = voices.IndexOf("Maxim", StringComparison.OrdinalIgnoreCase) >= 0 || voices.IndexOf("Максим", StringComparison.OrdinalIgnoreCase) >= 0;
+            WriteConfig("system", "", "", "Maxim");
+            EditorUtility.DisplayDialog("Шарик", has
+                ? "Голос Максима найден в Windows. Нажмите Play — шарик заговорит голосом бота Максима."
+                : "Голос Maxim в Windows не найден. Установите русский SAPI5-голос Maxim (например, IVONA 2 Maxim) и снова выберите этот пункт. Пока играет 8-битный лепет. Список голосов — в Console.", "Ок");
+        }
+
+        [MenuItem("Шарик/Голос/Бот Максим — Amazon Polly (нужен ключ AWS)")]
+        static void MaximPolly()
+        {
+            WriteConfig("polly", "", "", null);
+            EditorUtility.DisplayDialog("Шарик",
+                "Голос «Maxim» из Amazon Polly. Впишите свои ключи в brain_config.local.json в корне проекта:\n" +
+                "\"awsAccessKey\": \"…\", \"awsSecretKey\": \"…\", \"awsRegion\": \"eu-central-1\"\n\n" +
+                "Ключ нужен с правом polly:SynthesizeSpeech. Файл в .gitignore и в репозиторий не попадёт.", "Ок");
+        }
+
         [MenuItem("Шарик/Голос/Вернуть 8-битный лепет")]
-        static void Babble() { WriteConfig("gibberish", "", ""); Debug.Log("[Шарик] Голос: 8-битный лепет."); }
+        static void Babble() { WriteConfig("gibberish", "", "", null); Debug.Log("[Шарик] Голос: 8-битный лепет."); }
 
         static string ArchiveName()
         {
@@ -58,7 +80,7 @@ namespace Sharik.EditorTools
                 if (File.Exists(archive) && !File.Exists(ExePath)) Extract(archive);
                 if (!File.Exists(ExePath)) { EditorUtility.DisplayDialog("Шарик", "Не получилось распаковать Piper. Подробности — в Console.", "Ок"); return; }
                 if (Application.platform != RuntimePlatform.WindowsEditor) Run("chmod", $"+x \"{ExePath}\"");
-                WriteConfig("piper", ExePath, model);
+                WriteConfig("piper", ExePath, model, null);
                 bool ok = TestSpeak(model);
                 EditorUtility.DisplayDialog("Шарик", ok
                     ? $"Голос «{voice}» установлен. Нажмите Play — шарик заговорит по-настоящему (голос чуть задран по высоте — так смешнее)."
@@ -119,7 +141,7 @@ namespace Sharik.EditorTools
         }
 
         /// <summary>Правит brain_config.local.json (он в .gitignore), сохраняя остальные поля.</summary>
-        static void WriteConfig(string voice, string exe, string model)
+        static void WriteConfig(string voice, string exe, string model, string systemVoice)
         {
             string path = Path.Combine(Application.dataPath, "..", "brain_config.local.json");
             var cfg = new Sharik.BrainConfig();
@@ -127,8 +149,8 @@ namespace Sharik.EditorTools
             if (baseTa != null) JsonUtility.FromJsonOverwrite(baseTa.text, cfg);
             if (File.Exists(path)) JsonUtility.FromJsonOverwrite(File.ReadAllText(path), cfg);
             cfg.voice = voice;
-            cfg.piperExe = exe;
-            cfg.piperModel = model;
+            if (voice == "piper") { cfg.piperExe = exe; cfg.piperModel = model; }
+            if (systemVoice != null) cfg.systemVoice = systemVoice;
             File.WriteAllText(path, JsonUtility.ToJson(cfg, true));
             Debug.Log($"[Шарик] Настройки голоса записаны в {Path.GetFullPath(path)}");
         }

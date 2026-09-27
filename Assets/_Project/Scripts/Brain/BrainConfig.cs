@@ -22,7 +22,12 @@ namespace Sharik
         public float timeoutSeconds = 25f;
         public float thinkMin = 8f, thinkMax = 12f;   // пауза между размышлениями — чтобы успевать читать
         public bool useLlm = true;
-        public string voice = "gibberish";     // gibberish | piper | off
+        public string voice = "gibberish";     // gibberish | piper | system | polly | off
+        public string systemVoice = "Maxim";   // system: голос Windows (SAPI) по подстроке имени, напр. «IVONA 2 Maxim»
+        public string awsAccessKey = "";       // polly: ключи AWS — только в brain_config.local.json (он в .gitignore)
+        public string awsSecretKey = "";
+        public string awsRegion = "eu-central-1";
+        public string pollyVoice = "Maxim";
         public string piperExe = "";
         public string piperModel = "";
         public float voiceVolume = 0.55f;

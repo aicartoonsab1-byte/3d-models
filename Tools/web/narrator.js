@@ -59,7 +59,9 @@
     },
     pickVoice() {
       // низкий «дикторский» голос: мужской, если есть
-      const male = ruVoices.find((v) => /dmitry|pavel|yuri|maxim|дмитрий|павел|юрий|максим|male/i.test(v.name));
+      const maxim = ruVoices.find((v) => /maxim|максим/i.test(v.name));      // «бот Максим» — лучший рассказчик для мультов
+      if (maxim) return maxim;
+      const male = ruVoices.find((v) => /dmitry|pavel|yuri|дмитрий|павел|юрий|male/i.test(v.name));
       return male || ruVoice;
     },
     speak(text) {
@@ -67,28 +69,31 @@
       const v = this.pickVoice(); if (!v) return;
       try {
         const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, ""));
-        u.voice = v; u.lang = v.lang; u.pitch = 0.55; u.rate = 0.9; u.volume = 1;
+        const bot = /maxim|максим/i.test(v.name);
+        u.voice = v; u.lang = v.lang; u.pitch = bot ? 1 : 0.55; u.rate = bot ? 1 : 0.9; u.volume = 1;
         speechSynthesis.cancel(); speechSynthesis.speak(u);
       } catch (e) { }
     },
+    bandTop: null,                                   // верх полосы субтитров: облачка героя держатся выше неё
     draw(c, S) {
       this.update();
-      if (!this.cur) return;
+      if (!this.cur) { this.bandTop = null; return; }
       const mult = styleName === "mult";
       const shown = Math.min(this.cur.text.length, Math.ceil((game.time - this.cur.start) * 22));
       const fs = Math.max(13, Math.round(S * 6.2));
       c.font = mult ? `${fs}px Pangolin, "Comic Sans MS", sans-serif` : `italic ${fs}px "Cormorant Garamond", Georgia, serif`;
       c.textAlign = "center"; c.textBaseline = "alphabetic";
       const lines = wrap(c, this.cur.text, ui.width * 0.82);
-      const lh = fs * 1.3, y0 = ui.height - 10 * S / 3 - lines.length * lh;
+      const lh = fs * 1.3, pad = fs * 0.45, h = lines.length * lh + pad * 2, top = ui.height - h;
+      this.bandTop = top;
+      // сплошная полоса, как у субтитров в кино: рисунок и другие надписи под неё не пролезают
+      c.fillStyle = mult ? "rgba(253,253,251,.96)" : "rgba(6,6,7,.86)"; c.fillRect(0, top, ui.width, h);
+      c.fillStyle = mult ? "#141414" : "rgba(239,236,230,.35)"; c.fillRect(0, top, ui.width, Math.max(1, S * 0.4));
       let left = shown;
       lines.forEach((l, i) => {
         const part = l.slice(0, Math.max(0, left)); left -= l.length + 1;
         if (!part) return;
-        const y = y0 + (i + 1) * lh - fs * 0.25;
-        c.lineWidth = Math.max(3, fs * 0.28); c.strokeStyle = mult ? "#fdfdfb" : "rgba(0,0,0,.85)"; c.lineJoin = "round";
-        c.strokeText(part, ui.width / 2, y);
-        c.fillStyle = mult ? "#141414" : "#e8e2d6"; c.fillText(part, ui.width / 2, y);
+        c.fillStyle = mult ? "#141414" : "#e8e2d6"; c.fillText(part, ui.width / 2, top + pad + (i + 1) * lh - fs * 0.3);
       });
       c.textAlign = "left"; c.textBaseline = "top";
     },

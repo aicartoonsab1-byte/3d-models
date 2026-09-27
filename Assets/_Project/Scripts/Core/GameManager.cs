@@ -61,6 +61,18 @@ namespace Sharik
                 pv.Exe = Cfg.piperExe; pv.Model = Cfg.piperModel; pv.Fallback = gib;
                 _voice = pv;
             }
+            else if (Cfg.voice == "system")
+            {
+                var sv = gameObject.AddComponent<SystemVoice>();
+                sv.VoiceName = Cfg.systemVoice; sv.Fallback = gib;
+                _voice = sv;
+            }
+            else if (Cfg.voice == "polly")
+            {
+                var po = gameObject.AddComponent<PollyVoice>();
+                po.AccessKey = Cfg.awsAccessKey; po.SecretKey = Cfg.awsSecretKey; po.Region = Cfg.awsRegion; po.VoiceId = Cfg.pollyVoice; po.Fallback = gib;
+                _voice = po;
+            }
             else _voice = gib;
             if (Cfg.voice == "off") _voice.Muted = true;
 
