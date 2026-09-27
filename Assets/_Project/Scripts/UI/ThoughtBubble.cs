@@ -14,18 +14,20 @@ namespace Sharik
         bool _thinking;
 
         public bool SpeechBusy => Time.time < _sayUntil;
+        /// <summary>Реплика закончилась и прошла небольшая пауза — можно говорить следующую.</summary>
+        public bool ReadyForNext => Time.time > _sayUntil + 0.5f;
 
         public void Say(string text)
         {
             _say = text;
             _sayStart = Time.time;
-            _sayUntil = Time.time + text.Length / Tuning.VoiceCharsPerSecond + 1.6f;
+            _sayUntil = Time.time + text.Length / Tuning.VoiceCharsPerSecond + Tuning.SpeechHold;
         }
 
         public void Think(string text)
         {
             _thought = text;
-            _thoughtUntil = Time.time + Mathf.Clamp(text.Length * 0.06f, 2.5f, 7f);
+            _thoughtUntil = Time.time + Mathf.Clamp(text.Length * 0.09f, Tuning.ThoughtMin, Tuning.ThoughtMax);
         }
 
         public void ShowThinking(bool on) => _thinking = on;

@@ -7,7 +7,7 @@ namespace Sharik
     public class Sfx : MonoBehaviour
     {
         public enum Id { Jump, Land, Splat, Reform, Fall, Spikes, CrusherArm, CrusherSlam, Trapdoor, Fan, Spring,
-            Checkpoint, Fragment, Denied, Exit, SwitchClunk, PowerDown, Glitch }
+            Checkpoint, Fragment, Denied, Exit, SwitchClunk, PowerDown, Glitch, Wake }
 
         static Sfx _i;
         const int Rate = 22050;
@@ -73,6 +73,7 @@ namespace Sharik
                 return ((ph % 1f) < 0.5f ? 1f : -1f) * 0.5f * (1 - p);
             });
             _clips[Id.Glitch] = Make("glitch", 0.15f, (t, p) => Sq(t, Random.Range(100, 2000)) * 0.3f);
+            _clips[Id.Wake] = Make("wake", 0.3f, (t, p) => (p < 0.6f ? Sq(t, Mathf.Lerp(160, 520, p / 0.6f)) : Tri(t, Mathf.Lerp(520, 260, (p - 0.6f) / 0.4f))) * 0.45f * (1 - p * 0.5f));
         }
     }
 }

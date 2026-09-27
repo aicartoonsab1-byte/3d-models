@@ -32,6 +32,16 @@ namespace Sharik
         // --- мозг
         public const float ReformTime = 1.3f;
         public const float RespawnDelay = 1.1f;
-        public const float VoiceCharsPerSecond = 20f;
+        public const float VoiceCharsPerSecond = 12f;   // скорость «печати» реплик и бормотания
+        public const float SpeechHold = 2.8f;           // сколько реплика висит после того, как допечаталась
+        public const float ThoughtMin = 4f, ThoughtMax = 9f;
+
+        // --- темп: шарик катится медленнее, чтобы успевать следить за ним и за диалогами (доля RunSpeed)
+        public const float WalkMul = 0.5f, WalkTalkMul = 0.25f, BackMul = 0.4f, YoloMul = 0.95f;
+        public const float StuckSeconds = 8f;
+
+        // --- пробуждённые враги: клик игрока будит врага, дальше он действует сам
+        public const float AwakeTrap = 10f, AwakeBoss = 18f;
+        public const float BossFatigue = 0.15f;         // +15% к перезарядке босса за каждую атаку
     }
 }

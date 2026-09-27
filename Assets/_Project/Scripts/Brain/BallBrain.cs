@@ -31,6 +31,7 @@ namespace Sharik
         float _intentUntil;
         float _nextThink;
         bool _scriptedBusy;
+        bool _introPending;         // пока звучит вступление — шарик стоит и слушает себя
         readonly Queue<(string text, string mood, bool thought)> _script = new Queue<(string, string, bool)>();
         readonly HashSet<int> _linesDone = new HashSet<int>();
         readonly List<(float time, string text)> _memory = new List<(float, string)>();
@@ -68,6 +69,8 @@ namespace Sharik
             GameEvents.BallJumped += OnJumped;
 
             foreach (var line in lv.Data.intro) Enqueue(line, Awareness >= 4 ? "glitch" : "neutral", false);
+            _introPending = _script.Count > 0;
+            _nextThink = Time.time + 6f;
         }
 
         void OnDestroy()
@@ -169,7 +172,7 @@ namespace Sharik
         }
 
         void OnCheckpoint(Vector2 p) { Remember("дотронулся до флажка-чекпоинта"); React("checkpoint", 0.7f); }
-        void OnJumped() { React("jump", 0.12f); }
+        void OnJumped() { React("jump", 0.06f); }
 
         // ================================================================ цикл
         void Update()
@@ -178,7 +181,7 @@ namespace Sharik
             var pos = (Vector2)_ball.transform.position;
 
             // сценарные реплики имеют приоритет
-            if (!_bubble.SpeechBusy && _script.Count > 0)
+            if (_bubble.ReadyForNext && _script.Count > 0)
             {
                 var s = _script.Dequeue();
                 Speak(s.text, s.mood, s.thought);
@@ -204,7 +207,7 @@ namespace Sharik
 
             if (Time.time >= _intentUntil && Current != Intent.Forward) Current = Intent.Forward;
 
-            if (Time.time >= _nextThink && !_scriptedBusy && _script.Count == 0)
+            if (Time.time >= _nextThink && !_scriptedBusy && _script.Count == 0 && _bubble.ReadyForNext)
             {
                 _nextThink = Time.time + Random.Range(_cfg.thinkMin, _cfg.thinkMax);
                 if (_llm.CanAsk) StartCoroutine(ThinkLlm());
@@ -217,16 +220,23 @@ namespace Sharik
             if (_ball == null || !_ball.IsAlive) return;
             int dir = _lv.Goal.x >= _ball.transform.position.x ? 1 : -1;
             _nav.IgnoreDanger = false;
+            if (_introPending)
+            {
+                if (_script.Count == 0 && !_bubble.SpeechBusy) _introPending = false;
+                else { _ball.MoveInput = 0; return; }
+            }
+            // сценарную реплику договаривает на ходу, но задумчиво-медленно
+            float walk = _scriptedBusy && _bubble.SpeechBusy ? Tuning.WalkTalkMul : Tuning.WalkMul;
             switch (Current)
             {
-                case Intent.Forward: _nav.Steer(_ball, dir, 0.85f); break;
-                case Intent.Back: _nav.Steer(_ball, -dir, 0.6f); break;
+                case Intent.Forward: _nav.Steer(_ball, dir, walk); break;
+                case Intent.Back: _nav.Steer(_ball, -dir, Tuning.BackMul); break;
                 case Intent.Yolo:
                     _nav.IgnoreDanger = true;
-                    _nav.Steer(_ball, dir, 1.15f);
+                    _nav.Steer(_ball, dir, Tuning.YoloMul);
                     break;
                 case Intent.RunJump:
-                    _nav.Steer(_ball, dir, 1.1f);
+                    _nav.Steer(_ball, dir, Tuning.YoloMul);
                     break;
                 case Intent.Jump:
                     if (_ball.CanJump)
@@ -263,13 +273,13 @@ namespace Sharik
 
         void CheckStuck(Vector2 pos)
         {
-            if (Current != Intent.Forward && Current != Intent.Yolo && Current != Intent.RunJump)
+            if (_introPending || (Current != Intent.Forward && Current != Intent.Yolo && Current != Intent.RunJump))
             {
                 _stuckSince = Time.time; _stuckRefX = pos.x; return;
             }
             if (Mathf.Abs(pos.x - _stuckRefX) > 1.2f) { _stuckRefX = pos.x; _stuckSince = Time.time; _stuckTries = 0; return; }
             float stuck = Time.time - _stuckSince;
-            if (stuck > 5f)
+            if (stuck > Tuning.StuckSeconds)
             {
                 _stuckTries++;
                 _stuckSince = Time.time;

@@ -13,7 +13,9 @@ namespace Sharik
         public override string Title => "Вентилятор";
         public override float Cooldown => Tuning.FanCooldown;
         public override bool IsDangerous => _on;
-        public override string DescribeState() => _on ? "вентилятор ДУЕТ вверх" : "выключенный вентилятор";
+        public override string DescribeState() => _on ? "вентилятор ДУЕТ вверх" : Awake ? "вентилятор включается сам" : "выключенный вентилятор";
+        protected override float AutoCooldown => 3.2f;
+        protected override bool WantsAutoAct(BallController b) => Near(b, Center, 9f);
 
         public static FanTrap Create(Transform parent, int x, int y, LevelRuntime rt)
         {
@@ -37,7 +39,8 @@ namespace Sharik
             Sfx.Play(Sfx.Id.Fan);
             _on = true;
             float t = 0;
-            while (t < Tuning.FanActive)
+            float active = Awake ? 1.6f : Tuning.FanActive;
+            while (t < active)
             {
                 t += Time.deltaTime;
                 Sr.sprite = SpriteLib.Get(((int)(t * 20)) % 2 == 0 ? "trap_fan_0" : "trap_fan_1");

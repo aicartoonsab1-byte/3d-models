@@ -10,6 +10,7 @@
     --hand: "Neucha", "Comic Sans MS", "Segoe Print", cursive;
     color-scheme: light;
   }
+  [hidden] { display: none !important; }
   html, body { background: var(--paper); color: var(--ink); }
   body { font-family: var(--hand); font-size: 17px; padding-inline: 16px; padding-block: 18px 32px; }
   .page { max-width: 1320px; margin: 0 auto; display: grid; gap: 14px; }
@@ -47,6 +48,13 @@
   #log li.sp::before { content: "— "; color: var(--coral-d); }
   #log li.th { color: var(--ink-l); font-style: italic; }
   #log li.th::before { content: "∘ "; color: var(--ink-l); }
+  .intro { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; text-align: center; padding-inline: 24px;
+    background: rgba(28, 23, 20, .82); color: var(--paper); font-size: 19px; }
+  .intro p { margin: 0; max-width: 46ch; }
+  .intro b { color: var(--coral); font-weight: 400; }
+  .intro-title { font-family: var(--display); font-size: clamp(20px, 3vw, 30px); }
+  .intro button { justify-self: center; background: var(--coral); border-color: var(--coral); color: var(--ink); font-size: 14px; padding: 12px 22px; }
+  .intro button:hover { background: var(--cream); }
   .note { font-size: 15px; color: var(--ink-l); margin: 0; }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
 </style>
@@ -62,6 +70,7 @@
       <select id="level" aria-label="Уровень"></select>
       <button id="restart" type="button">Заново</button>
       <button id="pause" type="button">Пауза</button>
+      <button id="voice" type="button">Голос: писклявый</button>
       <button id="mute" type="button" aria-pressed="true">Звук: вкл</button>
     </div>
   </header>
@@ -69,7 +78,13 @@
   <div class="layout">
     <section>
       <div id="stagewrap">
-        <div class="screen"><canvas id="view" width="320" height="180"></canvas><canvas id="ui" width="320" height="180"></canvas></div>
+        <div class="screen"><canvas id="view" width="320" height="180"></canvas><canvas id="ui" width="320" height="180"></canvas>
+          <div id="intro" class="intro">
+            <p class="intro-title">Шарик ждёт</p>
+            <p>Он покатится сам. Вы — наблюдатель: <b>кликните по ловушке или боссу</b>, чтобы разбудить его. Проснувшийся враг какое-то время действует сам.</p>
+            <button id="go" type="button">Начать</button>
+          </div>
+        </div>
         <div class="bar"><span id="stats">Лепёшек 0</span><span><b id="stage">стадия прозрения 0/5</b></span></div>
       </div>
     </section>
@@ -84,6 +99,7 @@
           <li><img alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAS0lEQVR4nGNgGAXDADAyMDAwPEqM+Q8TkJjUyvAir5oozXLzlzAyoQsSqxnFBchARlzkPzaFMPDk5RsMPRSBQeACQjYSAhixQHcDAN1fEiKU/uTEAAAAAElFTkSuQmCC"><span><b>Пружина</b> — подбрасывает к небу</span></li>
           <li><img alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAABACAYAAABcIPRGAAACMElEQVR4nO1ZQY7CMAx0EU9A4oI4IH7Ad7jwMi58hx8gpEVckLjtbS/sYZWSGjuxk7RxtR0JqUocZyZ2E6cAGMHtsH+l2M76oTMcRi+gOvx0cM8/319sOmH7eb/04lgfT40m/wHeItbHU9MPq0RIhGCb6hEA0O1Avr3JCITExPpNICZgSC7JuB32r9Vy0flx5E3l0Gq5EK3w/fFseZsRQJG/Xs7t82a76/Q5ESZO4hB5R9wX448xIYACJo4j4GDiHODAkfZhNgJSmBDg7yraMSYEaOELNv0OYFCRGoWAUIqNMoV8mBAgLSEomBAQQmyHagW4qq9/SmVhPgIxzADeOZhyoNRGJwI1Uih3znbFfUcpkdAScXPExsW4dDo1IoaIlmQhPwxCIoZOsSQBAH9E/cEx4qGrXw4kAshtNIc8vvrlQBLx4DnA3VUdSYpsyQhwHHywIZKo7yt1KHDpREYAk09JC+kYqR23oKJSQrK6mIg0IiE7iTjTtdDgXyVK7kBSZL3EADxpTdpJbFUvcWgABjc5Jcxvu17OsNnussgDCD7uuki4CfFzSVB+VcUch1o3teRSIsVRLai/C0nr+FS/Wt+iCOReOrgx1DjtwhT7MicVgUv1XJg+iSUw9xJr5xo8AqUXI1mAla1VLCBWGqQi169YAFU6lCgncv3+j13IMiYBtTEJqI1JQG1MAszB3Yj8mxH1zPWH7HB7Cb9z3Hl/PBvq1hRyRrVTfnA799+0xu8vzXdh8/qWBzYAAAAASUVORK5CYII="><span><b>Боссы</b> — Олень, Всевидящий, Червь, Хранитель</span></li>
         </ul>
+        <p class="note" style="margin-top:8px">Клик будит врага: коралловая рамка — он проснулся и действует сам, полоска — сколько ещё. Боссы ходят за шариком и устают.</p>
       </div>
       <div class="card">
         <h2>УПРАВЛЕНИЕ</h2>
@@ -114,7 +130,11 @@
     GACC: 38, AACC: 16, COYOTE: 0.1, KILLY: -3,
     SPIKES_ON: 1.6, SPIKES_CD: 3, CR_HOLD: 0.6, CR_CD: 3.5, CR_FALL: 22, CR_RISE: 3,
     TD_OPEN: 1.6, TD_CD: 3, FAN_ON: 2.5, FAN_CD: 4, FAN_F: 75, FAN_H: 5, SPRING_V: 22, SPRING_CD: 1.5,
-    REFORM: 1.3, RESPAWN: 1.1, CPS: 20,
+    REFORM: 1.3, RESPAWN: 1.1, CPS: 12, HOLD: 2.8,
+    // пробуждённые враги: сколько секунд действуют сами
+    AWAKE_TRAP: 10, AWAKE_BOSS: 18,
+    // скорость качения шарика (доля RUN): медленнее, чтобы успевать следить
+    WALK: 0.5, WALK_TALK: 0.25, BACK: 0.4, YOLO: 0.95,
   };
   const SKY = { meadow: "#efe3c8", cave: "#231c18", city: "#f0a193", glitch: "#efe3c8", void: "#0e0b0a" };
   const POWERS = [1, 0.85, 0.7, 0.55];
@@ -176,24 +196,70 @@
     clunk: () => { noise(0.4, 0.3); tone(70, 0.5, "square", 0.1); },
     powerdown: () => tone(440, 3, "square", 0.07, 0, 20),
     glitch: () => tone(200 + Math.random() * 1800, 0.12, "square", 0.02),
+    wake: () => { tone(160, 0.18, "square", 0.05, 0, 520); tone(520, 0.12, "triangle", 0.04, 0.16, 260); },
   };
-  // 8-битное бормотание — как GibberishVoice.cs
+  // ---------------------------------------------------------------- голос
+  // Два смешных голоса:
+  //  • «писклявый» — настоящая русская речь синтезатором браузера, задранная по высоте (бурундук),
+  //    интонация и скорость зависят от настроения, в «матрице» — наоборот, басовитый робот;
+  //  • «бормотание» — мультяшный лепет: слоги-«боинги» с глиссандо и вибрато, писк в конце фразы.
+  const VOICE_MODES = ["speech", "babble", "off"];
+  let voiceMode = "speech", ruVoice = null;
+  function findRuVoice() {
+    try {
+      const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+      ruVoice = vs.find((v) => /^ru/i.test(v.lang) && /google|milena|irina|yuri|pavel|natalia/i.test(v.name)) || vs.find((v) => /^ru/i.test(v.lang)) || null;
+    } catch (e) { ruVoice = null; }
+    updateVoiceLabel();
+  }
+  if (window.speechSynthesis) { findRuVoice(); try { speechSynthesis.onvoiceschanged = findRuVoice; } catch (e) { } }
+  const MOOD_VOICE = {   // pitch 0..2, rate 0.1..10 — для speechSynthesis
+    neutral: [1.85, 1.05], happy: [2, 1.15], scared: [2, 1.4], sad: [1.3, 0.8], angry: [1.55, 1.25], awe: [1.95, 0.9],
+    pray: [1.6, 0.78], dizzy: [1.75, 0.85], suspicious: [1.45, 0.85], determined: [1.35, 1.0], glitch: [0.2, 0.72],
+  };
   function speakVoice(text, mood) {
+    if (muted || voiceMode === "off") return;
+    if (voiceMode === "speech" && ruVoice && window.speechSynthesis) {
+      try {
+        const u = new SpeechSynthesisUtterance(text), mv = MOOD_VOICE[mood] || MOOD_VOICE.neutral;
+        u.voice = ruVoice; u.lang = ruVoice.lang; u.pitch = mv[0]; u.rate = mv[1]; u.volume = 1;
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+        if (Math.random() < 0.3) squeak(text.length / T.CPS * 0.9 + 0.2);   // смешной «пик» после фразы
+        return;
+      } catch (e) { /* упадём в бормотание */ }
+    }
+    babble(text, mood);
+  }
+  function squeak(when) { tone(900, 0.09, "triangle", 0.05, when, 1700); tone(1700, 0.07, "sine", 0.03, when + 0.09, 1100); }
+  function babble(text, mood) {
     const ac = audio(); if (!ac || muted) return;
-    let base = 330, wob = 0.08, type = "square";
-    ({ scared: () => { base = 470; wob = 0.2; }, happy: () => base = 400, awe: () => base = 400, sad: () => { base = 240; wob = 0.04; type = "triangle"; },
-       angry: () => base = 260, pray: () => { base = 300; type = "triangle"; }, glitch: () => { base = 200; wob = 0.35; },
-       determined: () => base = 280, dizzy: () => { base = 350; wob = 0.3; } }[mood] || (() => { }))();
-    const step = 1 / T.CPS, vowels = "аоуыэяёюие";
-    const s = text.slice(0, 90).toLowerCase();
+    let base = 360, wob = 0.12, glide = 1.35, type = "square";
+    ({ scared: () => { base = 520; wob = 0.25; glide = 1.6; }, happy: () => { base = 430; glide = 1.5; }, awe: () => { base = 420; glide = 0.75; },
+       sad: () => { base = 230; wob = 0.05; glide = 0.7; type = "triangle"; }, angry: () => { base = 250; glide = 1.15; type = "sawtooth"; },
+       pray: () => { base = 300; glide = 0.85; type = "triangle"; }, glitch: () => { base = 140; wob = 0.4; glide = 1; type = "sawtooth"; },
+       determined: () => { base = 280; glide = 1.1; }, dizzy: () => { base = 380; wob = 0.35; glide = 1.8; } }[mood] || (() => { }))();
+    const step = 1 / T.CPS, vowels = "аоуыэяёюие", s = text.slice(0, 120).toLowerCase(), t0 = ac.currentTime;
     for (let i = 0; i < s.length; i++) {
       const v = vowels.indexOf(s[i]);
-      if (v >= 0) {
-        let f = base * (0.8 + v * 0.06) * (1 + (Math.random() * 2 - 1) * wob);
-        if (text.endsWith("?") && i > s.length - 4) f *= 1.3;
-        tone(f, step * 0.9, type, 0.035, i * step);
-      }
+      if (v < 0) continue;
+      let f = base * (0.8 + v * 0.07) * (1 + (Math.random() * 2 - 1) * wob);
+      if (text.trim().endsWith("?") && i > s.length - 5) f *= 1.45;             // вопрос — вверх
+      if (text.trim().endsWith("!") && i > s.length - 5) f *= 1.2;
+      const d = step * 0.95, at = t0 + i * step;
+      const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain();
+      o.type = type; o2.type = "sine";
+      o.frequency.setValueAtTime(f * glide, at); o.frequency.exponentialRampToValueAtTime(f, at + d * 0.6);   // «боинг»
+      o2.frequency.setValueAtTime(f * 2.01, at);
+      lfo.frequency.value = 22; lg.gain.value = f * 0.04; lfo.connect(lg); lg.connect(o.frequency);           // вибрато
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.05, at + 0.012); g.gain.exponentialRampToValueAtTime(0.0008, at + d);
+      o.connect(g); o2.connect(g); g.connect(ac.destination);
+      [o, o2, lfo].forEach((x) => { x.start(at); x.stop(at + d + 0.02); });
     }
+    if (Math.random() < 0.35) squeak(s.length * step + 0.05);
+  }
+  function updateVoiceLabel() {
+    const b = document.getElementById("voice"); if (!b) return;
+    b.textContent = voiceMode === "speech" ? (ruVoice ? "Голос: писклявый" : "Голос: писклявый (нет рус. голоса → лепет)") : voiceMode === "babble" ? "Голос: лепет" : "Голос: выкл";
   }
 
   // ---------------------------------------------------------------- фразы
@@ -306,23 +372,79 @@
     return { x0: t.x - 0.5, x1: t.x + 0.5, y0: t.y - 0.5, y1: t.y + 0.5 };
   }
   let trapsFired = 0;
+  // Игрок будит врага кликом. Проснувшийся враг какое-то время действует САМ (autoTick),
+  // повторный клик — продлевает бодрствование и заставляет действовать немедленно.
   function fireTrap(t) {
-    if (t.disabled || game.time < t.ready) { SFX.denied(); return; }
-    t.ready = game.time + t.cd; trapsFired++;
+    if (t.disabled) { SFX.denied(); return; }
+    const wasAwake = t.awake > 0;
+    t.awake = t.kind === "boss" ? T.AWAKE_BOSS : T.AWAKE_TRAP;
+    if (!wasAwake) { t.acts = 0; SFX.wake(); }
+    if (game.time < t.ready) { if (wasAwake) SFX.denied(); return; }
+    trapsFired++;
+    act(t);
+  }
+  function cooldown(t) {
+    // в бодрствовании ловушки работают в своём ритме; боссы понемногу устают
+    const auto = { spikes: 2.6, crusher: 2.6, trapdoor: 2.4, fan: 3.2, spring: 1.6 }[t.kind];
+    const base = t.awake > 0 && auto ? auto : t.cd;
+    return t.kind === "boss" ? base * (1 + 0.15 * (t.acts || 0)) : base;
+  }
+  function act(t) {
+    t.ready = game.time + cooldown(t); t.acts = (t.acts || 0) + 1; t.warn = 0;
     brain && brain.onTrap(t);
-    if (t.kind === "spikes") { t.up = true; t.timer = T.SPIKES_ON; SFX.spikes(); }
+    if (t.kind === "spikes") { t.up = true; t.timer = t.awake > 0 ? 1.2 : T.SPIKES_ON; SFX.spikes(); }
     if (t.kind === "crusher") { t.phase = "arm"; t.timer = 0.2; SFX.arm(); }
     if (t.kind === "trapdoor") { t.open = true; t.timer = T.TD_OPEN; SFX.trapdoor(); }
-    if (t.kind === "fan") { t.on = true; t.timer = T.FAN_ON; SFX.fan(); }
+    if (t.kind === "fan") { t.on = true; t.timer = t.awake > 0 ? 1.6 : T.FAN_ON; SFX.fan(); }
     if (t.kind === "spring") {
       t.phase = "launch"; t.timer = 0.35; SFX.spring();
       if (ball.alive() && Math.abs(ball.x - t.x) < 0.65 && ball.y - t.y < 1.6 && ball.y > t.y - 0.6) ball.launch(ball.vx, T.SPRING_V);
     }
     if (t.kind === "boss") bossAttack(t);
   }
+  // Решение проснувшегося врага: действовать ли сейчас (с коротким предупреждением-дрожью)
+  function autoTick(t, dt) {
+    if (t.disabled || !(t.awake > 0)) return;
+    t.awake -= dt;
+    if (t.warn > 0) { t.warn -= dt; if (t.warn <= 0) act(t); return; }
+    if (game.time < t.ready || !ball.alive() || game.cutscene) return;
+    const dx = ball.x - t.x, adx = Math.abs(dx), near = (r) => adx < r && Math.abs(ball.y - t.y) < 4;
+    let want = false;
+    if (t.kind === "spikes" || t.kind === "fan") want = near(9);                       // свой ритм, пока шарик рядом
+    else if (t.kind === "crusher") want = adx < 2.6;                                    // караулит шарика
+    else if (t.kind === "trapdoor") want = adx < 1.4;                                   // открывается под ним
+    else if (t.kind === "spring") want = adx < 0.6 && ball.grounded;                    // подкидывает, как только встал
+    else if (t.kind === "boss") {
+      const bx = ball.x - t.home.x, abx = Math.abs(bx);
+      want = t.boss === "stag" ? abx < 5 && ball.grounded : t.boss === "watcher" ? abx < 9 : t.boss === "worm" ? abx < 12 : abx < 8;
+    }
+    if (want && !t.busy) t.warn = t.kind === "boss" ? 0.01 : 0.35;
+  }
+  // Боссы в бодрствовании двигаются: Олень ходит за шариком, Всевидящий плывёт над ним
+  function bossMove(t, dt) {
+    const awake = t.awake > 0;
+    t.origin = t.origin || { ...t.home };
+    let target = t.origin.x;
+    if (awake && ball.alive()) target = ball.x;
+    if (t.boss === "stag" && !t.busy) {
+      target = Math.max(t.origin.x - 6, Math.min(t.origin.x + 6, target));
+      const d = target - t.home.x;
+      if (Math.abs(d) > (awake ? 1.5 : 0.1)) {
+        const nx = t.home.x + Math.sign(d) * Math.min(Math.abs(d), (awake ? 1.6 : 1) * dt);
+        const legs = [nx - 1.2, nx + 1.2].every((lx) => support(Math.floor(lx), t.cy - 1));
+        if (legs) { t.home.x = nx; t.walk = (t.walk || 0) + dt; t.face = d < 0 ? -1 : 1; }
+      }
+      t.x = t.home.x;
+    }
+    if (t.boss === "watcher") {
+      target = Math.max(t.origin.x - 10, Math.min(t.origin.x + 10, target));
+      t.home.x += (target - t.home.x) * Math.min(1, dt * (awake ? 0.9 : 0.4));
+      t.x = t.home.x;
+    }
+  }
   function bossAttack(t) {
     t.busy = true;
-    if (t.boss === "stag") { t.frame = "atk"; t.phase = "stomp"; t.timer = 0.45; SFX.arm(); }
+    if (t.boss === "stag") { t.frame = "atk"; t.phase = "stomp"; t.timer = 0.6; SFX.arm(); }
     else if (t.boss === "watcher") { t.frame = "atk"; t.phase = "gaze"; t.timer = 0.4; SFX.glitch(); }
     else if (t.boss === "keeper") {
       t.frame = "atk"; t.phase = "roar"; t.timer = 1.2; SFX.powerdown(); shake(0.6, 0.08);
@@ -336,6 +458,8 @@
   function updateTraps(dt) {
     for (const t of L.traps) {
       if (t.timer > 0) t.timer -= dt;
+      autoTick(t, dt);
+      if (t.kind === "boss") bossMove(t, dt);
       if (t.kind === "spikes") {
         if (t.up && t.timer <= 0) t.up = false;
         if (t.up && ball.alive() && Math.abs(ball.x - t.x) < 0.75 && ball.y - T.R < t.y + 0.1 && ball.y > t.y - 0.6) ball.die("spikes");
@@ -366,10 +490,11 @@
       if (t.blinkAt < 0 && t.boss !== "worm") { t.frame = "blink"; if (t.blinkAt < -0.15) { t.frame = "idle"; t.blinkAt = 2.5 + Math.random() * 3.5; } }
       return;
     }
+    if (t.phase === "stomp" && t.timer > 0) t.frame = "atk";
     if (t.phase === "stomp" && t.timer <= 0) {
       t.frame = "idle"; SFX.slam(); shake(0.35, 0.2);
-      L.fx.push({ s: "fx_shock", x: t.x, y: t.cy + 0.25, t: 0, life: 0.5, grow: 8 });
-      if (ball.alive() && ball.grounded && Math.abs(ball.x - t.x) < 7) ball.launch(Math.sign(ball.x - t.x + 0.01) * 3, 18);
+      L.fx.push({ s: "fx_shock", x: t.home.x, y: t.cy + 0.25, t: 0, life: 0.5, grow: 8 });
+      if (ball.alive() && ball.grounded && Math.abs(ball.x - t.home.x) < 7) ball.launch(Math.sign(ball.x - t.home.x + 0.01) * 3, 18);
       t.phase = "cool"; t.timer = 0.5;
     } else if (t.phase === "gaze" && t.timer <= 0) {
       L.fx.push({ s: "fx_gaze", x: t.home.x, y: t.home.y - 0.3, vx: 0, vy: 0, t: 0, life: 3, orb: true, speed: 8 });
@@ -602,18 +727,19 @@
   class Brain {
     constructor() {
       this.aw = L.data.awareness || 0; nav.imp = 0.8 + (0.35 - 0.8) * this.aw / 5;
-      this.intent = "forward"; this.until = 0; this.nextThink = game.time + 3; this.queue = [];
+      this.intent = "forward"; this.until = 0; this.nextThink = game.time + 6; this.queue = [];
       this.say = null; this.thought = null; this.linesDone = new Set(); this.memory = [];
       this.stuckRef = ball.x; this.stuckSince = game.time; this.stuckTries = 0; this.deathsAt = {};
       this.bossesSeen = new Set(); this.cursorNoticed = false;
       (L.data.intro || []).forEach((t) => this.enqueue(t, this.aw >= 4 ? "glitch" : "neutral"));
+      this.introPending = this.queue.length > 0;
     }
     enqueue(text, mood, thought = false) { if (text) this.queue.push({ text, mood, thought }); }
     speechBusy() { return this.say && game.time < this.say.until; }
     speak(text, mood, thought) {
       ball.setMood(mood, 3);
-      if (thought) this.thought = { text, until: game.time + Math.min(7, Math.max(2.5, text.length * 0.06)) };
-      else { this.say = { text, start: game.time, until: game.time + text.length / T.CPS + 1.6 }; speakVoice(text, mood); }
+      if (thought) this.thought = { text, until: game.time + Math.min(9, Math.max(4, text.length * 0.09)) };
+      else { this.say = { text, start: game.time, until: game.time + text.length / T.CPS + T.HOLD }; speakVoice(text, mood); }
       log(text, thought);
     }
     react(key, chance = 1) {
@@ -636,10 +762,11 @@
     }
     onFragment(text) { this.enqueue(text, "awe"); const p = pickPhrase("fragment_react", this.aw); if (p) this.enqueue(p.text, p.mood, true); }
     onCheckpoint() { this.react("checkpoint", 0.7); }
-    onJump() { this.react("jump", 0.12); }
+    onJump() { this.react("jump", 0.06); }
     setIntent(i, d) { this.intent = i; this.until = game.time + d; if (i === "pray") ball.setMood("pray", d); }
     update() {
-      if (!this.speechBusy() && this.queue.length) { const s = this.queue.shift(); this.speak(s.text, s.mood, s.thought); this.scripted = true; }
+      const gapOk = !this.say || game.time > this.say.until + 0.5;   // пауза между репликами
+      if (!this.speechBusy() && gapOk && this.queue.length) { const s = this.queue.shift(); this.speak(s.text, s.mood, s.thought); this.scripted = true; }
       else if (!this.queue.length && !this.speechBusy()) this.scripted = false;
       if (!ball.alive() || game.cutscene) return;
       (L.data.lines || []).forEach((ln, i) => { if (!this.linesDone.has(i) && ball.x >= ln.x) { this.linesDone.add(i); this.enqueue(ln.text, ln.mood || "neutral"); } });
@@ -653,9 +780,10 @@
         if (!this.cursorNoticed && this.react("cursor")) this.cursorNoticed = true;
       } else if (ball.lookAt && Math.random() < 0.01) ball.lookAt = null;
       // застревание
-      if (["forward", "yolo", "run_jump"].includes(this.intent)) {
+      if (this.introPending) { this.stuckSince = game.time; this.stuckRef = ball.x; }
+      else if (["forward", "yolo", "run_jump"].includes(this.intent)) {
         if (Math.abs(ball.x - this.stuckRef) > 1.2) { this.stuckRef = ball.x; this.stuckSince = game.time; this.stuckTries = 0; }
-        else if (game.time - this.stuckSince > 5) {
+        else if (game.time - this.stuckSince > 8) {
           this.stuckTries++; this.stuckSince = game.time; this.react("stuck", 0.8);
           const k = this.stuckTries % 3;
           if (k === 1) this.setIntent("back", 0.8); else if (k === 2) this.setIntent("yolo", 3); else { this.setIntent("pray", 2); this.react("pray"); }
@@ -663,7 +791,7 @@
       } else { this.stuckSince = game.time; this.stuckRef = ball.x; }
       if (game.time >= this.until && this.intent !== "forward") this.intent = "forward";
       if (game.time >= this.nextThink && !this.scripted && !this.queue.length) {
-        this.nextThink = game.time + 4 + Math.random() * 3;
+        this.nextThink = game.time + 8 + Math.random() * 4;
         const p = pickPhrase("idle", this.aw); if (p) this.speak(p.text, p.mood, Math.random() < 0.55);
         const r = Math.random();
         if (r < 0.08) this.setIntent("pray", 2); else if (r < 0.14) this.setIntent("look", 1.6); else if (r < 0.14 + 0.08 * nav.imp) this.setIntent("yolo", 2.5);
@@ -672,9 +800,12 @@
     fixed() {
       if (!ball.alive() || game.cutscene) { ball.move = 0; return; }
       const dir = L.goal.x >= ball.x ? 1 : -1;
-      if (this.intent === "forward") nav.steer(dir, 0.85, false);
-      else if (this.intent === "back") nav.steer(-dir, 0.6, false);
-      else if (this.intent === "yolo") nav.steer(dir, 1.15, true);
+      // пока звучит вступление — стоит и слушает себя; пока говорит сценарную реплику — катится задумчиво
+      if (this.introPending) { if (!this.queue.length && !this.speechBusy()) this.introPending = false; else { ball.move = 0; return; } }
+      const talking = this.scripted && this.speechBusy();
+      if (this.intent === "forward") nav.steer(dir, talking ? T.WALK_TALK : T.WALK, false);
+      else if (this.intent === "back") nav.steer(-dir, T.BACK, false);
+      else if (this.intent === "yolo") nav.steer(dir, T.YOLO, true);
       else ball.move = 0;
     }
   }
@@ -846,7 +977,8 @@
     // ловушки
     for (const t of L.traps) {
       if (L.hidden.has(t)) continue;
-      if (t.kind === "spikes") spr(t.up ? "trap_spikes_on" : "trap_spikes_off", t.x, t.y);
+      const jit = t.warn > 0 ? (Math.random() - 0.5) / 8 : 0;
+      if (t.kind === "spikes") spr(t.up ? "trap_spikes_on" : "trap_spikes_off", t.x + jit, t.y);
       if (t.kind === "trapdoor") spr(t.open ? "trap_trapdoor_open" : "trap_trapdoor_closed", t.x, t.y);
       if (t.kind === "spring") spr(t.phase === "launch" ? "trap_spring_launch" : "trap_spring_idle", t.x, t.y);
       if (t.kind === "fan") {
@@ -855,7 +987,7 @@
       }
       if (t.kind === "crusher") {
         for (let y = t.pos + 1; y < L.h + 1; y++) spr("trap_chain", t.x, y);
-        const sh = t.phase === "arm" ? (Math.random() - 0.5) / 8 : 0;
+        const sh = t.phase === "arm" || t.warn > 0 ? (Math.random() - 0.5) / 8 : 0;
         spr("trap_crusher", t.x + sh, t.pos);
       }
       if (t.kind === "boss") {
@@ -864,7 +996,10 @@
           if (t.phase === "dust") spr("fx_dust", t.wx + (Math.random() - 0.5) / 4, t.wfy + 0.2);
           if (["burst", "hold", "sink"].includes(t.phase)) spr(t.phase === "burst" ? "boss_worm_atk" : "boss_worm_idle", t.wx, t.wormY);
           else if (t.phase !== "dust") spr("boss_worm_peek", t.home.x, t.home.y + bob);
-        } else spr(`boss_${t.boss}_${t.frame}`, t.home.x, t.home.y + bob);
+        } else {
+          const step = t.boss === "stag" && t.walk ? Math.round(Math.abs(Math.sin(t.walk * 8))) / 16 : 0;
+          spr(`boss_${t.boss}_${t.frame}`, t.home.x, t.home.y + bob + step, { flip: t.face < 0 });
+        }
       }
     }
     // шарик
@@ -947,7 +1082,13 @@
     for (const t of onScreen) {
       const b = trapBounds(t), p = toScreen((b.x0 + b.x1) / 2, b.y1 + 0.35);
       const ready = !t.disabled && game.time >= t.ready;
-      c.fillStyle = ready ? "#1c1714" : "rgba(168,63,61,.85)"; const s = fs * 1.35;
+      const s = fs * 1.35, awake = t.awake > 0;
+      if (awake) {   // проснулся: коралловая рамка и полоска оставшегося бодрствования
+        const full = t.kind === "boss" ? T.AWAKE_BOSS : T.AWAKE_TRAP;
+        c.fillStyle = "#e2615c"; c.fillRect(p.x * S - s / 2 - 3, p.y * S - s / 2 - 3, s + 6, s + 6);
+        c.fillStyle = "#faf3e1"; c.fillRect(p.x * S - s / 2 - 3, p.y * S - s / 2 - 8, (s + 6) * Math.max(0, t.awake / full), 3);
+      }
+      c.fillStyle = ready ? "#1c1714" : "rgba(168,63,61,.85)";
       c.fillRect(p.x * S - s / 2, p.y * S - s / 2, s, s);
       if (!ready) { c.fillStyle = "#e2615c"; c.fillRect(p.x * S - s / 2, p.y * S + s / 2 - 3, s * (1 - (t.ready - game.time) / t.cd), 3); }
       c.fillStyle = ready ? "#faf3e1" : "#f0a193"; c.font = `${fs}px "Rubik Mono One", monospace`; c.fillText(String(t.key), p.x * S, p.y * S + 1);
@@ -966,7 +1107,7 @@
       }
       c.globalAlpha = 1; c.textAlign = "left";
     }
-    if (game.paused) {
+    if (game.paused && $("intro").hidden) {
       c.fillStyle = "rgba(28,23,20,.6)"; c.fillRect(0, 0, ui.width, ui.height);
       c.textAlign = "center"; c.fillStyle = "#faf3e1"; c.font = `${Math.round(S * 12)}px "Rubik Mono One", monospace`;
       c.fillText("ПАУЗА", ui.width / 2, ui.height / 2); c.textAlign = "left";
@@ -1036,6 +1177,16 @@
   function toggleMute() { muted = !muted; $("mute").textContent = muted ? "Звук: выкл" : "Звук: вкл"; $("mute").setAttribute("aria-pressed", String(!muted)); }
   $("mute").addEventListener("click", () => { audio(); toggleMute(); });
   $("restart").addEventListener("click", () => game.start(levelIndex));
+  $("voice").addEventListener("click", () => {
+    voiceMode = VOICE_MODES[(VOICE_MODES.indexOf(voiceMode) + 1) % VOICE_MODES.length];
+    try { speechSynthesis.cancel(); } catch (e) { }
+    updateVoiceLabel(); speakVoice("Привет! Это мой голос.", "happy");
+  });
+  // Звук и речь в браузере разрешены только после действия пользователя — поэтому стартовый экран
+  $("go").addEventListener("click", () => {
+    audio(); if (AC && AC.state === "suspended") AC.resume();
+    findRuVoice(); $("intro").hidden = true; game.paused = false; game.start(levelIndex);
+  });
   $("pause").addEventListener("click", () => { game.paused = !game.paused; $("pause").textContent = game.paused ? "Дальше" : "Пауза"; });
   const sel = $("level");
   levels.forEach((lv, i) => { const o = document.createElement("option"); o.value = String(i); o.textContent = `${lv.order}. ${lv.title}`; sel.appendChild(o); });
@@ -1059,6 +1210,8 @@
     let start = 0; try { start = Number(localStorage.getItem("sharik_level") || 0) || 0; } catch (e) { }
     if (saved && typeof saved.level === "number") start = saved.level;
     game.start(start);
+    if (!$("intro").hidden) game.paused = true;
+    updateVoiceLabel();
     requestAnimationFrame(frame);
   }
   loadSprites().then(() => {

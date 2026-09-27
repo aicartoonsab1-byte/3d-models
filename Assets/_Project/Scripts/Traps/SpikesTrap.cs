@@ -11,7 +11,9 @@ namespace Sharik
         public override string Title => "Шипы";
         public override float Cooldown => Tuning.SpikesCooldown;
         public override bool IsDangerous => _up;
-        public override string DescribeState() => _up ? "шипы ТОРЧАТ" : "шипы спрятаны (подозрительно)";
+        public override string DescribeState() => _up ? "шипы ТОРЧАТ" : Awake ? "шипы шевелятся и выскакивают сами" : "шипы спрятаны (подозрительно)";
+        protected override float AutoCooldown => 2.6f;
+        protected override bool WantsAutoAct(BallController b) => Near(b, Center, 9f);   // свой ритм, пока шарик рядом
 
         public static SpikesTrap Create(Transform parent, int x, int y, LevelRuntime rt)
         {
@@ -31,7 +33,7 @@ namespace Sharik
             _up = true;
             Sr.sprite = SpriteLib.Get("trap_spikes_on");
             StartCoroutine(Shake(transform));
-            yield return new WaitForSeconds(Tuning.SpikesActive);
+            yield return new WaitForSeconds(Awake ? 1.2f : Tuning.SpikesActive);
             _up = false;
             Sr.sprite = SpriteLib.Get("trap_spikes_off");
         }

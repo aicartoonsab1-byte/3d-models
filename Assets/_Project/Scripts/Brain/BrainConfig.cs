@@ -20,7 +20,7 @@ namespace Sharik
         public int maxTokens = 220;
         public bool jsonMode = true;
         public float timeoutSeconds = 25f;
-        public float thinkMin = 4f, thinkMax = 7f;
+        public float thinkMin = 8f, thinkMax = 12f;   // пауза между размышлениями — чтобы успевать читать
         public bool useLlm = true;
         public string voice = "gibberish";     // gibberish | piper | off
         public string piperExe = "";

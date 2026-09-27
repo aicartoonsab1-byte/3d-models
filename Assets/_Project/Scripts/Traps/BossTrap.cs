@@ -17,7 +17,8 @@ namespace Sharik
         public string Kind;
         bool _attacking;
         float _nextBlink;
-        Vector3 _home;
+        Vector3 _home, _origin;
+        float _walkT;
         SpriteRenderer _extra;      // пыль / тело червя
 
         public override string Title => Kind switch
@@ -25,8 +26,25 @@ namespace Sharik
             "stag" => "Лунный Олень", "watcher" => "Всевидящий", "worm" => "Кодовый Червь", "keeper" => "Хранитель", _ => "Существо"
         };
 
-        public override float Cooldown => Kind switch { "stag" => 4f, "watcher" => 3f, "worm" => 4f, "keeper" => 5f, _ => 4f };
+        public override float Cooldown => Kind switch { "stag" => 3.5f, "watcher" => 3f, "worm" => 3f, "keeper" => 4.5f, _ => 4f };
         public override bool IsDangerous => _attacking;
+        public override float AwakeDuration => Tuning.AwakeBoss;
+        protected override float AutoCooldown => Cooldown * (1f + Tuning.BossFatigue * Acts);   // устаёт
+        protected override float WarnTime => 0.01f;                                               // у боссов свой замах
+        public override Vector2 Center => new Vector2(transform.localPosition.x, Cell.y + 0.5f);
+
+        protected override bool WantsAutoAct(BallController b)
+        {
+            if (_attacking) return false;
+            float dx = Mathf.Abs(b.transform.position.x - Center.x);
+            return Kind switch
+            {
+                "stag" => dx < 5f && b.Grounded,
+                "watcher" => dx < 9f,
+                "worm" => dx < 12f,
+                _ => dx < 8f,
+            };
+        }
 
         public override string DescribeState() => Kind switch
         {
@@ -49,6 +67,7 @@ namespace Sharik
             float lift = kind == "watcher" ? 2.5f : 0f;           // Всевидящий парит
             t.transform.localPosition = new Vector3(x + 0.5f, y + h / 2f + lift, 0);
             t._home = t.transform.localPosition;
+            t._origin = t._home;
             t._nextBlink = Time.time + Random.Range(2f, 5f);
             if (kind == "worm")
             {
@@ -59,9 +78,11 @@ namespace Sharik
             return t;
         }
 
-        void Update()
+        protected override void Update()
         {
+            base.Update();
             if (Disabled) return;
+            Walk();
             // «живость»: моргание и дыхание
             if (!_attacking && Time.time > _nextBlink && Kind != "worm")
             {
@@ -74,6 +95,30 @@ namespace Sharik
                 float off = Mathf.Round(Mathf.Sin(Time.time * (Kind == "watcher" ? 2f : 1.2f)) * amp) / Tuning.PixelsPerUnit;
                 transform.localPosition = _home + new Vector3(0, off, 0);
             }
+        }
+
+        /// <summary>Проснувшийся Олень ходит за шариком (не сходя в пропасть), Всевидящий плывёт над ним.
+        /// Уснув, оба возвращаются домой.</summary>
+        void Walk()
+        {
+            if (_attacking || (Kind != "stag" && Kind != "watcher")) return;
+            var b = GameManager.I != null ? GameManager.I.Ball : null;
+            float target = Awake && b != null && b.IsAlive ? b.transform.position.x : _origin.x;
+            float range = Kind == "stag" ? 6f : 10f;
+            target = Mathf.Clamp(target, _origin.x - range, _origin.x + range);
+            float d = target - _home.x;
+            if (Kind == "stag")
+            {
+                if (Mathf.Abs(d) < (Awake ? 1.5f : 0.1f)) return;
+                float nx = _home.x + Mathf.Sign(d) * Mathf.Min(Mathf.Abs(d), (Awake ? 1.6f : 1f) * Time.deltaTime);
+                // ноги только на опоре — в пропасть не шагает
+                if (!Rt.Grid.IsSupport(Mathf.FloorToInt(nx - 1.2f), Cell.y - 1) || !Rt.Grid.IsSupport(Mathf.FloorToInt(nx + 1.2f), Cell.y - 1)) return;
+                _home.x = nx;
+                Sr.flipX = d < 0;
+                _walkT += Time.deltaTime;
+                transform.localPosition = _home + new Vector3(0, Mathf.Round(Mathf.Abs(Mathf.Sin(_walkT * 8f))) / Tuning.PixelsPerUnit, 0);
+            }
+            else _home.x += d * Mathf.Min(1f, Time.deltaTime * (Awake ? 0.9f : 0.4f));
         }
 
         IEnumerator Blink()
@@ -102,7 +147,7 @@ namespace Sharik
             _attacking = true;
             Sr.sprite = SpriteLib.Get("boss_stag_atk");
             Sfx.Play(Sfx.Id.CrusherArm);
-            yield return new WaitForSeconds(0.45f);
+            yield return new WaitForSeconds(0.6f);      // замах: встаёт на дыбы — шарик успевает испугаться
             Sr.sprite = SpriteLib.Get("boss_stag_idle");
             Sfx.Play(Sfx.Id.CrusherSlam);
             CameraRig.Shake(0.35f, 0.2f);

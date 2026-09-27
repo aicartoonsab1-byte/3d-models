@@ -6,11 +6,11 @@
  "maxTokens": 220,
  "jsonMode": true,
  "timeoutSeconds": 25,
- "thinkMin": 4.0,
- "thinkMax": 7.0,
+ "thinkMin": 8.0,
+ "thinkMax": 12.0,
  "useLlm": true,
  "voice": "gibberish",
  "piperExe": "",
  "piperModel": "",
- "voiceVolume": 0.55
+ "voiceVolume": 0.6
 }

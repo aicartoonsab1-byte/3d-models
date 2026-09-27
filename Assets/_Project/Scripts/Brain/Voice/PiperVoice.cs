@@ -71,7 +71,12 @@ namespace Sharik
                 if (req.result != UnityWebRequest.Result.Success) { Fallback.Speak(text, mood); yield break; }
                 _src.Stop();
                 _src.clip = DownloadHandlerAudioClip.GetContent(req);
-                _src.pitch = mood == "glitch" ? 0.8f : 1.1f;     // чуть мультяшнее
+                // писклявый «бурундук»: настоящая речь, задранная по высоте; в «матрице» — наоборот, басом
+                _src.pitch = mood switch
+                {
+                    "glitch" => 0.7f, "sad" => 1.2f, "pray" => 1.25f, "angry" => 1.3f,
+                    "scared" => 1.6f, "happy" => 1.5f, _ => 1.4f,
+                };
                 _src.Play();
             }
         }

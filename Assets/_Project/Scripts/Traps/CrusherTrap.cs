@@ -14,7 +14,9 @@ namespace Sharik
         public override string Title => "Пресс";
         public override float Cooldown => Tuning.CrusherCooldown;
         public override bool IsDangerous => _falling || _down;
-        public override string DescribeState() => _falling ? "пресс ПАДАЕТ" : _down ? "пресс внизу" : "над головой висит пресс";
+        public override string DescribeState() => _falling ? "пресс ПАДАЕТ" : _down ? "пресс внизу" : Awake ? "пресс проснулся и караулит" : "над головой висит пресс";
+        protected override float AutoCooldown => 2.6f;
+        protected override bool WantsAutoAct(BallController b) => Mathf.Abs(b.transform.position.x - Center.x) < 2.6f;
 
         public static CrusherTrap Create(Transform parent, int x, int y, LevelRuntime rt)
         {

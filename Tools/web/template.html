@@ -10,6 +10,7 @@
     --hand: "Neucha", "Comic Sans MS", "Segoe Print", cursive;
     color-scheme: light;
   }
+  [hidden] { display: none !important; }
   html, body { background: var(--paper); color: var(--ink); }
   body { font-family: var(--hand); font-size: 17px; padding-inline: 16px; padding-block: 18px 32px; }
   .page { max-width: 1320px; margin: 0 auto; display: grid; gap: 14px; }
@@ -47,6 +48,13 @@
   #log li.sp::before { content: "— "; color: var(--coral-d); }
   #log li.th { color: var(--ink-l); font-style: italic; }
   #log li.th::before { content: "∘ "; color: var(--ink-l); }
+  .intro { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; text-align: center; padding-inline: 24px;
+    background: rgba(28, 23, 20, .82); color: var(--paper); font-size: 19px; }
+  .intro p { margin: 0; max-width: 46ch; }
+  .intro b { color: var(--coral); font-weight: 400; }
+  .intro-title { font-family: var(--display); font-size: clamp(20px, 3vw, 30px); }
+  .intro button { justify-self: center; background: var(--coral); border-color: var(--coral); color: var(--ink); font-size: 14px; padding: 12px 22px; }
+  .intro button:hover { background: var(--cream); }
   .note { font-size: 15px; color: var(--ink-l); margin: 0; }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
 </style>
@@ -62,6 +70,7 @@
       <select id="level" aria-label="Уровень"></select>
       <button id="restart" type="button">Заново</button>
       <button id="pause" type="button">Пауза</button>
+      <button id="voice" type="button">Голос: писклявый</button>
       <button id="mute" type="button" aria-pressed="true">Звук: вкл</button>
     </div>
   </header>
@@ -69,7 +78,13 @@
   <div class="layout">
     <section>
       <div id="stagewrap">
-        <div class="screen"><canvas id="view" width="320" height="180"></canvas><canvas id="ui" width="320" height="180"></canvas></div>
+        <div class="screen"><canvas id="view" width="320" height="180"></canvas><canvas id="ui" width="320" height="180"></canvas>
+          <div id="intro" class="intro">
+            <p class="intro-title">Шарик ждёт</p>
+            <p>Он покатится сам. Вы — наблюдатель: <b>кликните по ловушке или боссу</b>, чтобы разбудить его. Проснувшийся враг какое-то время действует сам.</p>
+            <button id="go" type="button">Начать</button>
+          </div>
+        </div>
         <div class="bar"><span id="stats">Лепёшек 0</span><span><b id="stage">стадия прозрения 0/5</b></span></div>
       </div>
     </section>
@@ -84,6 +99,7 @@
           <li><img alt="" src="{{trap_spring_idle}}"><span><b>Пружина</b> — подбрасывает к небу</span></li>
           <li><img alt="" src="{{boss_stag_idle}}"><span><b>Боссы</b> — Олень, Всевидящий, Червь, Хранитель</span></li>
         </ul>
+        <p class="note" style="margin-top:8px">Клик будит врага: коралловая рамка — он проснулся и действует сам, полоска — сколько ещё. Боссы ходят за шариком и устают.</p>
       </div>
       <div class="card">
         <h2>УПРАВЛЕНИЕ</h2>

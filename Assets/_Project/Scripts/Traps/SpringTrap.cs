@@ -10,7 +10,9 @@ namespace Sharik
         public override string Title => "Пружина";
         public override float Cooldown => Tuning.SpringCooldown;
         public override bool IsDangerous => _launching;
-        public override string DescribeState() => "пружинка на земле (милая?)";
+        public override string DescribeState() => Awake ? "пружинка дрожит от нетерпения" : "пружинка на земле (милая?)";
+        protected override float AutoCooldown => 1.6f;
+        protected override bool WantsAutoAct(BallController b) => b.Grounded && Near(b, Center, 0.6f, 1.6f);
 
         public static SpringTrap Create(Transform parent, int x, int y, LevelRuntime rt)
         {

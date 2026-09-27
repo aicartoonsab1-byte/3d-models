@@ -50,6 +50,7 @@ namespace Sharik
 
         void Fire(TrapBase t)
         {
+            // клик будит врага; дальше он действует сам (TrapBase.Update)
             if (t.Trigger()) TotalFired++;
             else Sfx.Play(Sfx.Id.Denied);
         }

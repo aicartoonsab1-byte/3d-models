@@ -126,7 +126,7 @@ class Sim:
             return None, target
         edge = (cx + 1) - self.x if d > 0 else self.x - cx
         if wall and edge < R + 0.15:          # как Navigator: отступить от стены перед прыжком
-            return None, -d * RUN_SPEED * 0.6 * 0.85
+            return None, -d * RUN_SPEED * 0.6 * 0.5
         trig = 0.75 if wall else 0.35 + (0.75 - 0.35) * self.imp * self.rng.random()
         if edge > trig and not wall:
             return None, target
@@ -159,7 +159,7 @@ class Sim:
         if self.intent in ("forward", "yolo"):
             if abs(self.x - self.stuck_ref) > 1.2:
                 self.stuck_ref, self.stuck_since, self.stuck_tries = self.x, self.t, 0
-            elif self.t - self.stuck_since > 5:
+            elif self.t - self.stuck_since > 8:   # Tuning.StuckSeconds
                 self.stuck_tries += 1
                 self.stuck_since = self.t
                 k = self.stuck_tries % 3
@@ -170,11 +170,11 @@ class Sim:
 
         jump_vx, target = None, 0.0
         if self.intent == "forward":
-            jump_vx, target = self.steer(d, 0.85)
+            jump_vx, target = self.steer(d, 0.5)   # Tuning.WalkMul
         elif self.intent == "yolo":
-            jump_vx, target = self.steer(d, 1.15, yolo=True)
+            jump_vx, target = self.steer(d, 0.95, yolo=True)   # Tuning.YoloMul
         elif self.intent == "back":
-            jump_vx, target = self.steer(-d, 0.6)
+            jump_vx, target = self.steer(-d, 0.4)   # Tuning.BackMul
 
         if jump_vx is not None and self.grounded:
             jvx, pw = jump_vx
@@ -251,7 +251,7 @@ class Sim:
         return abs(self.x - self.goal[0]) < 0.9 and abs(self.y - self.goal[1]) < 1.5
 
 
-def run(lv: Level, n: int, verbose: bool, limit: float = 240.0):
+def run(lv: Level, n: int, verbose: bool, limit: float = 400.0):
     awareness = lv.data.get("awareness", 0)
     results = []
     for i in range(n):

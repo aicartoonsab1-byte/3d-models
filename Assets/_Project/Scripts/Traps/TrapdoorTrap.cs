@@ -11,7 +11,9 @@ namespace Sharik
         public override string Title => "Люк";
         public override float Cooldown => Tuning.TrapdoorCooldown;
         public override bool IsDangerous => IsOpen;
-        public override string DescribeState() => IsOpen ? "люк ОТКРЫТ, под ним бездна" : "деревянный люк в полу";
+        public override string DescribeState() => IsOpen ? "люк ОТКРЫТ, под ним бездна" : Awake ? "люк поскрипывает и ждёт" : "деревянный люк в полу";
+        protected override float AutoCooldown => 2.4f;
+        protected override bool WantsAutoAct(BallController b) => Near(b, Center, 1.4f, 2f);
 
         public static TrapdoorTrap Create(Transform parent, int x, int y, LevelRuntime rt)
         {

@@ -25,6 +25,14 @@ namespace Sharik
                     if (t.Hotkey == 0) continue;
                     var sp = Camera.main.WorldToScreenPoint(t.LabelPoint);
                     var r = new Rect(sp.x - fs * 0.45f, Screen.height - sp.y - fs * 0.6f, fs * 0.95f, fs * 1.05f);
+                    if (t.Awake)
+                    {
+                        // проснулся: коралловая рамка и полоска оставшегося бодрствования
+                        GUI.color = new Color32(0xe2, 0x61, 0x5c, 255);
+                        GUI.DrawTexture(new Rect(r.x - 3 * px, r.y - 3 * px, r.width + 6 * px, r.height + 6 * px), UiStyle.White);
+                        GUI.color = new Color32(0xfa, 0xf3, 0xe1, 255);
+                        GUI.DrawTexture(new Rect(r.x - 3 * px, r.y - 6 * px, (r.width + 6 * px) * t.AwakeLeft01, 2 * px), UiStyle.White);
+                    }
                     GUI.color = t.Ready ? new Color(0.1f, 0.1f, 0.15f, 0.85f) : new Color(0.3f, 0.1f, 0.1f, 0.7f);
                     GUI.DrawTexture(r, UiStyle.White);
                     if (!t.Ready)
@@ -51,7 +59,7 @@ namespace Sharik
                 var br = gm.Brain != null && gm.Brain.Llm != null ? gm.Brain.Llm.Status : "—";
                 string mode = gm.Cfg.useLlm ? $"Нейросеть: {br}" : "Нейросеть выключена (F2) — офлайн-фразы";
                 UiStyle.Shadowed(new Rect(10, Screen.height - fs * 1.4f - 6, Screen.width, fs * 1.4f),
-                    "Мешай шарику: клик по ловушке или 1–9 · R — заново · Esc — пауза · F1 — мысли нейросети · M — звук   |   " + mode,
+                    "Клик по врагу (или 1–9) будит его — дальше он действует сам · R — заново · Esc — пауза · F1 — мысли нейросети · M — звук   |   " + mode,
                     UiStyle.Small, new Color(1, 1, 1, 0.75f));
 
                 if (ShowDebug && gm.Brain != null) DrawDebug(gm);
