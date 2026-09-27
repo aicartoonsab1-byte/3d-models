@@ -141,7 +141,7 @@ def main(argv):
     OUT.mkdir(parents=True, exist_ok=True)
     done = 0
     for lv in all_levels():
-        if masks and not any(fnmatch.fnmatch(lv.path.name, m.split('/')[-1]) for m in masks):
+        if masks and not any((fnmatch.fnmatch(lv.path.name, m.split('/')[-1]) or fnmatch.fnmatch(lv.path.stem, m.split('/')[-1])) for m in masks):
             continue
         out = OUT / f"{lv.path.stem}.png"
         render(lv, with_path).convert("RGB").save(out)

@@ -177,7 +177,7 @@ def main(argv):
     masks = [a for a in argv if not a.startswith("--")]
     levels = all_levels()
     if masks:
-        levels = [lv for lv in levels if any(fnmatch.fnmatch(lv.path.name, m.split('/')[-1]) for m in masks)]
+        levels = [lv for lv in levels if any((fnmatch.fnmatch(lv.path.name, m.split('/')[-1]) or fnmatch.fnmatch(lv.path.stem, m.split('/')[-1])) for m in masks)]
     reports = [check(lv) for lv in levels]
 
     # глобальные проверки порядка

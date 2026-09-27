@@ -330,7 +330,7 @@ def main(argv):
     a = ap.parse_args(argv)
     bad = 0
     for lv in all_levels():
-        if a.masks and not any(fnmatch.fnmatch(lv.path.name, m.split('/')[-1]) for m in a.masks):
+        if a.masks and not any((fnmatch.fnmatch(lv.path.name, m.split('/')[-1]) or fnmatch.fnmatch(lv.path.stem, m.split('/')[-1])) for m in a.masks):
             continue
         if not lv.find("S") or not (lv.find("F") + lv.find("R")):
             continue
