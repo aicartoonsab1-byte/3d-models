@@ -233,13 +233,13 @@ class Sim:
             landed_on = self.platform_under(self.x, self.y - R, ny - R)
         if landed_on is not None:
             ny = landed_on + R
-            self.land()
+            self.land(ny)
         elif self.hits_solid(self.x, ny):
             if self.vy < 0:
                 ny = math.floor(ny - R) + 1 + R
                 if self.hits_solid(self.x, ny):
                     ny = self.y
-                self.land()
+                self.land(ny)
             else:
                 self.vy = 0.0
                 ny = self.y
@@ -287,8 +287,9 @@ class Sim:
             self.die("бездна")
         self.t += DT
 
-    def land(self):
-        soft = self.lv.ch(math.floor(self.x), math.floor(self.y - R - 0.05)) == "O"   # гриб гасит удар
+    def land(self, ny=None):
+        yy = self.y if ny is None else ny            # позиция ПОСЛЕ шага (y ещё не присвоен)
+        soft = self.lv.ch(math.floor(self.x), math.floor(yy - R - 0.05)) == "O"   # гриб гасит удар
         if self.peak_fall > SPLAT_SPEED and not soft:
             self.splats += 1
             self.t += 1.3 + 0.5
