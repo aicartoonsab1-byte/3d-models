@@ -209,7 +209,18 @@ def voice_stats(path: Path) -> dict:
     f0 = np.array(f0s) if f0s else np.array([0.0])
     spec = np.abs(np.fft.rfft(x[: sr * 20])); fq = np.fft.rfftfreq(len(x[: sr * 20]), 1 / sr)
     cum = np.cumsum(spec) / (spec.sum() + 1e-9)
-    return {"f0": float(np.median(f0)), "f0_spread_semi": float(12 * np.log2((np.percentile(f0, 90) + 1) / (np.percentile(f0, 10) + 1))),
+    # темп: слоговые пики огибающей речевой полосы (300–3000 Гц), на секунду речи
+    X = np.fft.rfft(x); fqx = np.fft.rfftfreq(len(x), 1 / sr); X[(fqx < 300) | (fqx > 3000)] = 0
+    band = np.fft.irfft(X, len(x))
+    env = np.sqrt(np.convolve(band ** 2, np.ones(160) / 160, "same"))[::160]          # 10 мс
+    env = np.convolve(env, np.ones(5) / 5, "same")
+    thr = np.percentile(env, 60); speech = env > np.percentile(env, 35)
+    peaks, last = 0, -99
+    for i in range(1, len(env) - 1):
+        if env[i] > thr and env[i] >= env[i - 1] and env[i] > env[i + 1] and i - last >= 10:
+            peaks += 1; last = i
+    rate = peaks / max(1.0, speech.sum() / 100)
+    return {"rate": float(rate), "f0": float(np.median(f0)), "f0_spread_semi": float(12 * np.log2((np.percentile(f0, 90) + 1) / (np.percentile(f0, 10) + 1))),
             "voiced": voiced, "brightness": float(np.median(cents)) if cents else 0.0,
             "band_low": float(fq[np.searchsorted(cum, 0.02)]), "band_high": float(fq[np.searchsorted(cum, 0.98)]), "seconds": len(x) / sr}
 
@@ -218,7 +229,7 @@ def analyze(ref: Path):
     """Сравнить референс с дикторами и предложить профиль."""
     import math
     r = voice_stats(ref)
-    print(f"референс: высота ~{r['f0']:.0f} Гц, интонация ±{r['f0_spread_semi']:.1f} пт, яркость {r['brightness']:.0f} Гц, "
+    print(f"референс: темп ~{r['rate']:.1f} слог/с, высота ~{r['f0']:.0f} Гц, интонация ±{r['f0_spread_semi']:.1f} пт, яркость {r['brightness']:.0f} Гц, "
           f"полоса {r['band_low']:.0f}–{r['band_high']:.0f} Гц, {r['seconds']:.1f} с")
     best = []
     with tempfile.TemporaryDirectory() as td:
@@ -233,10 +244,12 @@ def analyze(ref: Path):
     print("ближайшие дикторы:")
     for score, sp, semi, st in best[:4]:
         print(f"  {sp:12} свой {st['f0']:.0f} Гц → сдвиг {semi:+.1f} пт (оценка {score:.2f})")
-    _, sp, semi, _ = best[0]
+    _, sp, semi, st0 = best[0]
+    tempo = round(max(0.75, min(1.3, r["rate"] / max(0.5, st0["rate"]))), 2)
+    print(f"темп диктора {sp}: {st0['rate']:.1f} слог/с → tempo {tempo}")
     fx = []
     if r["band_high"] < 4200: fx.append("telephone")
-    prof = {"engine": "rhvoice", "speaker": sp, "pitch": round(max(-8, min(8, semi)), 1), "tempo": 1.0, "fx": fx,
+    prof = {"engine": "rhvoice", "speaker": sp, "pitch": round(max(-8, min(8, semi)), 1), "tempo": tempo, "fx": fx,
             "moodScale": round(min(1.5, max(0.3, r["f0_spread_semi"] / 8)), 2), "desc": f"подобран по референсу {ref.name}"}
     print("предлагаемый профиль:", json.dumps(prof, ensure_ascii=False))
     return prof

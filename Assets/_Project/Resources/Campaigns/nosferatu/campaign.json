@@ -557,5 +557,5 @@
    "promptHint": "Ты — Кнопик в старом немом кино: вежливый канцелярит, приметы, молитвы святым почтового ведомства, мысли о Лине. Не говори про матрицу, код и программу."
   }
  },
- "voices": {"hero": "knopik_hero", "narrator": "knopik_narr"}
+ "voices": {"hero": "knopik_hero", "narrator": "ref_narrator_old"}
 }
