@@ -143,7 +143,10 @@ def check(lv: Level) -> dict:
                 if fall > SPLAT_SPEED:
                     info.append(f"эффектное падение-лепёшка {a}→{b} (скорость {fall:.1f})")
             # ловушки рядом с путём
-            pcols = {p[0] for p in path}
+            # колонки пути — включая всё, над чем шарик пролетает между точками приземления
+            pcols = set()
+            for a, b in zip(path, path[1:] or path):
+                pcols.update(range(min(a[0], b[0]), max(a[0], b[0]) + 1))
             for (c, x, y) in trap_cells:
                 if not any(abs(x - px) <= 2 for px in pcols):
                     warnings.append(f"{TRAP_NAMES[c]} в ({x},{y}) далеко от пути шарика — не сработает")
