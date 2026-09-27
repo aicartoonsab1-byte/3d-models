@@ -20,6 +20,7 @@
 ```bash
 python3 Tools/levels/validate.py            # проходимость и схема всех уровней
 python3 Tools/levels/render.py --path       # превью → Design/previews/*.png
+python3 Tools/levels/autoplay.py            # дойдёт ли шарик сам (порт Navigator.cs)
 python3 Tools/art/generate_sprites.py       # перерисовать все спрайты
 Tools/compile_check/check.sh                # C# компилируется без Unity
 ```

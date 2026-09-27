@@ -25,5 +25,7 @@ description: Конвейер создания уровня «Шарика» с�
 ## Инструменты
 - `python3 Tools/levels/validate.py [маска] [--json]` — проверка схемы и проходимости (физика шарика та же, что в игре).
 - `python3 Tools/levels/render.py [маска] [--path]` — PNG-превью спрайтами игры.
+- `python3 Tools/levels/autoplay.py [маска] [-n 10] [-v]` — дойдёт ли сам шарик своим инстинктом.
+- `Tools/levels/gridkit.py` — конструктор сетки для скриптов сборки уровня.
 - `python3 Tools/art/generate_sprites.py` — перегенерация спрайтов (если менялся стиль).
 - `Tools/compile_check/check.sh` — компиляция C# без Unity.

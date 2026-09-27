@@ -7,7 +7,8 @@ description: Полная проверка игры «Шарик» без Unity 
 
 1. `python3 Tools/levels/validate.py`: все уровни должны быть `[OK]`.
 2. `python3 Tools/levels/render.py --path` и просмотр каждого `Design/previews/*.png` через Read.
-3. `Tools/compile_check/check.sh`: C# компилируется при обоих вариантах ввода (Input System и старый Input Manager).
+3. `python3 Tools/levels/autoplay.py -n 10`: сам шарик (инстинкт из Navigator.cs) доходит до конца.
+4. `Tools/compile_check/check.sh`: C# компилируется при обоих вариантах ввода (Input System и старый Input Manager).
 4. Сквозная арка: выпиши `order / title / awareness / palette / boss` всех уровней и сверь с таблицей в `Design/GDD.md`.
 5. Для глубокого разбора уровней запусти агента `playtester`.
 

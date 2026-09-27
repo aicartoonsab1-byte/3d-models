@@ -20,3 +20,4 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 ## Проверка (обязательно)
 1. `python3 Tools/levels/validate.py <id>.json`: `[OK]`, и нет предупреждений «ловушка далеко от пути».
 2. `python3 Tools/levels/render.py <id>.json --path` и посмотри PNG: номера ловушек должны стоять вдоль красной линии пути.
+3. `python3 Tools/levels/autoplay.py <id>.json -n 10`: шарик дошёл ≥ 8/10 (ловушки при прогоне пассивны).

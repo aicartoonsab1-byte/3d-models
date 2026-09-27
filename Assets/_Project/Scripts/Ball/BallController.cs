@@ -42,6 +42,7 @@ namespace Sharik
             rb.freezeRotation = true;                       // вращение рисуем сами (пятнышки)
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.sleepMode = RigidbodySleepMode2D.NeverSleep;     // иначе стоящий шарик «не чувствует» выдвинутые шипы
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = Tuning.BallRadius;
             col.sharedMaterial = new PhysicsMaterial2D("Plasticine") { friction = 0.2f, bounciness = 0f };
@@ -129,6 +130,8 @@ namespace Sharik
         void OnCollisionEnter2D(Collision2D c)
         {
             if (State != BallState.Alive) return;
+            // пресс (кинематическое тело) сам решает, когда делать лепёшку
+            if (c.rigidbody != null && c.rigidbody.bodyType == RigidbodyType2D.Kinematic) return;
             float impact = 0f;
             Vector2 normal = Vector2.up;
             for (int i = 0; i < c.contactCount; i++)

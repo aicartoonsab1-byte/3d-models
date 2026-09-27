@@ -62,6 +62,10 @@
 7. **Проверяйте:** `python3 Tools/levels/validate.py <файл>` должен выдавать `[OK]` без ошибок.
 8. **Смотрите:** `python3 Tools/levels/render.py <файл> --path`, затем откройте `Design/previews/<id>.png`.
 
+## Сборка сетки кодом
+
+Не набирайте строки руками: используйте `Tools/levels/gridkit.py`. Пример использования есть в docstring модуля.
+
 ## Минимальный пример
 
 ```json
