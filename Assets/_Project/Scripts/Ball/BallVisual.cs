@@ -47,6 +47,34 @@ namespace Sharik
 
         public void LookAt(Vector2? worldPoint) => _lookAt = worldPoint;
 
+        float _trembleUntil, _trembleK;
+
+        /// <summary>
+        /// Эмоция с силой 0..1 — видна в пластилине: страх — дрожь и капли пота, радость — подпрыгивает и искрит,
+        /// злость — пар и тряска, грусть — оседает и плачет, трепет — звёздочки, «матрица» — пиксельный шум.
+        /// </summary>
+        public void Emote(string mood, float k)
+        {
+            k = Mathf.Clamp01(k);
+            SetMood(mood, 2f + k * 3f);
+            var p = (Vector2)transform.position;
+            int n = Mathf.RoundToInt(2 + k * 6);
+            var cream = new Color32(0xfa, 0xf3, 0xe1, 255); var coral = new Color32(0xe2, 0x61, 0x5c, 255); var ink = new Color32(0x1c, 0x17, 0x14, 255);
+            switch (mood)
+            {
+                case "scared": _trembleUntil = Time.time + 1f + k * 1.5f; _trembleK = k; Fx.Burst(p + new Vector2(0.45f, 0.35f), cream, cream, n, -6f, 1f, 0.9f); break;
+                case "angry": _trembleUntil = Time.time + 0.5f + k; _trembleK = k; Fx.Burst(p + Vector2.up * 0.5f, ink, ink, n, 0.5f, 0.8f, 1f); if (k > 0.6f) CameraRig.Shake(0.15f, 0.04f * k); break;
+                case "sad": Squash(0.25f * k, Vector2.up); Fx.Burst(p + new Vector2(-0.1f, 0.1f), cream, cream, n / 2 + 1, -3f, 0.3f, 1.2f); break;
+                case "happy": Fx.Burst(p, coral, cream, n, 0f, 0.8f, 0.9f); Stretch(0.4f * k); break;
+                case "awe": Fx.Burst(p + Vector2.up * 0.3f, cream, coral, n, 0f, 0.6f, 0.9f); break;
+                case "glitch": Fx.Burst(p, new Color32(0x3c, 0xf0, 0x9a, 255), coral, n, 0f, 1.5f, 0.25f); break;
+            }
+            // радость — подпрыгивает (если стоит)
+            var ball = GetComponentInParent<BallController>();
+            if (mood == "happy" && k > 0.6f && ball != null && ball.IsAlive && ball.Grounded)
+                ball.Body.SetVel(new Vector2(ball.Body.Vel().x, 4f + k * 3f));
+        }
+
         // ------------------------------------------------------------ пружинка формы
         public void Squash(float amount, Vector2 normal)
         {
@@ -79,6 +107,11 @@ namespace Sharik
             // качение: пятнышки крутятся, пиксельно шагами по 22.5°
             _roll -= vel.x / Tuning.BallRadius * Mathf.Rad2Deg * Time.deltaTime;
             _spots.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Round(_roll / 22.5f) * 22.5f);
+
+            // дрожь от страха/злости
+            if (Time.time < _trembleUntil)
+                _pivot.localPosition = new Vector3(Mathf.Round(Random.Range(-1f, 1f) * _trembleK) / Tuning.PixelsPerUnit, -Tuning.BallRadius, 0);
+            else _pivot.localPosition = new Vector3(0, -Tuning.BallRadius, 0);
 
             // взгляд
             if (_lookAt.HasValue) _lookLeft = _lookAt.Value.x < transform.position.x;

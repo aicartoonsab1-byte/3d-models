@@ -14,19 +14,20 @@ namespace UnityEditor {
     public void ReadTextureSettings(TextureImporterSettings s){} public void SetTextureSettings(TextureImporterSettings s){} }
   public class InitializeOnLoadAttribute : System.Attribute {}
   public class MenuItem : System.Attribute { public MenuItem(string s){} }
-  public static class EditorApplication { public static System.Action delayCall; }
+  public delegate void CallbackFunction();
+  public static class EditorApplication { public static System.Action delayCall; public static CallbackFunction update; }
   public enum InsecureHttpOption { NotAllowed, DevelopmentOnly, AlwaysAllowed }
   public static class PlayerSettings { public static InsecureHttpOption insecureHttpOption; }
   [System.Flags] public enum ImportAssetOptions { Default=0, ForceUpdate=1, ImportRecursive=256 }
   public static class AssetDatabase { public static void ImportAsset(string p, ImportAssetOptions o){} }
-  public static class EditorUtility { public static void RevealInFinder(string p){} }
+  public static class EditorUtility { public static void RevealInFinder(string p){} public static bool DisplayDialog(string a,string b,string c)=>true; public static bool DisplayCancelableProgressBar(string a,string b,float c)=>false; public static void ClearProgressBar(){} }
 }
 #if ENABLE_INPUT_SYSTEM
 namespace UnityEngine.InputSystem {
   public class ButtonControl { public bool wasPressedThisFrame; }
   public class Vector2Control { public UnityEngine.Vector2 ReadValue()=>default; }
   public class Keyboard { public static Keyboard current;
-    public ButtonControl rKey,nKey,pKey,mKey,escapeKey,f1Key,f2Key,spaceKey,enterKey,digit1Key,digit2Key,digit3Key,digit4Key,digit5Key,digit6Key,digit7Key,digit8Key,digit9Key,anyKey; }
+    public ButtonControl rKey,nKey,pKey,mKey,escapeKey,f1Key,f2Key,f3Key,spaceKey,enterKey,digit1Key,digit2Key,digit3Key,digit4Key,digit5Key,digit6Key,digit7Key,digit8Key,digit9Key,anyKey; }
   public class Mouse { public static Mouse current; public ButtonControl leftButton; public Vector2Control position; }
 }
 #endif

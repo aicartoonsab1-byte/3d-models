@@ -16,7 +16,8 @@ namespace Sharik
         public string storyBeat;      // контекст для нейросети: что сейчас происходит в душе шарика
         public string goalHint;
         public bool final;
-        public string boss;           // вид босса для клетки 'B': stag | watcher | worm | keeper
+        public string boss;
+        public bool dark;             // тьма: видно только вокруг шарика           // вид босса для клетки 'B': stag | watcher | worm | keeper
         public string[] intro;
         public string[] outro;
         public ScriptLine[] lines;

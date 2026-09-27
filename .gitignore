@@ -31,3 +31,6 @@ __pycache__/
 Tools/compile_check/.refs/
 Tools/compile_check/bin/
 Tools/compile_check/obj/
+
+# Скачанный голос Piper (Шарик → Голос → Установить)
+/Piper/

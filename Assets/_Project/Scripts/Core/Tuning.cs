@@ -22,6 +22,12 @@ namespace Sharik
         public const float CoyoteTime = 0.1f;
         public const float KillY = -3f;               // ниже — упал в бездну
 
+        // --- механики уровня
+        public const float ConveyorSpeed = 2f, IceAccelMul = 0.25f;
+        public const float CrumbleDelay = 0.6f, CrumbleBack = 4f;
+        public static readonly float[] MushroomPowers = { 1.45f, 1.25f };   // прыжок с гриба-батута
+        public const float PortalCooldown = 1.2f;
+
         // --- ловушки
         public const float SpikesActive = 1.6f, SpikesCooldown = 3f;
         public const float CrusherHold = 0.6f, CrusherCooldown = 3.5f, CrusherFallSpeed = 22f, CrusherRiseSpeed = 3f;

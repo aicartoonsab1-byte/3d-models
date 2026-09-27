@@ -100,7 +100,7 @@ namespace Sharik
         [Serializable] class Msg { public string content; }
     }
 
-    /// <summary>Ответ «мозга» шарика.</summary>
+    /// <summary>Ответ «разума» шарика (схема — в BrainPrompt).</summary>
     [Serializable]
     public class BrainReply
     {
@@ -108,27 +108,49 @@ namespace Sharik
         public string say;
         public string action;
         public string mood;
+        public float intensity = 0.5f;
+        public string target;
+        public NameReply name;
+        public string belief, question, answered;
+        public TraitShift traits;
+
+        [Serializable] public class NameReply { public string thing; public string @as; }
+        [Serializable] public class TraitShift { public float curiosity, courage, trust, awareness; }
 
         /// <summary>Достаёт JSON из ответа модели (модели любят добавлять текст, ```json и &lt;think&gt;).</summary>
         public static BrainReply Parse(string content)
         {
-            if (string.IsNullOrEmpty(content)) return null;
-            int think = content.IndexOf("</think>", StringComparison.Ordinal);
-            if (think >= 0) content = content.Substring(think + 8);
-            int a = content.IndexOf('{');
-            int b = content.LastIndexOf('}');
-            if (a >= 0 && b > a)
+            string json = ExtractJson(content);
+            if (json != null)
             {
                 try
                 {
-                    var r = JsonUtility.FromJson<BrainReply>(content.Substring(a, b - a + 1));
-                    if (r != null && (!string.IsNullOrEmpty(r.thought) || !string.IsNullOrEmpty(r.say))) return r;
+                    var r = JsonUtility.FromJson<BrainReply>(json);
+                    if (r != null && (!string.IsNullOrEmpty(r.thought) || !string.IsNullOrEmpty(r.say) || !string.IsNullOrEmpty(r.action))) return r;
                 }
                 catch { /* упадём ниже в «просто текст» */ }
             }
-            var text = content.Trim().Trim('`', '"');
+            var text = (content ?? "").Trim().Trim('`', '"');
             if (text.Length == 0) return null;
             return new BrainReply { thought = text.Length > 120 ? text.Substring(0, 120) + "…" : text, action = "forward" };
         }
+
+        public static string ExtractJson(string content)
+        {
+            if (string.IsNullOrEmpty(content)) return null;
+            int think = content.IndexOf("</think>", StringComparison.Ordinal);
+            if (think >= 0) content = content.Substring(think + 8);
+            int a = content.IndexOf('{'), b = content.LastIndexOf('}');
+            return a >= 0 && b > a ? content.Substring(a, b - a + 1) : null;
+        }
+    }
+
+    /// <summary>Ответ на рефлексию после уровня.</summary>
+    [Serializable]
+    public class ReflectionReply
+    {
+        public string diary;
+        public string[] beliefs;
+        public string[] questions;
     }
 }

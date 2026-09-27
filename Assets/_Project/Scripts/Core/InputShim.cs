@@ -11,7 +11,7 @@ namespace Sharik
     /// </summary>
     public static class InputShim
     {
-        public enum K { R, N, P, M, Escape, F1, F2, Space, Enter, D1, D2, D3, D4, D5, D6, D7, D8, D9 }
+        public enum K { R, N, P, M, Escape, F1, F2, F3, Space, Enter, D1, D2, D3, D4, D5, D6, D7, D8, D9 }
 
         public static bool Down(K k)
         {
@@ -27,6 +27,7 @@ namespace Sharik
                 case K.Escape: return kb.escapeKey.wasPressedThisFrame;
                 case K.F1: return kb.f1Key.wasPressedThisFrame;
                 case K.F2: return kb.f2Key.wasPressedThisFrame;
+                case K.F3: return kb.f3Key.wasPressedThisFrame;
                 case K.Space: return kb.spaceKey.wasPressedThisFrame;
                 case K.Enter: return kb.enterKey.wasPressedThisFrame;
                 case K.D1: return kb.digit1Key.wasPressedThisFrame;
@@ -50,6 +51,7 @@ namespace Sharik
                 case K.Escape: return Input.GetKeyDown(KeyCode.Escape);
                 case K.F1: return Input.GetKeyDown(KeyCode.F1);
                 case K.F2: return Input.GetKeyDown(KeyCode.F2);
+                case K.F3: return Input.GetKeyDown(KeyCode.F3);
                 case K.Space: return Input.GetKeyDown(KeyCode.Space);
                 case K.Enter: return Input.GetKeyDown(KeyCode.Return);
                 default:

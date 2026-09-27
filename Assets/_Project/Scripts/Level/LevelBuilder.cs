@@ -3,6 +3,14 @@ using UnityEngine;
 
 namespace Sharik
 {
+    /// <summary>Видимая шарику вещь: id для нейросети, вид (ключ имён) и её трансформ (null — исчезла).</summary>
+    public class WorldThing
+    {
+        public readonly string Id, Key;
+        public readonly Transform Tr;
+        public WorldThing(string id, string key, Transform tr) { Id = id; Key = key; Tr = tr; }
+    }
+
     /// <summary>Результат постройки уровня.</summary>
     public class LevelRuntime
     {
@@ -14,6 +22,10 @@ namespace Sharik
         public readonly List<TrapBase> Traps = new List<TrapBase>();
         public readonly List<SpriteRenderer> WorldSprites = new List<SpriteRenderer>();
         public Color Sky;
+        public readonly List<Portal> Portals = new List<Portal>();
+        /// <summary>Вещи, которые шарик видит и может разглядывать/называть (декор, осколки, флажки, выход).</summary>
+        public readonly List<WorldThing> Things = new List<WorldThing>();
+        public readonly Dictionary<Vector2Int, SpriteRenderer> Mushrooms = new Dictionary<Vector2Int, SpriteRenderer>();
     }
 
     /// <summary>
@@ -62,11 +74,41 @@ namespace Sharik
                         bool top = d.At(x, y + 1) != '#' && d.At(x, y + 1) != 'T';
                         rt.WorldSprites.Add(SpriteLib.Make("t", tiles, $"tile_{pal}_{(top ? "top" : "fill")}{Variant(x, y)}", p, Order.Tiles));
                         if (top && d.At(x, y + 1) == '.' && Deco(x, y, d))
-                            rt.WorldSprites.Add(SpriteLib.Make("Deco", objs, $"deco_{(x * 7 + y) % 4}", LevelGrid.Center(x, y + 1), Order.Objects - 2));
+                        {
+                            string key = $"deco_{(x * 7 + y) % 4}";
+                            var deco = SpriteLib.Make("Deco", objs, key, LevelGrid.Center(x, y + 1), Order.Objects - 2);
+                            rt.WorldSprites.Add(deco);
+                            rt.Things.Add(new WorldThing("deco" + rt.Things.Count, key, deco.transform));
+                        }
                         break;
                     case '=':
                         rt.WorldSprites.Add(SpriteLib.Make("p", tiles, $"tile_{pal}_platform", p, Order.Tiles));
                         break;
+                    case 'X': CrumbleBlock.Create(tiles, x, y, rt); break;
+                    case '>': case '<':
+                    {
+                        var sr = SpriteLib.Make("Conveyor", tiles, c == '>' ? "mech_conv_r_0" : "mech_conv_l_0", p, Order.Tiles);
+                        sr.gameObject.AddComponent<SpriteFlip>().Init(c == '>' ? "mech_conv_r" : "mech_conv_l", 8f);
+                        rt.WorldSprites.Add(sr);
+                        break;
+                    }
+                    case '~': rt.WorldSprites.Add(SpriteLib.Make("Ice", tiles, "mech_ice", p, Order.Tiles)); break;
+                    case 'O':
+                    {
+                        // шляпка гриба — вровень с верхом клетки (в спрайте она начинается на 6-м пикселе)
+                        var sr = SpriteLib.Make("Mushroom", tiles, "mech_bounce", p + new Vector2(0, 6f / 16f), Order.Tiles);
+                        rt.WorldSprites.Add(sr);
+                        rt.Mushrooms[new Vector2Int(x, y)] = sr;
+                        rt.Things.Add(new WorldThing("mush" + rt.Things.Count, "mushroom", sr.transform));
+                        break;
+                    }
+                    case '@':
+                    {
+                        var portal = Portal.Create(objs, x, y, rt);
+                        rt.Portals.Add(portal);
+                        rt.Things.Add(new WorldThing("portal" + rt.Things.Count, "portal", portal.transform));
+                        break;
+                    }
                     case 'S':
                         rt.Spawn = new Vector2(p.x, y + Tuning.BallRadius + 0.02f);
                         break;
@@ -76,6 +118,7 @@ namespace Sharik
                         var col = sr.gameObject.AddComponent<BoxCollider2D>();
                         col.isTrigger = true; col.size = new Vector2(0.6f, 1.6f);
                         sr.gameObject.AddComponent<ExitDoor>();
+                        rt.Things.Add(new WorldThing("exit", "exit", sr.transform));
                         rt.Goal = p;
                         rt.WorldSprites.Add(sr);
                         break;
@@ -96,6 +139,7 @@ namespace Sharik
                         var col = sr.gameObject.AddComponent<BoxCollider2D>();
                         col.isTrigger = true; col.size = new Vector2(0.8f, 1f);
                         sr.gameObject.AddComponent<Checkpoint>();
+                        rt.Things.Add(new WorldThing("cp" + rt.Things.Count, "checkpoint", sr.transform));
                         rt.WorldSprites.Add(sr);
                         break;
                     }
@@ -111,6 +155,10 @@ namespace Sharik
                 }
             }
 
+            // порталы парами слева направо: 1-й вход → 2-й выход (как Tools/levels/levellib.py)
+            rt.Portals.Sort((a, b) => a.Cell.x != b.Cell.x ? a.Cell.x.CompareTo(b.Cell.x) : b.Cell.y.CompareTo(a.Cell.y));
+            for (int i = 0; i + 1 < rt.Portals.Count; i += 2) rt.Portals[i].Exit = rt.Portals[i + 1];
+
             fragOrder.Sort((a, b) => a.y != b.y ? b.y.CompareTo(a.y) : a.x.CompareTo(b.x));
             foreach (var f in fragOrder)
             {
@@ -118,14 +166,19 @@ namespace Sharik
                 var col = sr.gameObject.AddComponent<CircleCollider2D>();
                 col.isTrigger = true; col.radius = 0.4f;
                 var fr = sr.gameObject.AddComponent<Fragment>();
+                rt.Things.Add(new WorldThing("frag" + fragIndex, "fragment", sr.transform));
                 fr.text = fragIndex < d.fragments.Length ? d.fragments[fragIndex] : "...";
                 fragIndex++;
             }
 
             BuildColliders(d, root);
             BuildBackground(rt, pal);
+            if (d.dark) Darkness.Create(root);
             return rt;
         }
+
+        /// <summary>Что входит в общие (объединяемые) коллайдеры земли. X и T — отдельные, они исчезают.</summary>
+        static bool Merge(char c) => c == '#' || c == '<' || c == '>' || c == '~' || c == 'O';
 
         /// <summary>Вариант тайла: изредка — с полумесяцем, глазом или ростком.</summary>
         static string Variant(int x, int y)
@@ -156,15 +209,15 @@ namespace Sharik
             for (int y = d.Height - 1; y >= 0; y--)
             for (int x = 0; x < d.Width; x++)
             {
-                if (used[x, y] || d.At(x, y) != '#') continue;
+                if (used[x, y] || !Merge(d.At(x, y))) continue;
                 int x2 = x;
-                while (x2 + 1 < d.Width && d.At(x2 + 1, y) == '#' && !used[x2 + 1, y]) x2++;
+                while (x2 + 1 < d.Width && Merge(d.At(x2 + 1, y)) && !used[x2 + 1, y]) x2++;
                 int y2 = y;   // расширяем вниз, пока вся полоса твёрдая
                 while (y2 - 1 >= 0)
                 {
                     bool ok = true;
                     for (int xx = x; xx <= x2; xx++)
-                        if (d.At(xx, y2 - 1) != '#' || used[xx, y2 - 1]) { ok = false; break; }
+                        if (!Merge(d.At(xx, y2 - 1)) || used[xx, y2 - 1]) { ok = false; break; }
                     if (!ok) break;
                     y2--;
                 }

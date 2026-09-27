@@ -42,6 +42,18 @@ namespace Sharik
 
             bool wall = _g.IsSolid(nx, c.y);
             bool pit = !_g.IsSupport(nx, c.y - 1) && !_g.HasFloorBelow(nx, c.y, out _);
+
+            // на грибе-батуте: высокая стена в 2–3 клетках — прыгаем с гриба заранее
+            if (_g.Data.At(c.x, c.y - 1) == 'O' && !wall)
+            {
+                for (int k = 2; k <= 3; k++)
+                {
+                    int x2 = c.x + dir * k;
+                    if (!(_g.IsSolid(x2, c.y) && _g.IsSolid(x2, c.y + 3))) continue;
+                    if (TryAimedJump(ball, pos, c, dir, out float mvx, out float mpw, 3)) { ball.Jump(mvx, mpw); return; }
+                    break;
+                }
+            }
             bool lowStep = !wall && !_g.IsSupport(nx, c.y - 1) && _g.HasFloorBelow(nx, c.y, out int fy) && c.y - fy >= 1;
             if (!(wall || pit))
             {
@@ -81,22 +93,25 @@ namespace Sharik
 
         /// <summary>Найти ближайшую клетку впереди, куда можно долететь, и нужную горизонтальную скорость.</summary>
         static readonly float[] Powers = { 1f, 0.85f, 0.7f, 0.55f };
+        static readonly float[] MushPowers = { 1.45f, 1.25f, 1f, 0.85f, 0.7f, 0.55f };   // Tuning.MushroomPowers + обычные
 
-        public bool TryAimedJump(BallController ball, Vector2 pos, Vector2Int c, int dir, out float vx, out float power)
+        public bool TryAimedJump(BallController ball, Vector2 pos, Vector2Int c, int dir, out float vx, out float power, int minDy = -6)
         {
             vx = 0; power = 1f;
             float best = float.MaxValue;
+            bool mush = _g.Data.At(c.x, c.y - 1) == 'O';
+            var powers = mush ? MushPowers : Powers;
             for (int dx = 1; dx <= 6; dx++)
-            for (int dy = 3; dy >= -6; dy--)
+            for (int dy = mush ? 7 : 3; dy >= minDy; dy--)
             {
                 int tx = c.x + dir * dx, ty = c.y + dy;
                 if (!_g.IsStandable(tx, ty)) continue;
                 if (dx == 1 && dy == 0) continue;
                 float h = ty - c.y;                       // перепад высоты в клетках
                 // сначала полный прыжок, под низким потолком — слабее
-                for (int k = 0; k < Powers.Length; k++)
+                for (int k = 0; k < powers.Length; k++)
                 {
-                    float v0 = Tuning.JumpSpeed * Powers[k];
+                    float v0 = Tuning.JumpSpeed * powers[k];
                     float disc = v0 * v0 - 2f * G * (h + 0.15f);
                     if (disc < 0) break;
                     float t = (v0 + Mathf.Sqrt(disc)) / G;   // время до приземления (нисходящая ветвь)
@@ -105,7 +120,7 @@ namespace Sharik
                     if (!ArcClear(pos, needVx, v0, t)) continue;
                     // предпочитаем ближние и не слишком низкие клетки
                     float score = dx * 1.0f + Mathf.Max(0, -dy) * 0.6f - Mathf.Max(0, dy) * 0.2f + k * 0.3f;
-                    if (score < best) { best = score; vx = needVx; power = Powers[k]; }
+                    if (score < best) { best = score; vx = needVx; power = powers[k]; }
                     break;
                 }
             }

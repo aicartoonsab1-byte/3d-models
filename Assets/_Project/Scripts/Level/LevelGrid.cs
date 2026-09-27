@@ -8,6 +8,8 @@ namespace Sharik
     {
         public readonly LevelData Data;
         readonly Dictionary<Vector2Int, TrapdoorTrap> _trapdoors = new Dictionary<Vector2Int, TrapdoorTrap>();
+        readonly Dictionary<Vector2Int, CrumbleBlock> _crumbles = new Dictionary<Vector2Int, CrumbleBlock>();
+        public void RegisterCrumble(Vector2Int c, CrumbleBlock b) => _crumbles[c] = b;
 
         public LevelGrid(LevelData d) { Data = d; }
         public int W => Data.Width;
@@ -19,7 +21,8 @@ namespace Sharik
         {
             if (x < 0 || x >= W) return true;
             char c = Data.At(x, y);
-            if (c == '#') return true;
+            if (c == '#' || c == '<' || c == '>' || c == '~' || c == 'O') return true;
+            if (c == 'X') return !_crumbles.TryGetValue(new Vector2Int(x, y), out var cb) || !cb.Gone;
             if (c == 'T') return !_trapdoors.TryGetValue(new Vector2Int(x, y), out var t) || !t.IsOpen;
             return false;
         }
@@ -42,6 +45,10 @@ namespace Sharik
             floorY = -1;
             return false;
         }
+
+        /// <summary>Символ опоры прямо под шариком (конвейер, лёд, гриб…).</summary>
+        public char UnderBall(Vector2 ballPos) =>
+            Data.At(Mathf.FloorToInt(ballPos.x), Mathf.FloorToInt(ballPos.y - Tuning.BallRadius - 0.05f));
 
         public static Vector2Int Cell(Vector2 p) => new Vector2Int(Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y));
         public static Vector2 Center(int x, int y) => new Vector2(x + 0.5f, y + 0.5f);

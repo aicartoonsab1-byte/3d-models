@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 namespace Sharik
@@ -9,6 +10,7 @@ namespace Sharik
         public float BigAlpha;
         public float Fade;              // 0..1 затемнение экрана
         public bool ShowDebug;
+        public bool ShowMind = true;
 
         void OnGUI()
         {
@@ -63,6 +65,7 @@ namespace Sharik
                     UiStyle.Small, new Color(1, 1, 1, 0.75f));
 
                 if (ShowDebug && gm.Brain != null) DrawDebug(gm);
+                else if (ShowMind) DrawMind();
             }
 
             if (Fade > 0)
@@ -100,13 +103,37 @@ namespace Sharik
         {
             var llm = gm.Brain.Llm;
             string text = $"<b>НАМЕРЕНИЕ:</b> {gm.Brain.Current}   <b>стадия:</b> {gm.Brain.Awareness}\n" +
-                          $"<b>ПАМЯТЬ:</b>\n{gm.Brain.MemoryDump()}\n" +
+                          $"<b>РАЗУМ:</b> {gm.Brain.Status}\n" +
                           $"<b>ПОСЛЕДНИЙ ЗАПРОС:</b>\n{Trim(llm.LastRequest, 1200)}\n<b>ОТВЕТ:</b>\n{Trim(llm.LastResponse, 600)}";
             var st = UiStyle.Panel;
             st.richText = true;
             float w = Screen.width * 0.42f;
             float h = Mathf.Min(Screen.height * 0.75f, st.CalcHeight(new GUIContent(text), w));
             GUI.Box(new Rect(Screen.width - w - 10, 40, w, h), text, st);
+        }
+
+        /// <summary>Панель «Разум шарика» (F3): черты характера, убеждения, вопросы, имена, дневник.</summary>
+        void DrawMind()
+        {
+            var m = Mind.I;
+            string Bar(float v, float max = 1f) { int n = Mathf.RoundToInt(10 * v / max); return new string('■', n) + new string('□', 10 - n); }
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("<b>РАЗУМ ШАРИКА</b>  (F3 — скрыть)");
+            sb.AppendLine($"любопытство {Bar(m.traits.curiosity)}");
+            sb.AppendLine($"смелость    {Bar(m.traits.courage)}");
+            sb.AppendLine($"доверие     {Bar(m.traits.trust)}");
+            sb.AppendLine($"прозрение   {Bar(m.traits.awareness, 5f)}");
+            sb.AppendLine($"циклов {m.loops} · лепёшек {m.stats.splats} · разглядел {m.stats.inspected}");
+            if (m.beliefs.Count > 0) { sb.AppendLine("<b>верит:</b>"); foreach (var b in m.beliefs.Skip(Mathf.Max(0, m.beliefs.Count - 4))) sb.AppendLine("• " + b); }
+            if (m.questions.Count > 0) { sb.AppendLine("<b>не даёт покоя:</b>"); foreach (var q in m.questions.Take(3)) sb.AppendLine("• " + q); }
+            if (m.names.Count > 0) sb.AppendLine("<b>имена:</b> " + string.Join(", ", m.names.Skip(Mathf.Max(0, m.names.Count - 5)).Select(n => $"{n.name} ({Mind.What(n.key)})")));
+            if (m.diary.Count > 0) sb.AppendLine($"<b>дневник:</b> «{m.diary[m.diary.Count - 1].level}»: {m.diary[m.diary.Count - 1].text}");
+            var st = UiStyle.Panel;
+            st.richText = true;
+            float w = Screen.width * 0.3f;
+            var content = new GUIContent(sb.ToString());
+            float h = Mathf.Min(Screen.height * 0.6f, st.CalcHeight(content, w));
+            GUI.Box(new Rect(Screen.width - w - 10, 40, w, h), content, st);
         }
 
         static string Trim(string s, int n) => string.IsNullOrEmpty(s) ? "—" : s.Length > n ? s.Substring(0, n) + "…" : s;

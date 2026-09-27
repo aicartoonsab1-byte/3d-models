@@ -16,6 +16,7 @@ namespace Sharik
         public static event Action LevelFinished;
         public static event Action BallJumped;
         public static event Action<Vector2> BallLanded;
+        public static event Action<string> World;                   // «блок рассыпался», «портал» и т.п.
 
         public static void RaiseTrapFired(TrapBase t) => TrapFired?.Invoke(t);
         public static void RaiseSplat(DeathKind k, bool died) => BallSplat?.Invoke(k, died);
@@ -25,11 +26,12 @@ namespace Sharik
         public static void RaiseLevelFinished() => LevelFinished?.Invoke();
         public static void RaiseJumped() => BallJumped?.Invoke();
         public static void RaiseLanded(Vector2 v) => BallLanded?.Invoke(v);
+        public static void RaiseWorld(string what) => World?.Invoke(what);
 
         public static void Clear()
         {
             TrapFired = null; BallSplat = null; BallReformed = null; FragmentFound = null;
-            CheckpointReached = null; LevelFinished = null; BallJumped = null; BallLanded = null;
+            CheckpointReached = null; LevelFinished = null; BallJumped = null; BallLanded = null; World = null;
         }
     }
 }

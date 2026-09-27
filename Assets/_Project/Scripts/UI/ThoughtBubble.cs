@@ -17,8 +17,10 @@ namespace Sharik
         /// <summary>Реплика закончилась и прошла небольшая пауза — можно говорить следующую.</summary>
         public bool ReadyForNext => Time.time > _sayUntil + 0.5f;
 
-        public void Say(string text)
+        float _k;
+        public void Say(string text, float intensity = 0.5f)
         {
+            _k = intensity;
             _say = text;
             _sayStart = Time.time;
             _sayUntil = Time.time + text.Length / Tuning.VoiceCharsPerSecond + Tuning.SpeechHold;
@@ -52,6 +54,7 @@ namespace Sharik
                 float w = Mathf.Min(maxW, st.CalcSize(content).x);
                 float h = st.CalcHeight(content, w);
                 var r = Clamp(new Rect(x - w * 0.3f, bottom - h - 6 * px, w, h));
+                if (_k > 0.75f) { r.x += Random.Range(-1, 2) * px; r.y += Random.Range(-1, 2) * px; }   // сильная эмоция — облачко трясётся
                 GUI.Box(r, _say.Substring(0, shown), st);
                 // хвостик к шарику
                 GUI.color = new Color(0.06f, 0.06f, 0.1f);

@@ -122,7 +122,7 @@ namespace Sharik
         {
             InputLocked = true;
             ball.Freeze();
-            Brain.OnLevelEnd();
+            StartCoroutine(Brain.Reflect());             // дневник и пересмотр убеждений — на GameManager, переживёт смену уровня
             GameEvents.RaiseLevelFinished();
             foreach (var line in Level.Data.outro) yield return Brain.SayAndWait(line, "happy");
             Sfx.Play(Sfx.Id.Exit);
@@ -230,7 +230,8 @@ namespace Sharik
                 {
                     _waitingRestart = false;
                     _hud.BigAlpha = 0;
-                    BallBrain.Biography.Clear();
+                    Mind.I.loops++;
+                    Mind.I.Save();
                     LoadLevel(0);
                 }
                 return;
@@ -241,6 +242,7 @@ namespace Sharik
                 Time.timeScale = Paused ? 0f : 1f;
             }
             if (InputShim.Down(InputShim.K.F1)) _hud.ShowDebug = !_hud.ShowDebug;
+            if (InputShim.Down(InputShim.K.F3)) _hud.ShowMind = !_hud.ShowMind;
             if (InputShim.Down(InputShim.K.F2)) Cfg.useLlm = !Cfg.useLlm;
             if (InputShim.Down(InputShim.K.M)) { Sfx.Muted = !Sfx.Muted; _voice.Muted = Sfx.Muted; }
             if (InputShim.Down(InputShim.K.R)) LoadLevel(LevelIndex);

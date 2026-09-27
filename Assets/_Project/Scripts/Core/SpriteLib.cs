@@ -50,7 +50,7 @@ namespace Sharik
         public static SpriteRenderer Make(string goName, Transform parent, string sprite, Vector2 pos, int order)
         {
             var go = new GameObject(goName);
-            go.transform.SetParent(parent, false);
+            if (parent != null) go.transform.SetParent(parent, false);
             go.transform.localPosition = pos;
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = Get(sprite);

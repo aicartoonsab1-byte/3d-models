@@ -66,7 +66,7 @@ namespace Sharik
         public void Jump(float? vx = null, float power = 1f)
         {
             _jumpQueued = true;
-            _jumpMul = Mathf.Clamp(power, 0.4f, 1f);
+            _jumpMul = Mathf.Clamp(power, 0.4f, 1.45f);      // >1 — только с гриба-батута
             _aimedJump = vx.HasValue;
             _jumpVx = vx ?? Body.Vel().x;
         }
@@ -87,10 +87,15 @@ namespace Sharik
             if (State != BallState.Alive) return;
 
             var v = Body.Vel();
+            var grid = GameManager.I != null && GameManager.I.Level != null ? GameManager.I.Level.Grid : null;
+            char under = Grounded && grid != null ? grid.UnderBall(transform.position) : '.';
             if (!(_aimedJump && !Grounded))
             {
                 float target = Mathf.Clamp(MoveInput, -1f, 1f) * Tuning.RunSpeed * SpeedMul;
+                if (under == '>') target += Tuning.ConveyorSpeed;          // конвейер тащит
+                else if (under == '<') target -= Tuning.ConveyorSpeed;
                 float acc = Grounded ? Tuning.GroundAccel : Tuning.AirAccel;
+                if (under == '~') acc *= Tuning.IceAccelMul;                // на льду заносит
                 v.x = Mathf.MoveTowards(v.x, target, acc * Time.fixedDeltaTime);
             }
             if (_jumpQueued)
@@ -105,6 +110,7 @@ namespace Sharik
                     _airborneSince = Time.time;
                     Visual.Stretch(0.35f);
                     Sfx.Play(Sfx.Id.Jump);
+                    if (under == 'O') { MushroomBoing(); Sfx.Play(Sfx.Id.Spring); }
                     GameEvents.RaiseJumped();
                 }
                 else _aimedJump = false;
@@ -145,6 +151,20 @@ namespace Sharik
             }
             impact = Mathf.Max(impact, normal.y > 0.5f ? _peakFallSpeed : 0f);
             _peakFallSpeed = 0f;
+
+            // гриб-батут гасит удар: «боинг» вместо лепёшки
+            var grid = GameManager.I != null && GameManager.I.Level != null ? GameManager.I.Level.Grid : null;
+            if (normal.y > 0.5f && grid != null && grid.UnderBall(transform.position) == 'O')
+            {
+                MushroomBoing();
+                if (impact > 6f)
+                {
+                    Sfx.Play(Sfx.Id.Spring);
+                    Visual.Squash(0.6f, normal);
+                    Body.SetVel(new Vector2(Body.Vel().x, Mathf.Min(6f, impact * 0.3f)));
+                }
+                return;
+            }
 
             if (impact > Tuning.SplatSpeed)
             {
@@ -229,6 +249,31 @@ namespace Sharik
         }
 
         public void Unfreeze() { if (State == BallState.Cutscene) State = BallState.Alive; }
+
+        /// <summary>Мгновенный перенос (порталы): скорость сохраняется, прицельный прыжок сбрасывается.</summary>
+        public void Teleport(Vector2 to)
+        {
+            transform.position = to;
+            Body.position = to;
+            _aimedJump = false;
+            _peakFallSpeed = 0f;
+            Visual.Stretch(0.8f);
+        }
+
+        void MushroomBoing()
+        {
+            var lv = GameManager.I != null ? GameManager.I.Level : null;
+            if (lv == null) return;
+            var c = LevelGrid.Cell((Vector2)transform.position - new Vector2(0, Tuning.BallRadius + 0.05f));
+            if (lv.Mushrooms.TryGetValue(c, out var sr)) StartCoroutine(Boing(sr));
+        }
+
+        static IEnumerator Boing(SpriteRenderer sr)
+        {
+            sr.sprite = SpriteLib.Get("mech_bounce_squash");
+            yield return new WaitForSeconds(0.25f);
+            if (sr != null) sr.sprite = SpriteLib.Get("mech_bounce");
+        }
 
         public void Vanish() { State = BallState.Gone; Body.simulated = false; }
 
