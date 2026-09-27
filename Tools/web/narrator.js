@@ -83,9 +83,9 @@
         const part = l.slice(0, Math.max(0, left)); left -= l.length + 1;
         if (!part) return;
         const y = y0 + (i + 1) * lh - fs * 0.25;
-        c.lineWidth = Math.max(3, fs * 0.28); c.strokeStyle = mult ? "#17110d" : "rgba(0,0,0,.85)"; c.lineJoin = "round";
+        c.lineWidth = Math.max(3, fs * 0.28); c.strokeStyle = mult ? "#fdfdfb" : "rgba(0,0,0,.85)"; c.lineJoin = "round";
         c.strokeText(part, ui.width / 2, y);
-        c.fillStyle = mult ? "#fff3b8" : "#e8e2d6"; c.fillText(part, ui.width / 2, y);
+        c.fillStyle = mult ? "#141414" : "#e8e2d6"; c.fillText(part, ui.width / 2, y);
       });
       c.textAlign = "left"; c.textBaseline = "top";
     },

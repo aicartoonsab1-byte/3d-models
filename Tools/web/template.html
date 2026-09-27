@@ -71,24 +71,24 @@
   .introsrc { font-style: italic; color: var(--ink-l); font-size: 16px; }
   .campaign { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
   .note { font-size: 15px; color: var(--ink-l); margin: 0; }
-  /* Облик «мульт»: бумага, чёрный фломастер, плоские цвета, рукописный шрифт */
+  /* Облик «мульт»: белый лист и тонкая чёрная линия от руки, как в самодельных мультах-притчах */
   body[data-style="mult"] {
-    --paper: #efe6cf; --paper-d: #e2d6b8; --ink: #1d1712; --ink-l: #5b4e40; --coral: #c8452f; --coral-d: #a2371f; --cream: #f7f0dc;
+    --paper: #fdfdfb; --paper-d: #f1f1ee; --ink: #141414; --ink-l: #55534f; --coral: #c0281c; --coral-d: #9c2016; --cream: #fdfdfb;
     --display: Pangolin, "Comic Sans MS", sans-serif; --hand: Pangolin, "Comic Sans MS", sans-serif;
     color-scheme: light;
   }
-  body[data-style="mult"] h1 { font-style: normal; transform: rotate(-1.5deg); }
-  body[data-style="mult"] select, body[data-style="mult"] button { border: 2px solid var(--ink); border-radius: 12px 6px 14px 5px; }
+  body[data-style="mult"] h1 { font-style: normal; transform: rotate(-1deg); }
+  body[data-style="mult"] select, body[data-style="mult"] button { border: 1.5px solid var(--ink); border-radius: 10px 4px 12px 5px; }
   body[data-style="mult"] select option { background: var(--cream); color: var(--ink); }
-  body[data-style="mult"] button:hover, body[data-style="mult"] select:hover { background: rgba(29,23,18,.07); }
-  body[data-style="mult"] .card { background: var(--cream); border: 2px solid var(--ink); border-radius: 16px 8px 18px 6px; box-shadow: 3px 3px 0 var(--ink); }
-  body[data-style="mult"] #stagewrap { border: 3px solid var(--ink); border-radius: 6px; box-shadow: 4px 4px 0 var(--ink); }
-  body[data-style="mult"] .bar { border-top: 2px solid var(--ink); background: var(--cream); }
-  body[data-style="mult"] .traps img { filter: none; }
-  body[data-style="mult"] kbd { border: 1.5px solid var(--ink); border-radius: 4px; }
-  body[data-style="mult"] .intro { background: rgba(239,230,207,.93); }
+  body[data-style="mult"] button:hover, body[data-style="mult"] select:hover { background: rgba(20,20,20,.05); }
+  body[data-style="mult"] .card { background: var(--cream); border: 1.5px solid var(--ink); border-radius: 14px 6px 16px 5px; }
+  body[data-style="mult"] #stagewrap { border: 1.5px solid var(--ink); border-radius: 4px; background: var(--paper); }
+  body[data-style="mult"] .bar { border-top: 1.5px solid var(--ink); background: var(--cream); }
+  body[data-style="mult"] .traps img { filter: grayscale(1) contrast(1.4); }
+  body[data-style="mult"] kbd { border: 1px solid var(--ink); border-radius: 4px; }
+  body[data-style="mult"] .intro { background: rgba(253,253,251,.94); }
   body[data-style="mult"] .intro-title { font-style: normal; }
-  body[data-style="mult"] .trait i { background: linear-gradient(90deg, var(--coral) var(--v), #d9ccaa var(--v)); border: 1.5px solid var(--ink); }
+  body[data-style="mult"] .trait i { background: linear-gradient(90deg, var(--ink) var(--v), #fff var(--v)); border: 1px solid var(--ink); }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
 </style>
 

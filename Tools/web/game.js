@@ -918,7 +918,10 @@
     }
     if (L.data.dark && ball) {
       // видно только вокруг шарика (и чуть-чуть вокруг проснувшихся врагов)
-      dark.ctx.globalCompositeOperation = "source-over"; dark.ctx.fillStyle = STY().darkFill; dark.ctx.fillRect(0, 0, T.VW, T.VH);
+      if (styleName === "mult") {   // «мелом по доске»: белые линии на чёрном
+        ctx.save(); ctx.globalCompositeOperation = "difference"; ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, T.VW, T.VH); ctx.restore();
+      }
+      dark.ctx.clearRect(0, 0, T.VW, T.VH); dark.ctx.globalCompositeOperation = "source-over"; dark.ctx.fillStyle = STY().darkFill; dark.ctx.fillRect(0, 0, T.VW, T.VH);
       dark.ctx.globalCompositeOperation = "destination-out";
       const hole = (wx, wy, r) => { const p = toScreen(wx, wy), gr = dark.ctx.createRadialGradient(p.x, p.y, r * 0.35, p.x, p.y, r); gr.addColorStop(0, "rgba(0,0,0,1)"); gr.addColorStop(1, "rgba(0,0,0,0)"); dark.ctx.fillStyle = gr; dark.ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2); };
       hole(ball.x, ball.y, (100 + Math.sin(game.time * 3) * 4) * glowState.r);
@@ -970,7 +973,7 @@
   }
   // облачко в мульт-стиле: белое, неровный чёрный контур, хвостик к герою; мысли — облако-«тучка» с пузырьками
   function multBubble(c, text, lines, x, y, w, h, fs, anchorX, thought, shown) {
-    c.save(); c.lineJoin = "round"; c.lineCap = "round"; c.strokeStyle = "#17110d"; c.lineWidth = 2.2; c.fillStyle = thought ? "#f3efe2" : "#fffdf5";
+    c.save(); c.lineJoin = "round"; c.lineCap = "round"; c.strokeStyle = "#141414"; c.lineWidth = 1.5; c.fillStyle = "#fdfdfb";
     const k = Math.floor(game.time * 6) % 2, j = (i) => ((i * 37 + k * 11) % 5 - 2) * 0.6;
     c.beginPath();
     if (thought) {
@@ -1022,9 +1025,9 @@
         c.fillStyle = "#efece6"; c.fillRect(p.x * SP - s / 2 - 3, p.y * SP - s / 2 - 8, (s + 6) * Math.max(0, t.awake / full), 3);
       }
       const M = styleName === "mult";
-      c.fillStyle = M ? (ready ? "#fffdf5" : "#d9ccaa") : ready ? "rgba(8,8,8,.9)" : "rgba(40,30,28,.85)";
+      c.fillStyle = M ? (ready ? "#fdfdfb" : "#e4e2dc") : ready ? "rgba(8,8,8,.9)" : "rgba(40,30,28,.85)";
       c.fillRect(p.x * SP - s / 2, p.y * SP - s / 2, s, s);
-      c.strokeStyle = M ? "#17110d" : "rgba(239,236,230,.7)"; c.lineWidth = M ? 2 : 1; c.strokeRect(p.x * SP - s / 2 + 0.5, p.y * SP - s / 2 + 0.5, s - 1, s - 1);
+      c.strokeStyle = M ? "#17110d" : "rgba(239,236,230,.7)"; c.lineWidth = M ? 1.5 : 1; c.strokeRect(p.x * SP - s / 2 + 0.5, p.y * SP - s / 2 + 0.5, s - 1, s - 1);
       if (!ready) { c.fillStyle = "#e2615c"; c.fillRect(p.x * SP - s / 2, p.y * SP + s / 2 - 3, s * (1 - (t.ready - game.time) / t.cd), 3); }
       c.fillStyle = M ? (ready ? "#17110d" : "#7a6c58") : ready ? "#efece6" : "#8f8a82"; c.font = M ? `${fs}px Pangolin, sans-serif` : `${fs}px "Cormorant Garamond", Georgia, serif`; c.fillText(String(t.key), p.x * SP, p.y * SP + 1);
     }
@@ -1035,14 +1038,14 @@
       c.globalAlpha = Math.min(1, game.bigA); c.textAlign = "center";
       const M = styleName === "mult";
       c.font = M ? `${Math.round(S * 14)}px Pangolin, sans-serif` : `italic ${Math.round(S * 15)}px "Cormorant Garamond", Georgia, serif`;
-      if (M) { c.lineJoin = "round"; c.lineWidth = S * 2.2; c.strokeStyle = "#17110d"; c.strokeText(game.big, ui.width / 2, ui.height * 0.32); c.fillStyle = "#fff3b8"; }
+      if (M) { c.lineJoin = "round"; c.lineWidth = S * 2.2; c.strokeStyle = "#fdfdfb"; c.strokeText(game.big, ui.width / 2, ui.height * 0.32); c.fillStyle = "#141414"; }
       else { c.fillStyle = "rgba(0,0,0,.35)"; c.fillText(game.big, ui.width / 2 + 3, ui.height * 0.32 + 3); c.fillStyle = "#efece6"; }
       c.fillText(game.big, ui.width / 2, ui.height * 0.32);
       if (game.small) {
         c.font = M ? `${Math.round(S * 6.5)}px Pangolin, sans-serif` : `${Math.round(S * 6.5)}px Lora, Georgia, serif`; c.fillStyle = "#cfcac0";
         game.small.split("\n").forEach((l, i) => {
           const y = ui.height * 0.47 + i * S * 8;
-          if (M) { c.lineWidth = S * 1.4; c.strokeText(l, ui.width / 2, y); c.fillStyle = "#fffdf5"; }
+          if (M) { c.lineWidth = S * 1.4; c.strokeStyle = "#fdfdfb"; c.strokeText(l, ui.width / 2, y); c.fillStyle = "#141414"; }
           c.fillText(l, ui.width / 2, y);
         });
       }
