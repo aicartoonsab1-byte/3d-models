@@ -31,7 +31,7 @@
     lines(key) { const c = (CAMP.narrator && CAMP.narrator[key]) || NARR_LINES[key] || []; return c; },
     fill(t) { const h = (CAMP.hero && CAMP.hero.name) || "Шарик"; return t.replace(/\{hero\}/g, h); },
     pick(key) { const a = this.lines(key); return a.length ? this.fill(a[Math.floor(Math.random() * a.length)]) : null; },
-    busy() { return !!(this.cur && game.time < this.cur.until) || this.queue.length > 0; },
+    busy() { return !!(this.cur && game.time < this.cur.until) || this.queue.length > 0 || (this.cur && VOICE.busy()); },
     say(text) { if (text) this.queue.push(text); },
     // по событию: не чаще раза в 25 с и не всегда
     maybe(key, chance) {
@@ -45,9 +45,9 @@
     },
     // прочитать карточку-главу голосом рассказчика (без субтитров — текст на карточке)
     read(text) { this.cur = null; this.queue = []; this.speak(this.fill(text)); },
-    hush() { try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { } },
+    hush() { VOICE.stop(); try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { } },
     update() {
-      if (this.cur && game.time < this.cur.until) return;
+      if (this.cur && (game.time < this.cur.until || VOICE.busy())) return;
       this.cur = null;
       if (!this.queue.length || game.paused) return;
       if (brain && brain.say && game.time < brain.say.until) return;    // не перебиваем героя
@@ -65,6 +65,7 @@
       return male || ruVoice;
     },
     speak(text) {
+      if (VOICE.play("narrator", text)) return;
       if (muted || voiceMode === "off" || voiceMode === "babble" || !window.speechSynthesis) return;
       const v = this.pickVoice(); if (!v) return;
       try {
@@ -101,7 +102,7 @@
   // шарик ждёт, пока рассказчик договорит
   {
     const sb = Brain.prototype.speechBusy;
-    Brain.prototype.speechBusy = function () { return sb.call(this) || NARR.busy(); };
+    Brain.prototype.speechBusy = function () { return sb.call(this) || NARR.busy() || VOICE.busy(); };
     const wrapM = (m, fn) => { const o = Brain.prototype[m]; Brain.prototype[m] = function (...a) { const r = o.apply(this, a); try { fn(...a); } catch (e) { } return r; }; };
     wrapM("onSplat", (kind, dies) => NARR.maybe(dies ? "death" : "splat", 0.35));
     wrapM("onTrap", () => NARR.maybe("trap", 0.2));

@@ -31,7 +31,7 @@
     },
     speakNext() {
       if (this.say && this.t < this.say.until) return;
-      if (NARR.busy()) return;
+      if (NARR.busy() || VOICE.busy()) return;
       const n = this.sayQ.shift(); if (!n) { this.say = null; return; }
       this.say = { text: n.text, start: this.t, until: this.t + n.text.length / T.CPS + T.HOLD };
       this.mood = n.mood; speakVoice(n.text, n.mood, 0.5); log(n.text, false);

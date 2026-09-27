@@ -89,10 +89,36 @@
   //  • «бормотание» — мультяшный лепет: слоги-«боинги» с глиссандо и вибрато, писк в конце фразы.
   // Стили: «живой» — лучший русский голос системы почти без искажений (нейро-голоса Edge «Светлана»/«Дмитрий»,
   // «Google русский»); «писклявый» — он же, задранный «бурундуком»; «лепет» — мультяшное бормотание; «выкл».
-  const VOICE_MODES = ["natural", "squeaky", "babble", "off"];
-  const VOICE_LABEL = { natural: "Голос: живой", squeaky: "Голос: писклявый", babble: "Голос: лепет", off: "Голос: выкл" };
-  let voiceMode = "natural", ruVoice = null, ruVoices = [];
-  try { voiceMode = localStorage.getItem("sharik_voice_mode") || "natural"; } catch (e) { }
+  const VOICE_MODES = ["studio", "natural", "squeaky", "babble", "off"];
+  const VOICE_LABEL = { studio: "Голос: студия", natural: "Голос: живой", squeaky: "Голос: писклявый", babble: "Голос: лепет", off: "Голос: выкл" };
+  let voiceMode = "studio", ruVoice = null, ruVoices = [];
+  try { voiceMode = localStorage.getItem("sharik_voice_mode") || "studio"; } catch (e) { }
+  if (!VOICE_MODES.includes(voiceMode)) voiceMode = "studio";
+
+  // ---------------------------------------------------------------- студийная озвучка (Tools/voice/studio.py → voice/<кампания>.js)
+  const VOICE = {
+    audio: null, busyUntil: 0, loading: {},
+    load(cid) {                                           // пакет грузится тегом <script>: работает и с диска, и в опубликованной странице
+      if ((window.SHARIK_VOICE && window.SHARIK_VOICE[cid]) || this.loading[cid]) return;
+      this.loading[cid] = true;
+      const s = document.createElement("script"); s.src = "voice/" + cid + ".js"; s.async = true;
+      s.onerror = () => { this.loading[cid] = "none"; };
+      document.head.appendChild(s);
+    },
+    clip(role, text) { const p = window.SHARIK_VOICE && window.SHARIK_VOICE[CAMP.id]; return p && p.clips[role + "|" + text]; },
+    busy() { return performance.now() < this.busyUntil; },
+    stop() { if (this.audio) { try { this.audio.pause(); } catch (e) { } this.audio = null; } this.busyUntil = 0; },
+    play(role, text) {
+      if (muted || voiceMode !== "studio") return false;
+      const src = this.clip(role, String(text).trim()); if (!src) return false;
+      this.stop(); try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { }
+      const a = new Audio(src); this.audio = a; this.busyUntil = performance.now() + 1500;
+      a.addEventListener("loadedmetadata", () => { if (this.audio === a && isFinite(a.duration)) this.busyUntil = performance.now() + a.duration * 1000; });
+      a.addEventListener("ended", () => { if (this.audio === a) this.busyUntil = 0; });
+      a.play().catch(() => { this.busyUntil = 0; });
+      return true;
+    },
+  };
   function voiceScore(v) {
     let sc = 0;
     if (/maxim|максим/i.test(v.name)) sc += 20;                  // «бот Максим» (IVONA/Polly Maxim), если установлен в системе
@@ -126,12 +152,14 @@
   };
   function speakVoice(text, mood, k = 0.5) {
     if (muted || voiceMode === "off") return;
-    if ((voiceMode === "natural" || voiceMode === "squeaky") && ruVoice && window.speechSynthesis) {
+    if (VOICE.play("hero", text)) return;
+    if ((voiceMode === "natural" || voiceMode === "squeaky" || voiceMode === "studio") && ruVoice && window.speechSynthesis) {
       try {
         const mv = MOOD_VOICE[mood] || MOOD_VOICE.neutral, u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, ""));
         const excite = (k - 0.5) * (mood === "sad" || mood === "pray" ? -0.3 : 0.4);   // сила эмоции слышна
         let pitch = mv[0] + excite * 0.5, rate = mv[1] * (1 + excite * 0.5);
         if (voiceMode === "squeaky") pitch = mood === "glitch" ? 0.2 : Math.min(2, pitch + 0.75);
+        else if (voiceMode === "studio") { /* записи нет — говорим живым голосом браузера */ }
         else if (/maxim|максим/i.test(ruVoice.name)) { pitch = mood === "glitch" ? 0.7 : 1; rate = 1 + excite * 0.3; }   // бот Максим — ровно, по-роботски
         u.voice = ruVoice; u.lang = ruVoice.lang; u.pitch = Math.max(0, Math.min(2, pitch)); u.rate = Math.max(0.5, Math.min(1.8, rate)); u.volume = 1;
         speechSynthesis.cancel(); speechSynthesis.speak(u);
@@ -1214,6 +1242,7 @@
   }
   fillLevels();
   function showCampaign() {
+    VOICE.load(CAMP.id);
     $("introtitle").textContent = CAMP.title || "Шарик";
     $("introlog").textContent = CAMP.logline || "";
     $("introsrc").textContent = CAMP.source || "";
@@ -1244,7 +1273,7 @@
     const dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts;
     if (game.card && !game.paused) {
       game.card.t += dt;
-      if (game.card.t > game.card.need && !(window.speechSynthesis && speechSynthesis.speaking && game.card.t < game.card.need + 12)) game.closeCard();
+      if (game.card.t > game.card.need && !(((window.speechSynthesis && speechSynthesis.speaking) || VOICE.busy()) && game.card.t < game.card.need + 25)) game.closeCard();
     } else if (PONG.on) {
       if (!game.paused) PONG.update(dt);
     } else if (!game.paused) {

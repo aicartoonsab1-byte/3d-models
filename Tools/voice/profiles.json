@@ -1,0 +1,79 @@
+{
+ "sharik_hero": {
+  "engine": "rhvoice",
+  "speaker": "evgeniy-rus",
+  "pitch": 3.5,
+  "tempo": 1.03,
+  "fx": [],
+  "desc": "Шарик: пластилиновый недотёпа, звонкий, чуть мультяшный"
+ },
+ "sharik_narr": {
+  "engine": "rhvoice",
+  "speaker": "mikhail",
+  "pitch": -2.5,
+  "tempo": 0.94,
+  "fx": [
+   "reverb"
+  ],
+  "moods": false,
+  "desc": "Рассказчик мифа: низкий, невозмутимый, с лёгким эхом"
+ },
+ "fantik_hero": {
+  "engine": "rhvoice",
+  "speaker": "aleksandr",
+  "pitch": 1.5,
+  "tempo": 0.9,
+  "fx": [],
+  "moodScale": 0.6,
+  "desc": "Фантик: простодушный, медленный, добрый"
+ },
+ "fantik_narr": {
+  "engine": "rhvoice",
+  "speaker": "pavel",
+  "pitch": -2,
+  "tempo": 0.95,
+  "fx": [
+   "hall"
+  ],
+  "moods": false,
+  "desc": "Рассказчик «Фантика»: спокойный голос за кадром"
+ },
+ "knopik_hero": {
+  "engine": "rhvoice",
+  "speaker": "artemiy",
+  "pitch": 3,
+  "tempo": 1.05,
+  "fx": [],
+  "desc": "Кнопик: вежливый писарь, торопливый, пугливый"
+ },
+ "knopik_narr": {
+  "engine": "rhvoice",
+  "speaker": "vitaliy",
+  "pitch": -1.5,
+  "tempo": 0.93,
+  "fx": [
+   "old"
+  ],
+  "moods": false,
+  "desc": "Интертитры немого кино: голос как со старой плёнки"
+ },
+ "bot": {
+  "engine": "espeak",
+  "speaker": "ru+m3",
+  "tempo": 1.0,
+  "fx": [
+   "robot"
+  ],
+  "moods": false,
+  "desc": "Робот-бот: железный, ровный"
+ },
+ "maxim_like": {
+  "engine": "rhvoice",
+  "speaker": "evgeniy-rus",
+  "pitch": 0.5,
+  "tempo": 1.05,
+  "fx": [],
+  "moods": false,
+  "desc": "Похожий регистр на присланный образец «бота Максима» (подобран studio.py analyze): ровно, без интонаций. Это не сам голос Maxim"
+ }
+}

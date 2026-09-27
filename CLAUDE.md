@@ -23,6 +23,7 @@ python3 Tools/levels/render.py --path       # превью → Design/previews/*
 python3 Tools/levels/autoplay.py            # дойдёт ли шарик сам (порт Navigator.cs)
 python3 Tools/art/generate_sprites.py       # перерисовать все спрайты
 Tools/compile_check/check.sh                # C# компилируется без Unity
+python3 Tools/voice/studio.py render all    # озвучка реплик студийными голосами → Web/voice/*.js (навык /voice)
 python3 Tools/web/build.py                  # браузерный прототип → Web/sharik.html (game.js + mind.js + narrator.js + limbo.js + mult.js)
 ```
 

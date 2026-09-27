@@ -34,3 +34,4 @@ Tools/compile_check/obj/
 
 # Скачанный голос Piper (Шарик → Голос → Установить)
 /Piper/
+Tools/voice/.cache/
