@@ -17,6 +17,7 @@
     spikes: "шипы", crusher: "пресс (железная коробка на цепи)", trapdoor: "люк в полу", fan: "вентилятор", spring: "пружина",
     stag: "Лунный Олень", watcher: "Всевидящий", worm: "Кодовый Червь", keeper: "Хранитель",
     exit: "дверь-выход", checkpoint: "тотем-флажок", fragment: "светящийся осколок",
+    portal: "портал — дыра в мире с коралловым вихрем", mushroom: "гриб-батут", crumble: "треснувший блок", conveyor: "движущаяся лента", ice: "скользкий лёд",
   };
   const FUNNY_NAMES = ["Геннадий", "Тётя Плюх", "Господин Железяка", "Колючкин", "Шуршик", "Бубубу", "Ваше Величество Люк",
     "Дядя Ветер", "Прыгун Прыгунович", "Мистер Глаз", "Старушка Спираль", "Рогатик", "Бог Невезения", "Луноголовый", "Тыкалка"];
@@ -24,6 +25,8 @@
     deco_0: ["Геннадий-гриб", "Лунная Шапка"], deco_1: ["Рогатик", "Мелкий Бодун"], deco_2: ["Мистер Глаз", "Гляделка"],
     deco_3: ["Старушка Спираль", "Улиткин"], spikes: ["Колючкин", "Бубубу"], crusher: ["Господин Железяка", "Дядя Бум"],
     trapdoor: ["Ваше Величество Люк", "Дырка"], fan: ["Дядя Ветер", "Дуйчик"], spring: ["Прыгун Прыгунович", "Боинг"],
+    mushroom: ["Батутыч", "Пружинный Гриб"], crumble: ["Хрустик", "Предатель"], portal: ["Дырка-в-Мире", "Кроличья Нора"],
+    conveyor: ["Дорожка-Торопыжка", "Лента"], ice: ["Скользяка", "Зимний Пол"],
     stag: ["Бог Невезения", "Луноголовый"], watcher: ["Тот-Кто-Смотрит", "Глазастик"], worm: ["Баг", "Подземный Дед"], keeper: ["Сторож", "Большой Звёздный"],
   };
   const OFFLINE_QUESTIONS = [
@@ -86,6 +89,11 @@
     L.traps.forEach((t, i) => add("trap" + i, thingKey(t), t.kind === "boss" ? t.home.x : t.x, t.kind === "boss" ? t.cy + 0.5 : t.y,
       trapDangerous(t) ? "ДЕЙСТВУЕТ прямо сейчас" : t.awake > 0 ? "проснулся, может сработать сам" : "спит"));
     L.fragments.forEach((f, i) => { if (!f.taken) add("frag" + i, "fragment", f.x, f.y, null); });
+    L.portals.forEach((p, i) => { if (!p.isExit) add("portal" + i, "portal", p.x, p.y, null); });
+    L.tiles.forEach((t, i) => {
+      if (t.bounce) add("mush" + i, "mushroom", t.x, t.y, null);
+      else if (t.crumble && Math.abs(t.x - ball.x) < 4) add("crumble" + i, "crumble", t.x, t.y, L.crumble[t.crumble].t > 0.2 ? "трещит под тобой!" : null);
+    });
     L.checkpoints.forEach((k, i) => add("cp" + i, "checkpoint", k.x, k.y, k.on ? "горит" : "не горит"));
     if (L.exit) add("exit", "exit", L.exit.x, L.exit.y, null);
     out.sort((a, b) => Math.abs(a.dx) - Math.abs(b.dx));

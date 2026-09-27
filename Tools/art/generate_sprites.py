@@ -692,6 +692,75 @@ def boss_keeper(frame: str) -> Image.Image:
     return img
 
 
+# ============================================================================ новые элементы уровней
+def make_mechanics():
+    # X — рассыпающийся блок: тушь с трещинами и коралловыми крошками
+    for i, name in enumerate(("mech_crumble", "mech_crumble_crack")):
+        c = new(16, 16)
+        rect(c, 0, 0, 15, 15, INK)
+        hline(c, 0, 15, 0, INK_L)
+        for (x, y) in ((3, 4), (4, 5), (5, 5), (6, 6), (10, 3), (11, 4), (11, 5), (12, 8), (7, 10), (8, 11), (4, 12)):
+            px(c, x, y, CREAM if i == 0 else CORAL)
+        if i == 1:
+            line(c, [(2, 2), (7, 8), (5, 14)], CORAL)
+            line(c, [(13, 1), (9, 7), (12, 14)], CORAL)
+        for x in (2, 13):
+            px(c, x, 15, T)
+        save(name, c)
+    bits = new(4, 4); rect(bits, 0, 0, 2, 2, INK); px(bits, 1, 1, CORAL); save("fx_crumb", bits)
+
+    # O — гриб-батут: коралловая шляпка с кремовыми точками, чёрная ножка; кадр сжатия
+    for i, name in enumerate(("mech_bounce", "mech_bounce_squash")):
+        m = new(16, 16)
+        top = 6 if i == 0 else 9
+        ellipse(m, 0, top, 15, top + 6, CORAL)
+        rect(m, 0, top + 3, 15, top + 4, CORAL_D)
+        for x in (3, 7, 11):
+            px(m, x, top + 1, CREAM); px(m, x + 1, top + 2, CREAM)
+        rect(m, 6, top + 5, 9, 15, INK)
+        px(m, 7, 13, CREAM)
+        tufts(m, (3, 12), 15, INK)
+        save(name, m)
+
+    # < > — конвейер: тушь со стрелками-шевронами (2 кадра для анимации)
+    for d, name in ((1, "mech_conv_r"), (-1, "mech_conv_l")):
+        for f in range(2):
+            cv = new(16, 16)
+            rect(cv, 0, 0, 15, 15, INK)
+            rect(cv, 0, 0, 15, 4, INK_L)
+            for x0 in range(-4 + f * 4, 16, 8):          # шевроны «>>» или «<<»
+                for (ox, oy) in ((0, 0), (1, 1), (2, 2), (1, 3), (0, 4)):
+                    for w in (0, 1):
+                        xx = x0 + ox + w if d > 0 else x0 + 2 - ox + w
+                        px(cv, xx, oy, CORAL)
+            for x in (2, 7, 12):
+                ellipse(cv, x - 1, 7, x + 2, 10, INK_L); px(cv, x, 8, CREAM)   # катки
+            save(f"{name}_{f}", cv)
+
+    # ~ — лёд: кремовая глазурь с бликами поверх туши
+    ice = new(16, 16)
+    rect(ice, 0, 0, 15, 15, INK)
+    rect(ice, 0, 0, 15, 4, hexc("#dfe9ec"))
+    hline(ice, 0, 15, 4, hexc("#a9bcc4"))
+    for (x, y) in ((2, 1), (3, 1), (9, 2), (10, 2), (13, 1)):
+        px(ice, x, y, CREAM)
+    for x in (4, 11):
+        drip(ice, x, 5, 2, hexc("#a9bcc4"))     # сосульки
+    save("mech_ice", ice)
+
+    # @ — портал: чёрная арка-глаз с коралловым вихрем (2 кадра)
+    for f in range(2):
+        pt = new(16, 32)
+        ellipse(pt, 0, 0, 15, 31, INK)
+        ellipse(pt, 3, 4, 12, 28, CORAL if f == 0 else CORAL_D)
+        ellipse(pt, 5, 8, 10, 24, INK)
+        for a in range(0, 360, 45):
+            r = 3 + (a // 45 + f) % 2
+            px(pt, 7.5 + r * math.cos(math.radians(a)), 16 + 2.2 * r * math.sin(math.radians(a)), CREAM)
+        eye(pt, 7.5, 16, 2, 1, white=CREAM, pupil=INK)
+        save(f"mech_portal_{f}", pt)
+
+
 def make_bosses():
     for f in ("idle", "blink", "atk"):
         save(f"boss_stag_{f}", boss_stag(f))
@@ -739,6 +808,7 @@ def main():
     make_traps()
     make_objects()
     make_deco()
+    make_mechanics()
     make_bosses()
     contact_sheet()
     print(f"Сгенерировано спрайтов: {len(sprites)} → {OUT.relative_to(ROOT)}")

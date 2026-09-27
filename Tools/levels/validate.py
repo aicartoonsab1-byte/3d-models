@@ -113,6 +113,15 @@ def check(lv: Level) -> dict:
                     warnings.append(f"люк в ({x},{y}): под ним твёрдо — открывать бессмысленно")
                 if lv.ch(x, y + 1) in SOLID:
                     errors.append(f"люк в ({x},{y}) замурован сверху")
+    portals = lv.find("@")
+    if len(portals) % 2:
+        errors.append(f"порталов @ должно быть чётное число (пары вход→выход), найдено {len(portals)}")
+    for a, b in lv.portals().items():
+        if lv.landing_below(*b) is None:
+            errors.append(f"выход портала {b} висит над бездной — шарик провалится")
+    for (x, y) in lv.find("X"):
+        if lv.ch(x, y + 1) in SOLID:
+            warnings.append(f"рассыпающийся блок ({x},{y}) закрыт сверху — на нём нельзя стоять")
     bosses = lv.find("B")
     if len(bosses) > 1:
         errors.append("на уровне может быть только один босс B")

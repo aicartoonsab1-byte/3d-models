@@ -71,6 +71,19 @@ def render(lv, with_path=False, scale=2):
                     put(f"deco_{(x * 7 + y) % 4}", x, y + 1)
             elif c == "=":
                 put(f"tile_{pal}_platform", x, y)
+            elif c == "X":
+                put("mech_crumble", x, y)
+            elif c == "O":
+                put("mech_bounce", x, y, dy=-6)
+            elif c == ">":
+                put("mech_conv_r_0", x, y)
+            elif c == "<":
+                put("mech_conv_l_0", x, y)
+            elif c == "~":
+                put("mech_ice", x, y)
+            elif c == "@":
+                entr = (x, y) in lv.portals()
+                put("mech_portal_0" if entr else "mech_portal_1", x, y)
             elif c == "S":
                 put("ball_body", x, y, dy=-1)
                 put("face_neutral", x, y, dy=-1)

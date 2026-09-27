@@ -38,6 +38,12 @@ LEGEND = {
     "W": "ЛОВУШКА: вентилятор (стоит на земле, дует вверх на 5 клеток)",
     "J": "ЛОВУШКА: пружина (стоит на земле, подбрасывает вверх)",
     "B": "БОСС (стоит на земле; вид задаётся полем \"boss\": stag | watcher | worm | keeper)",
+    "X": "рассыпающийся блок (твёрдый; если шарик задержится на нём ~0.6 с — осыпается на 4 с)",
+    "O": "гриб-батут (твёрдый блок; мягкая посадка без лепёшки; прыжок с него в 1.45 раза сильнее ≈ 7 клеток вверх)",
+    ">": "конвейер вправо (земля, тащит шарика на +2 кл/с)",
+    "<": "конвейер влево (земля, тащит шарика на −2 кл/с)",
+    "~": "лёд (земля, шарика заносит — медленно разгоняется и тормозит)",
+    "@": "портал (пары по порядку слева направо: 1-й — вход, 2-й — выход; 3-й — вход, 4-й — выход…)",
 }
 BOSSES = {
     "stag": "Лунный Олень — стоит над дорогой (шарик катится под брюхом), топот подбрасывает шарик",
@@ -45,7 +51,8 @@ BOSSES = {
     "worm": "Кодовый Червь — живёт в земле, выныривает прямо под шариком в радиусе 10 клеток",
     "keeper": "Хранитель — лежит у рубильника, рёвом отбрасывает шарик назад",
 }
-SOLID = set("#T")               # что считается твёрдым в пассивном состоянии ловушек
+SOLID = set("#TX<>~O")          # что считается твёрдым в пассивном состоянии ловушек
+MUSHROOM_POWERS = (1.45, 1.25)  # прыжок с гриба-батута (синхронно с Navigator.cs)
 PLATFORM = set("=")
 TRAPS = set("^CTWJB")
 TRAP_NAMES = {"^": "spikes", "C": "crusher", "T": "trapdoor", "W": "fan", "J": "spring", "B": "boss"}
@@ -94,6 +101,20 @@ class Level:
     def blocks_ball(self, x: int, y: int) -> bool:
         """Твёрдое для тела шарика (кроме платформ — сквозь них можно пролететь снизу)."""
         return self.solid(x, y)
+
+    def portals(self) -> dict:
+        """Вход → выход. Порталы парами по порядку слева направо (при равном x — сверху вниз)."""
+        cells = sorted(self.find("@"), key=lambda c: (c[0], -c[1]))
+        return {cells[i]: cells[i + 1] for i in range(0, len(cells) - 1, 2)}
+
+    def landing_below(self, x: int, y: int):
+        """Куда шарик упадёт из клетки (x,y): первая стоячая клетка вниз или None (бездна)."""
+        for yy in range(y, -1, -1):
+            if self.standable(x, yy):
+                return (x, yy)
+            if self.solid(x, yy):
+                return None
+        return None
 
     def standable(self, x: int, y: int) -> bool:
         """Клетка, в которой шарик может стоять (сам пустой, под ним опора)."""
@@ -157,7 +178,8 @@ def simulate(lv: Level, sx: int, sy: int, vx: float, jump: bool, dt: float = 1 /
             elif _collides(lv, nx, y, vy) != "solid":
                 if vy < 0:     # приземлились на твёрдое
                     cell = (math.floor(nx), math.floor(y - BALL_RADIUS + 0.05))
-                    return (cell, -vy) if lv.standable(*cell) else None
+                    soft = lv.ch(cell[0], cell[1] - 1) == "O"   # гриб гасит удар
+                    return (cell, 0.0 if soft else -vy) if lv.standable(*cell) else None
                 ny = y
                 vy = 0.0
             else:
@@ -180,12 +202,22 @@ def simulate(lv: Level, sx: int, sy: int, vx: float, jump: bool, dt: float = 1 /
 def neighbors(lv: Level, x: int, y: int):
     """Все клетки, куда шарик может попасть из стоячей клетки (x,y)."""
     out = {}
+    # вход в портал — только телепорт (шарик проваливается в него, едва коснувшись)
+    exit_ = lv.portals().get((x, y))
+    if exit_:
+        land = lv.landing_below(*exit_)
+        if land:
+            out[land] = ("portal", 0.0)
+        return out
     # ходьба
     for dx in (-1, 1):
         if lv.standable(x + dx, y):
             out[(x + dx, y)] = ("walk", 0.0)
     # прыжки и скатывания с разной горизонтальной скоростью
-    for jump, power in ((True, 1.0), (True, 0.85), (True, 0.7), (True, 0.55), (False, 1.0)):
+    variants = [(True, 1.0), (True, 0.85), (True, 0.7), (True, 0.55), (False, 1.0)]
+    if lv.ch(x, y - 1) == "O":                      # с гриба-батута — выше
+        variants = [(True, p) for p in MUSHROOM_POWERS] + variants
+    for jump, power in variants:
         for k in range(-8, 9):
             vx = RUN_SPEED * k / 8
             if not jump and abs(vx) < 1.0:

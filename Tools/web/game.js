@@ -19,6 +19,8 @@
   };
   const SKY = { meadow: "#efe3c8", cave: "#231c18", city: "#f0a193", glitch: "#efe3c8", void: "#0e0b0a" };
   const POWERS = [1, 0.85, 0.7, 0.55];
+  const MUSH_POWERS = [1.45, 1.25];            // прыжок с гриба-батута (levellib.MUSHROOM_POWERS)
+  const CONVEYOR = 2, ICE_ACC = 0.25, CRUMBLE_T = 0.6, CRUMBLE_BACK = 4;
 
   // ---------------------------------------------------------------- DOM
   const view = document.getElementById("view");
@@ -29,6 +31,7 @@
   const buf = document.createElement("canvas");
   buf.width = T.VW; buf.height = T.VH;
   const ctx = buf.getContext("2d");
+  const dark = { cv: document.createElement("canvas") }; dark.cv.width = T.VW; dark.cv.height = T.VH; dark.ctx = dark.cv.getContext("2d");
   ctx.imageSmoothingEnabled = false;
 
   // ---------------------------------------------------------------- спрайты
@@ -200,7 +203,8 @@
   function solid(x, y) {
     if (x < 0 || x >= L.w) return true;
     const c = at(x, y);
-    if (c === "#") return true;
+    if (c === "#" || c === "<" || c === ">" || c === "~" || c === "O") return true;
+    if (c === "X") { const k = L.crumble[x + "," + y]; return !(k && k.back > game.time); }
     if (c === "T") { const t = trapdoorAt(x, y); return !t || !t.open; }
     return false;
   }
@@ -218,7 +222,7 @@
 
   function buildLevel(data) {
     L = { data, w: Math.max(...data.grid.map((r) => r.length)), h: data.grid.length, pal: SKY[data.palette] ? data.palette : "meadow",
-          tiles: [], decos: [], objects: [], traps: [], trapdoors: {}, fragments: [], checkpoints: [], spawn: null, goal: null, exit: null, sw: null,
+          tiles: [], decos: [], objects: [], traps: [], portals: [], crumble: {}, bounceAt: {}, trapdoors: {}, fragments: [], checkpoints: [], spawn: null, goal: null, exit: null, sw: null,
           hidden: new Set(), fx: [], glitchT: 4 + Math.random() * 6, glitches: [], dissolve: -1, sky: SKY[data.palette] || SKY.meadow };
     const frag = [];
     for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
@@ -231,6 +235,11 @@
           L.tiles.push(d); L.decos.push(d);
         }
       } else if (c === "=") L.tiles.push({ s: `tile_${L.pal}_platform`, x: cx, y: cy });
+      else if (c === "X") { L.crumble[x + "," + y] = { t: 0, back: 0 }; L.tiles.push({ s: "mech_crumble", x: cx, y: cy, crumble: x + "," + y }); }
+      else if (c === "O") L.tiles.push({ s: "mech_bounce", x: cx, y: cy + 6 / 16, bounce: x + "," + y });
+      else if (c === ">" || c === "<") L.tiles.push({ s: c === ">" ? "mech_conv_r" : "mech_conv_l", x: cx, y: cy, anim: true });
+      else if (c === "~") L.tiles.push({ s: "mech_ice", x: cx, y: cy });
+      else if (c === "@") L.portals.push({ cx: x, cy: y, x: cx, y: cy });
       else if (c === "S") L.spawn = { x: cx, y: y + T.R + 0.02 };
       else if (c === "F") { L.exit = { x: cx, y: y + 1, used: false }; L.goal = { x: cx, y: cy }; }
       else if (c === "R") { L.sw = { x: cx, y: y + 1, on: false, used: false }; L.goal = { x: cx, y: cy }; }
@@ -238,6 +247,9 @@
       else if (c === "*") frag.push({ x, y });
       else if ("^CTWJB".includes(c)) L.traps.push(makeTrap(c, x, y));
     }
+    // порталы парами слева направо: 1-й вход → 2-й выход (как levellib.portals)
+    L.portals.sort((a, b) => a.cx !== b.cx ? a.cx - b.cx : b.cy - a.cy);
+    for (let i = 0; i + 1 < L.portals.length; i += 2) { L.portals[i].exit = L.portals[i + 1]; L.portals[i + 1].isExit = true; }
     frag.sort((a, b) => a.y !== b.y ? b.y - a.y : a.x - b.x);
     frag.forEach((f, i) => L.fragments.push({ x: f.x + 0.5, y: f.y + 0.5, text: data.fragments[i] || "...", taken: false }));
   }
@@ -435,7 +447,7 @@
     }
     alive() { return this.state === "alive"; }
     setMood(m, hold = 2.5) { if (m && IMG["face_" + m]) { this.mood = m; this.moodUntil = game.time + hold; } }
-    jump(vx, power = 1) { this.jumpQ = { vx, power: Math.max(0.4, Math.min(1, power)) }; }
+    jump(vx, power = 1) { this.jumpQ = { vx, power: Math.max(0.4, Math.min(1.45, power)) }; }
     canJump() { return this.alive() && game.time - this.lastGround <= T.COYOTE; }
     launch(vx, vy) { this.vx = vx; this.vy = vy; this.aimed = false; this.grounded = false; this.stretch(0.6); }
     squashV(a, wall) { a = Math.min(1, Math.max(0, a)); if (wall) { this.sx = 1 - 0.45 * a; this.sy = 1 + 0.3 * a; } else { this.sx = 1 + 0.5 * a; this.sy = 1 - 0.45 * a; } this.svx = this.svy = 0; }
@@ -470,13 +482,17 @@
           this.vy = T.JUMP * this.jumpQ.power;
           this.vx = Math.max(-T.RUN * 1.25, Math.min(T.RUN * 1.25, this.jumpQ.vx));
           this.aimed = true; this.grounded = false; this.lastGround = -9; this.stretch(0.35); SFX.jump();
+          const ux = Math.floor(this.x), uy = Math.floor(this.y - T.R - 0.05);
+          if (at(ux, uy) === "O") { L.bounceAt[ux + "," + uy] = game.time; SFX.spring(); }
           brain && brain.onJump();
         }
         this.jumpQ = null;
       }
       if (!(this.aimed && !this.grounded)) {
-        const target = Math.max(-1, Math.min(1, this.move)) * T.RUN * this.speedMul;
-        const acc = (this.grounded ? T.GACC : T.AACC) * dt;
+        const under = this.grounded ? at(Math.floor(this.x), Math.floor(this.y - T.R - 0.05)) : ".";
+        let target = Math.max(-1, Math.min(1, this.move)) * T.RUN * this.speedMul;
+        if (under === ">") target += CONVEYOR; else if (under === "<") target -= CONVEYOR;
+        const acc = (this.grounded ? T.GACC : T.AACC) * dt * (under === "~" ? ICE_ACC : 1);
         this.vx += Math.max(-acc, Math.min(acc, target - this.vx));
       }
       this.vy -= T.G * dt;
@@ -507,7 +523,11 @@
         if (!this.grounded) {
           const imp = this.peakFall;
           this.peakFall = 0;
-          if (imp > T.SPLAT) { this.vy = 0; return this.splat("land", false); }
+          const ux = Math.floor(this.x), uy = Math.floor(this.y - T.R - 0.05);
+          if (at(ux, uy) === "O") {            // гриб-батут гасит удар: «боинг» вместо лепёшки
+            L.bounceAt[ux + "," + uy] = game.time;
+            if (imp > 6) { SFX.spring(); this.squashV(0.6, false); this.vy = Math.min(6, imp * 0.3); this.grounded = false; this.lastGround = game.time; return; }
+          } else if (imp > T.SPLAT) { this.vy = 0; return this.splat("land", false); }
           if (imp > 4) { this.squashV((imp - 4) / (T.SPLAT - 4), false); SFX.land(); }
         }
         this.vy = 0; this.grounded = true; this.lastGround = game.time; this.aimed = false;
@@ -587,18 +607,19 @@
       }
       return true;
     },
-    aimed(c, dir) {
+    aimed(c, dir, minDy = -6) {
       let best = null, res = null;
-      for (let dx = 1; dx <= 6; dx++) for (let dy = 3; dy >= -6; dy--) {
+      const mush = at(c.x, c.y - 1) === "O", powers = mush ? MUSH_POWERS.concat(POWERS) : POWERS;
+      for (let dx = 1; dx <= 6; dx++) for (let dy = mush ? 7 : 3; dy >= minDy; dy--) {
         const tx = c.x + dir * dx, ty = c.y + dy;
         if (!standable(tx, ty) || (dx === 1 && dy === 0)) continue;
-        for (let k = 0; k < POWERS.length; k++) {
-          const v0 = T.JUMP * POWERS[k], disc = v0 * v0 - 2 * T.G * (dy + 0.15);
+        for (let k = 0; k < powers.length; k++) {
+          const v0 = T.JUMP * powers[k], disc = v0 * v0 - 2 * T.G * (dy + 0.15);
           if (disc < 0) break;
           const t = (v0 + Math.sqrt(disc)) / T.G, need = ((tx + 0.5) - ball.x) / t;
           if (Math.abs(need) > T.RUN * 1.15 || !this.arcClear(need, v0, t)) continue;
           const score = dx + Math.max(0, -dy) * 0.6 - Math.max(0, dy) * 0.2 + k * 0.3;
-          if (best === null || score < best) { best = score; res = { vx: need, power: POWERS[k] }; }
+          if (best === null || score < best) { best = score; res = { vx: need, power: powers[k] }; }
           break;
         }
       }
@@ -611,6 +632,13 @@
       ball.move = dir;
       const c = this.standCell(), nx = c.x + dir;
       const wall = solid(nx, c.y), pit = !support(nx, c.y - 1) && floorBelow(nx, c.y) === null;
+      // на грибе: высокая стена в 2–3 клетках — прыгаем с гриба заранее
+      if (at(c.x, c.y - 1) === "O" && !wall) {
+        for (const k of [2, 3]) {
+          const x2 = c.x + dir * k;
+          if (solid(x2, c.y) && solid(x2, c.y + 3)) { const a = this.aimed(c, dir, 3); if (a) { ball.jump(a.vx, a.power); return; } break; }
+        }
+      }
       if (!wall && !pit) return;
       const edge = dir > 0 ? (c.x + 1) - ball.x : ball.x - c.x;
       if (wall && edge < T.R + 0.15) { ball.move = -dir * 0.6; return; }
@@ -705,9 +733,36 @@
     },
   };
 
+  function mechanics(dt) {
+    // рассыпающиеся блоки: стоишь дольше 0.6 с — осыпается на 4 с
+    const cell = ball.grounded ? Math.floor(ball.x) + "," + Math.floor(ball.y - T.R - 0.05) : null;
+    for (const [k, c] of Object.entries(L.crumble)) {
+      if (k === cell && ball.alive()) {
+        c.t += dt;
+        if (c.t > CRUMBLE_T && !(c.back > game.time)) {
+          c.back = game.time + CRUMBLE_BACK; c.t = 0; ball.grounded = false; SFX.trapdoor();
+          const [x, y] = k.split(",").map(Number);
+          for (let i = 0; i < 6; i++) L.fx.push({ px: i % 2 ? "#e2615c" : "#1c1714", x: x + Math.random(), y: y + 0.5, vx: (Math.random() - 0.5), vy: 0, g: -20, t: 0, life: 0.8 });
+          brain && brain.event && brain.event("Блок под тобой рассыпался!", true);
+        }
+      } else if (!(c.back > game.time)) c.t = Math.max(0, c.t - dt);
+    }
+    // порталы: вход переносит к выходу
+    if (ball.alive() && game.time > (ball.portalCd || 0)) {
+      const cx = Math.floor(ball.x), cy = Math.floor(ball.y - T.R + 0.1);
+      const p = L.portals.find((q) => q.exit && q.cx === cx && q.cy === cy);
+      if (p) {
+        ball.x = p.exit.x; ball.y = p.exit.cy + T.R + 0.02; ball.portalCd = game.time + 1.2; ball.aimed = false;
+        SFX.glitch(); SFX.fragment(); shake(0.2, 0.06);
+        for (let i = 0; i < 10; i++) L.fx.push({ px: i % 2 ? "#e2615c" : "#faf3e1", x: ball.x + (Math.random() - 0.5), y: ball.y + (Math.random() - 0.5), vx: 0, vy: 0.5, t: -i * 0.02, life: 0.4, spark: true });
+        brain && brain.event && brain.event("Ты провалился в портал и вылетел в другом месте мира!", true);
+      }
+    }
+  }
   function fixedStep(dt) {
     brain.fixed();
     ball.step(dt);
+    mechanics(dt);
     updateTraps(dt);
     // снаряды и эффекты
     for (const f of L.fx) {
@@ -793,10 +848,18 @@
       if (L.hidden.has(t)) continue;
       if (L.dissolve > 0 && Math.random() < 0.02) continue;   // мерцание при выключении мира
       const g = gl && gl.get(t);
-      spr(t.s, t.x + (g ? g.dx / 16 : 0), t.y);
+      let name = t.s, ox = g ? g.dx / 16 : 0;
+      if (t.crumble) {
+        const c = L.crumble[t.crumble];
+        if (c.back > game.time) continue;
+        if (c.t > 0.2) { name = "mech_crumble_crack"; ox += (Math.random() - 0.5) / 8; }
+      } else if (t.bounce) { if (game.time - (L.bounceAt[t.bounce] || -9) < 0.25) name = "mech_bounce_squash"; }
+      else if (t.anim) name = `${t.s}_${Math.floor(game.time * 8) % 2}`;
+      spr(name, t.x + ox, t.y);
       if (g) { const p = toScreen(t.x, t.y); ctx.globalAlpha = 0.5; ctx.fillStyle = g.c; ctx.fillRect(p.x - 8, p.y - 8, 16, 16); ctx.globalAlpha = 1; }
     }
     // объекты
+    for (const p of L.portals) if (!L.hidden.has(p)) spr(`mech_portal_${(Math.floor(game.time * 4) + (p.isExit ? 1 : 0)) % 2}`, p.x, p.cy + 1);
     if (L.exit && !L.hidden.has(L.exit)) spr("obj_exit", L.exit.x, L.exit.y);
     if (L.sw && !L.swHidden) spr(L.sw.on ? "obj_switch_on" : "obj_switch_off", L.sw.x, L.sw.y);
     for (const k of L.checkpoints) if (!L.hidden.has(k)) spr(k.on ? "obj_checkpoint_on" : "obj_checkpoint_off", k.x, k.y);
@@ -858,6 +921,17 @@
       if (f.px) { if (f.t > 0) { const p = toScreen(f.x, f.y); ctx.globalAlpha = Math.max(0, 1 - f.t / f.life); ctx.fillStyle = f.px; ctx.fillRect(p.x, p.y, f.spark ? 1 : 2, f.spark ? 1 : 2); if (f.spark) { ctx.fillRect(p.x - 1, p.y, 3, 1); ctx.fillRect(p.x, p.y - 1, 1, 3); } ctx.globalAlpha = 1; } continue; }
       if (f.grow) { const im = IMG[f.s]; const p = toScreen(f.x, f.y); ctx.save(); ctx.globalAlpha = 1 - f.t / f.life; ctx.translate(p.x, p.y); ctx.scale(1 + f.t * f.grow, 1); ctx.drawImage(im, -16, -4); ctx.restore(); }
       else spr(f.s, f.x, f.y);
+    }
+    if (L.data.dark && ball) {
+      // видно только вокруг шарика (и чуть-чуть вокруг проснувшихся врагов)
+      dark.ctx.globalCompositeOperation = "source-over"; dark.ctx.fillStyle = "rgba(10,8,7,0.93)"; dark.ctx.fillRect(0, 0, T.VW, T.VH);
+      dark.ctx.globalCompositeOperation = "destination-out";
+      const hole = (wx, wy, r) => { const p = toScreen(wx, wy), gr = dark.ctx.createRadialGradient(p.x, p.y, r * 0.35, p.x, p.y, r); gr.addColorStop(0, "rgba(0,0,0,1)"); gr.addColorStop(1, "rgba(0,0,0,0)"); dark.ctx.fillStyle = gr; dark.ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2); };
+      hole(ball.x, ball.y, 58 + Math.sin(game.time * 3) * 2);
+      for (const t of L.traps) if (t.awake > 0 || trapDangerous(t)) hole(t.kind === "boss" ? t.home.x : t.x, t.kind === "boss" ? t.home.y : t.y, 26);
+      for (const f of L.fragments) if (!f.taken) hole(f.x, f.y, 14);
+      if (L.exit) hole(L.exit.x, L.exit.y, 20);
+      ctx.drawImage(dark.cv, 0, 0);
     }
     if (game.fade > 0) { ctx.globalAlpha = Math.min(1, game.fade); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, T.VW, T.VH); ctx.globalAlpha = 1; }
 

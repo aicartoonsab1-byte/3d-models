@@ -15,8 +15,12 @@ import math
 import random
 import sys
 
-from levellib import (BALL_RADIUS as R, GRAVITY as G, JUMP_SPEED, PLATFORM, RUN_SPEED, SOLID, SPLAT_SPEED,
-                      Level, all_levels)
+from levellib import (BALL_RADIUS as R, GRAVITY as G, JUMP_SPEED, MUSHROOM_POWERS, PLATFORM, RUN_SPEED, SOLID,
+                      SPLAT_SPEED, Level, all_levels)
+
+CONVEYOR = 2.0        # синхронно с Tuning.ConveyorSpeed
+ICE_ACC = 0.25        # доля ускорения на льду
+CRUMBLE_T, CRUMBLE_BACK = 0.6, 4.0
 
 DT = 1 / 60
 GROUND_ACC, AIR_ACC = 38.0, 16.0
@@ -42,10 +46,18 @@ class Sim:
         self.stuck_ref, self.stuck_since, self.stuck_tries = self.x, 0.0, 0
         self.deaths_at: dict[int, int] = {}
         self.log: list[str] = []
+        self.crumbled: dict = {}      # клетка → время восстановления
+        self.touch: dict = {}         # клетка → сколько стоим на ней
+        self.portals = lv.portals()
+        self.portal_cd = 0.0
 
     # --- мир
     def solid(self, x, y):
-        return x < 0 or x >= self.lv.w or self.lv.ch(x, y) in SOLID
+        if x < 0 or x >= self.lv.w:
+            return True
+        if (x, y) in self.crumbled and self.crumbled[(x, y)] > self.t:
+            return False
+        return self.lv.ch(x, y) in SOLID
 
     def support(self, x, y):
         return self.solid(x, y) or self.lv.ch(x, y) in PLATFORM
@@ -82,14 +94,16 @@ class Sim:
 
     POWERS = (1.0, 0.85, 0.7, 0.55)   # как Navigator.Powers
 
-    def try_aimed(self, cx, cy, d):
+    def try_aimed(self, cx, cy, d, min_dy=-6):
+        mush = self.lv.ch(cx, cy - 1) == "O"
+        powers = (MUSHROOM_POWERS + self.POWERS) if mush else self.POWERS
         best, vx, power = None, 0.0, 1.0
         for dx in range(1, 7):
-            for dy in range(3, -7, -1):
+            for dy in range(7 if mush else 3, min_dy - 1, -1):
                 tx, ty = cx + d * dx, cy + dy
                 if not self.standable(tx, ty) or (dx == 1 and dy == 0):
                     continue
-                for k, pw in enumerate(self.POWERS):
+                for k, pw in enumerate(powers):
                     v0 = JUMP_SPEED * pw
                     disc = v0 ** 2 - 2 * G * (dy + 0.15)
                     if disc < 0:
@@ -122,6 +136,15 @@ class Sim:
         target = d * RUN_SPEED * speed_mul
         wall = self.solid(nx, cy)
         pit = not self.support(nx, cy - 1) and self.floor_below(nx, cy) is None
+        # на грибе-батуте: если впереди (1–3 кл.) стена выше обычного прыжка — прыгаем с гриба сразу
+        if self.lv.ch(cx, cy - 1) == "O" and not wall:
+            for k in (2, 3):
+                x2 = cx + d * k
+                if self.solid(x2, cy) and self.solid(x2, cy + 3):
+                    ok, vx, pw = self.try_aimed(cx, cy, d, min_dy=3)
+                    if ok:
+                        return (vx, pw), target
+                    break
         if not (wall or pit):
             return None, target
         edge = (cx + 1) - self.x if d > 0 else self.x - cx
@@ -183,7 +206,14 @@ class Sim:
             self.aimed = True
             self.grounded = False
         elif not (self.aimed and not self.grounded):
+            under = self.lv.ch(math.floor(self.x), math.floor(self.y - R - 0.05)) if self.grounded else "."
+            if under == ">":
+                target += CONVEYOR
+            elif under == "<":
+                target -= CONVEYOR
             acc = GROUND_ACC if self.grounded else AIR_ACC
+            if under == "~":
+                acc *= ICE_ACC
             dv = target - self.vx
             self.vx += max(-acc * DT, min(acc * DT, dv))
 
@@ -233,12 +263,33 @@ class Sim:
                 self.grounded = False
         if not self.grounded:
             self.peak_fall = max(self.peak_fall, -self.vy)
+        # рассыпающиеся блоки
+        if self.grounded:
+            cell = (math.floor(self.x), math.floor(self.y - R - 0.05))
+            if self.lv.ch(*cell) == "X":
+                self.touch[cell] = self.touch.get(cell, 0) + DT
+                if self.touch[cell] > CRUMBLE_T:
+                    self.crumbled[cell] = self.t + CRUMBLE_BACK
+                    self.touch[cell] = 0
+                    self.grounded = False
+            for c in list(self.touch):
+                if c != cell:
+                    self.touch[c] = 0
+        # порталы: вход переносит к выходу
+        if self.portal_cd <= self.t:
+            here = (math.floor(self.x), math.floor(self.y - R + 0.1))
+            if here in self.portals:
+                ex = self.portals[here]
+                self.x, self.y = ex[0] + 0.5, ex[1] + R + 0.02
+                self.portal_cd = self.t + 1.2
+                self.log.append(f"t={self.t:5.1f} портал {here}→{ex}")
         if self.y < -3:
             self.die("бездна")
         self.t += DT
 
     def land(self):
-        if self.peak_fall > SPLAT_SPEED:
+        soft = self.lv.ch(math.floor(self.x), math.floor(self.y - R - 0.05)) == "O"   # гриб гасит удар
+        if self.peak_fall > SPLAT_SPEED and not soft:
             self.splats += 1
             self.t += 1.3 + 0.5
             self.log.append(f"t={self.t:5.1f} лепёшка у x={math.floor(self.x)} (удар {self.peak_fall:.1f})")
