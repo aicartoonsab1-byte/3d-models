@@ -24,6 +24,11 @@ namespace Sharik
         public bool Ready => !Disabled && Time.time >= _readyAt;
         public float CooldownLeft01 => Ready ? 0f : Mathf.Clamp01((_readyAt - Time.time) / Cooldown);
         public Vector2 Center => LevelGrid.Center(Cell.x, Cell.y);
+        public SpriteRenderer Renderer => Sr;
+
+        /// <summary>Точка над ловушкой для номера-подсказки (для боссов и пресса — над спрайтом).</summary>
+        public Vector2 LabelPoint =>
+            Sr != null && Sr.enabled ? new Vector2(Sr.bounds.center.x, Sr.bounds.max.y + 0.3f) : Center + Vector2.up * 0.9f;
 
         public bool Trigger()
         {

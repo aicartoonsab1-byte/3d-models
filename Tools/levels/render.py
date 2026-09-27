@@ -31,13 +31,24 @@ def hexrgb(h):
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
-SKY = {"meadow": "#78b4fc", "cave": "#1c1c34", "city": "#fc9c6c", "glitch": "#10081c", "void": "#000000"}
+SKY = {"meadow": "#efe3c8", "cave": "#231c18", "city": "#f0a193", "glitch": "#efe3c8", "void": "#0e0b0a"}
+
+
+def variant(x, y):  # синхронно с LevelBuilder.Variant
+    h = (x * 73 + y * 31) % 11
+    return "_b" if h == 0 else "_c" if h == 5 else ""
+
+
+def deco_ok(lv, x, y):  # синхронно с LevelBuilder.Deco
+    if (x * 37 + y * 11) % 9 != 0:
+        return False
+    return all(lv.ch(x + dx, y + dy) in ".#" for dx in range(-2, 3) for dy in range(0, 3))
 
 
 def render(lv, with_path=False, scale=2):
     pal = lv.data.get("palette", "meadow")
     W, H = lv.w * 16, lv.h * 16
-    img = Image.new("RGBA", (W, H), hexrgb(SKY.get(pal, "#78b4fc")) + (255,))
+    img = Image.new("RGBA", (W, H), hexrgb(SKY.get(pal, "#efe3c8")) + (255,))
     hills = spr(f"bg_hills_{pal}")
     for x in range(0, W, hills.width):
         img.alpha_composite(hills, (x, H - hills.height - 16 * 2))
@@ -54,7 +65,10 @@ def render(lv, with_path=False, scale=2):
         for x in range(lv.w):
             c = lv.ch(x, y)
             if c == "#":
-                put(f"tile_{pal}_top" if lv.ch(x, y + 1) not in SOLID else f"tile_{pal}_fill", x, y)
+                top = lv.ch(x, y + 1) not in SOLID
+                put(f"tile_{pal}_{'top' if top else 'fill'}{variant(x, y)}", x, y)
+                if top and lv.ch(x, y + 1) == "." and deco_ok(lv, x, y):
+                    put(f"deco_{(x * 7 + y) % 4}", x, y + 1)
             elif c == "=":
                 put(f"tile_{pal}_platform", x, y)
             elif c == "S":
@@ -68,6 +82,16 @@ def render(lv, with_path=False, scale=2):
                 put("obj_checkpoint_off", x, y)
             elif c == "*":
                 put("obj_fragment", x, y, dy=-4)
+            elif c == "B":
+                trap_no += 1
+                kind = lv.data.get("boss", "stag")
+                name = "boss_worm_peek" if kind == "worm" else f"boss_{kind}_idle"
+                spr_ = spr(name)
+                lift = 40 if kind == "watcher" else 0
+                bx = x * 16 + 8 - spr_.width // 2
+                by = (lv.h - 1 - y) * 16 + 16 - spr_.height - lift
+                img.alpha_composite(spr_, (bx, by))
+                labels.append((x, y + spr_.height // 16 + (2 if kind == "watcher" else 0), trap_no))
             elif c in "^CTWJ":
                 trap_no += 1
                 name = {"^": "trap_spikes_on", "C": "trap_crusher", "T": "trap_trapdoor_closed",

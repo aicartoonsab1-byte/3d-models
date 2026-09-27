@@ -17,7 +17,7 @@ import fnmatch
 import json
 import sys
 
-from levellib import (LEGEND, LEVELS_DIR, MAX_H, MAX_W, MOODS, PALETTES, PLATFORM, SOLID, SPLAT_SPEED,
+from levellib import (BOSSES, LEGEND, LEVELS_DIR, MAX_H, MAX_W, MOODS, PALETTES, PLATFORM, SOLID, SPLAT_SPEED,
                       TRAP_NAMES, TRAPS, Level, all_levels, neighbors, solve)
 
 REQUIRED = {"id": str, "order": int, "title": str, "act": int, "awareness": int, "palette": str,
@@ -96,7 +96,7 @@ def check(lv: Level) -> dict:
         for (x, y) in lv.find(c):
             trap_cells.append((c, x, y))
             below = lv.ch(x, y - 1)
-            if c in "^WJ" and below not in SOLID and below not in PLATFORM:
+            if c in "^WJB" and below not in SOLID and below not in PLATFORM:
                 errors.append(f"{TRAP_NAMES[c]} в ({x},{y}) висит в воздухе — под ним нужна земля")
             if c == "C":
                 free = 0
@@ -113,6 +113,13 @@ def check(lv: Level) -> dict:
                     warnings.append(f"люк в ({x},{y}): под ним твёрдо — открывать бессмысленно")
                 if lv.ch(x, y + 1) in SOLID:
                     errors.append(f"люк в ({x},{y}) замурован сверху")
+    bosses = lv.find("B")
+    if len(bosses) > 1:
+        errors.append("на уровне может быть только один босс B")
+    if bosses and d.get("boss") not in BOSSES:
+        errors.append(f"есть B, но поле boss должно быть одним из {list(BOSSES)}")
+    if d.get("boss") and not bosses:
+        warnings.append("поле boss задано, но в grid нет клетки B")
     if not trap_cells and not d.get("final"):
         warnings.append("на уровне нет ни одной ловушки — игроку нечем мешать")
 

@@ -44,6 +44,7 @@ namespace Sharik
         readonly Dictionary<int, int> _deathsAt = new Dictionary<int, int>();
         int _trapsSeen;
         bool _cursorNoticed;
+        readonly HashSet<TrapBase> _bossesSeen = new HashSet<TrapBase>();
 
         public LlmClient Llm => _llm;
         public bool Busy => _scriptedBusy || _bubble.SpeechBusy;
@@ -198,6 +199,7 @@ namespace Sharik
                 }
 
             CheckCursor(pos);
+            CheckBosses(pos);
             CheckStuck(pos);
 
             if (Time.time >= _intentUntil && Current != Intent.Forward) Current = Intent.Forward;
@@ -277,6 +279,20 @@ namespace Sharik
                 if (_stuckTries % 3 == 1) { SetIntent(Intent.Back, 0.8f); }
                 else if (_stuckTries % 3 == 2) { SetIntent(Intent.Yolo, 3f); }
                 else { SetIntent(Intent.Pray, 2f); React("pray"); }
+            }
+        }
+
+        void CheckBosses(Vector2 pos)
+        {
+            foreach (var t in _lv.Traps)
+            {
+                if (!(t is BossTrap) || _bossesSeen.Contains(t)) continue;
+                if (Mathf.Abs(t.Center.x - pos.x) > 9f) continue;
+                _bossesSeen.Add(t);
+                Remember($"впервые увидел огромное существо: {t.Title}");
+                _ball.Visual.LookAt(t.Renderer.bounds.center);
+                if (!React("boss_seen")) _ball.Visual.SetMood("awe", 2f);
+                _nextThink = Mathf.Min(_nextThink, Time.time + 1.5f);
             }
         }
 

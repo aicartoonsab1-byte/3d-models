@@ -23,8 +23,7 @@ namespace Sharik
                 foreach (var t in gm.Traps.OnScreen)
                 {
                     if (t.Hotkey == 0) continue;
-                    var p = t is CrusherTrap ? (Vector2)t.transform.position : t.Center;
-                    var sp = Camera.main.WorldToScreenPoint(p + Vector2.up * 0.9f);
+                    var sp = Camera.main.WorldToScreenPoint(t.LabelPoint);
                     var r = new Rect(sp.x - fs * 0.45f, Screen.height - sp.y - fs * 0.6f, fs * 0.95f, fs * 1.05f);
                     GUI.color = t.Ready ? new Color(0.1f, 0.1f, 0.15f, 0.85f) : new Color(0.3f, 0.1f, 0.1f, 0.7f);
                     GUI.DrawTexture(r, UiStyle.White);

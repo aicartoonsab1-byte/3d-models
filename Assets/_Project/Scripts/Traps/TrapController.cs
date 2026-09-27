@@ -41,6 +41,7 @@ namespace Sharik
                 {
                     float d = Vector2.Distance(wp, t.Center);
                     if (t is CrusherTrap) d = Vector2.Distance(wp, t.transform.position);
+                    if (t is BossTrap && t.Renderer.bounds.Contains(new Vector3(wp.x, wp.y, t.Renderer.bounds.center.z))) d = 0f;
                     if (d < bestD) { bestD = d; best = t; }
                 }
                 if (best != null) Fire(best);

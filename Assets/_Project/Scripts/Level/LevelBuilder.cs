@@ -26,11 +26,12 @@ namespace Sharik
 
         public static readonly Dictionary<string, Color> SkyColors = new Dictionary<string, Color>
         {
-            { "meadow", new Color32(0x78, 0xb4, 0xfc, 255) },
-            { "cave", new Color32(0x1c, 0x1c, 0x34, 255) },
-            { "city", new Color32(0xfc, 0x9c, 0x6c, 255) },
-            { "glitch", new Color32(0x10, 0x08, 0x1c, 255) },
-            { "void", new Color32(0, 0, 0, 255) },
+            // «Мистическая гравюра»: бумага, тушь, коралл (см. Tools/art/generate_sprites.py)
+            { "meadow", new Color32(0xef, 0xe3, 0xc8, 255) },
+            { "cave", new Color32(0x23, 0x1c, 0x18, 255) },
+            { "city", new Color32(0xf0, 0xa1, 0x93, 255) },
+            { "glitch", new Color32(0xef, 0xe3, 0xc8, 255) },
+            { "void", new Color32(0x0e, 0x0b, 0x0a, 255) },
         };
 
         public static LevelRuntime Build(LevelData d)
@@ -59,7 +60,9 @@ namespace Sharik
                 {
                     case '#':
                         bool top = d.At(x, y + 1) != '#' && d.At(x, y + 1) != 'T';
-                        rt.WorldSprites.Add(SpriteLib.Make("t", tiles, $"tile_{pal}_{(top ? "top" : "fill")}", p, Order.Tiles));
+                        rt.WorldSprites.Add(SpriteLib.Make("t", tiles, $"tile_{pal}_{(top ? "top" : "fill")}{Variant(x, y)}", p, Order.Tiles));
+                        if (top && d.At(x, y + 1) == '.' && Deco(x, y, d))
+                            rt.WorldSprites.Add(SpriteLib.Make("Deco", objs, $"deco_{(x * 7 + y) % 4}", LevelGrid.Center(x, y + 1), Order.Objects - 2));
                         break;
                     case '=':
                         rt.WorldSprites.Add(SpriteLib.Make("p", tiles, $"tile_{pal}_platform", p, Order.Tiles));
@@ -104,6 +107,7 @@ namespace Sharik
                     case 'T': rt.Traps.Add(TrapdoorTrap.Create(traps, x, y, rt)); break;
                     case 'W': rt.Traps.Add(FanTrap.Create(traps, x, y, rt)); break;
                     case 'J': rt.Traps.Add(SpringTrap.Create(traps, x, y, rt)); break;
+                    case 'B': rt.Traps.Add(BossTrap.Create(traps, x, y, rt, d.boss)); break;
                 }
             }
 
@@ -121,6 +125,26 @@ namespace Sharik
             BuildColliders(d, root);
             BuildBackground(rt, pal);
             return rt;
+        }
+
+        /// <summary>Вариант тайла: изредка — с полумесяцем, глазом или ростком.</summary>
+        static string Variant(int x, int y)
+        {
+            int h = (x * 73 + y * 31) % 11;
+            return h == 0 ? "_b" : h == 5 ? "_c" : "";
+        }
+
+        /// <summary>Декоративные обитатели (грибы, зверьки, цветы-глаза, улитки) — редко и не рядом с игровыми объектами.</summary>
+        static bool Deco(int x, int y, LevelData d)
+        {
+            if ((x * 37 + y * 11) % 9 != 0) return false;
+            for (int dx = -2; dx <= 2; dx++)
+            for (int dy = 0; dy <= 2; dy++)
+            {
+                char c = d.At(x + dx, y + dy);
+                if (c != '.' && c != '#') return false;
+            }
+            return true;
         }
 
         /// <summary>Жадно объединяем твёрдые клетки в прямоугольники — меньше коллайдеров и шарик не цепляется за стыки.</summary>
