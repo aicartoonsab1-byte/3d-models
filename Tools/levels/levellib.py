@@ -17,7 +17,7 @@ LEVELS_DIR = ROOT / "Assets/_Project/Resources/Levels"
 # ---- физика (синхронно с Tuning.cs) -------------------------------------
 GRAVITY = 9.81 * 3.0          # Physics2D.gravity * gravityScale
 RUN_SPEED = 6.0               # макс. скорость качения, тайлов/с
-JUMP_SPEED = 13.5             # начальная вертикальная скорость прыжка
+JUMP_SPEED = 14.5             # начальная вертикальная скорость прыжка (≈3.6 клетки вверх)
 BALL_RADIUS = 0.45
 SPLAT_SPEED = 17.0            # удар о землю быстрее этого → лепёшка (без смерти)
 
@@ -131,21 +131,24 @@ def _collides(lv: Level, cx: float, cy: float, vy: float) -> str | None:
                 # платформа держит только сверху: верх платформы на ty+1
                 top = ty + 1
                 if cy - r <= top <= cy - r + 0.35 and tx - 0.2 <= cx <= tx + 1.2:
-                    return "land"
+                    return ("land", top)
     return None
 
 
 def simulate(lv: Level, sx: int, sy: int, vx: float, jump: bool, dt: float = 1 / 60,
-             tmax: float = 3.0):
+             tmax: float = 3.0, power: float = 1.0):
     """Бросок шарика из клетки (sx,sy). Возвращает (клетка_приземления, макс_скорость_падения) или None."""
     x, y = sx + 0.5, sy + BALL_RADIUS
-    vy = JUMP_SPEED if jump else 0.0
+    vy = JUMP_SPEED * power if jump else 0.0
     t = 0.0
     left_ground = jump
     while t < tmax:
         vy -= GRAVITY * dt
         nx, ny = x + vx * dt, y + vy * dt
         hit = _collides(lv, nx, ny, vy)
+        land_top = None
+        if isinstance(hit, tuple):
+            hit, land_top = hit
         if hit == "solid":
             # пробуем скользить: сначала только по y, потом только по x
             if _collides(lv, x, ny, vy) != "solid":
@@ -160,7 +163,10 @@ def simulate(lv: Level, sx: int, sy: int, vx: float, jump: bool, dt: float = 1 /
             else:
                 return None
         elif hit == "land" and left_ground:
-            cell = (math.floor(nx), math.floor(ny - BALL_RADIUS + 0.2))
+            # стоим НАД платформой: клетка = верх платформы (а не сама платформа)
+            cell = (math.floor(nx), land_top)
+            if not lv.standable(*cell):
+                cell = (math.floor(nx - 0.3) if lv.standable(math.floor(nx - 0.3), land_top) else math.floor(nx + 0.3), land_top)
             return (cell, -vy) if lv.standable(*cell) else None
         if ny < y and not left_ground:
             left_ground = True
@@ -179,12 +185,12 @@ def neighbors(lv: Level, x: int, y: int):
         if lv.standable(x + dx, y):
             out[(x + dx, y)] = ("walk", 0.0)
     # прыжки и скатывания с разной горизонтальной скоростью
-    for jump in (True, False):
+    for jump, power in ((True, 1.0), (True, 0.85), (True, 0.7), (True, 0.55), (False, 1.0)):
         for k in range(-8, 9):
             vx = RUN_SPEED * k / 8
             if not jump and abs(vx) < 1.0:
                 continue
-            res = simulate(lv, x, y, vx, jump)
+            res = simulate(lv, x, y, vx, jump, power=power)
             if res:
                 cell, fall = res
                 if cell != (x, y) and cell not in out:

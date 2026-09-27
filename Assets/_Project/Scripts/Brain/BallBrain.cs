@@ -232,7 +232,7 @@ namespace Sharik
                     if (_ball.CanJump)
                     {
                         var c = _nav.StandCell(_ball.transform.position);
-                        if (_nav.TryAimedJump(_ball, _ball.transform.position, c, dir, out float vx)) _ball.Jump(vx);
+                        if (_nav.TryAimedJump(_ball, _ball.transform.position, c, dir, out float vx, out float pw)) _ball.Jump(vx, pw);
                         else _ball.Jump(dir * 2f);
                         Current = Intent.Forward;
                     }

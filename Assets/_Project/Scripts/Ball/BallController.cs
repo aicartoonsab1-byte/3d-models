@@ -27,6 +27,7 @@ namespace Sharik
         float _lastGrounded = -10f;
         bool _jumpQueued;
         float _jumpVx;
+        float _jumpMul = 1f;
         bool _aimedJump;
         float _airborneSince;
         float _peakFallSpeed;
@@ -60,10 +61,12 @@ namespace Sharik
 
         public void SetRespawn(Vector2 p) => _respawn = new Vector2(p.x, Mathf.Floor(p.y) + Tuning.BallRadius + 0.02f);
 
-        /// <summary>Прыжок. vx == null — прыжок с текущей скоростью, иначе «прицельный» с заданной.</summary>
-        public void Jump(float? vx = null)
+        /// <summary>Прыжок. vx == null — с текущей скоростью, иначе «прицельный» с заданной.
+        /// power — доля полной силы прыжка (под низким потолком прыгаем слабее).</summary>
+        public void Jump(float? vx = null, float power = 1f)
         {
             _jumpQueued = true;
+            _jumpMul = Mathf.Clamp(power, 0.4f, 1f);
             _aimedJump = vx.HasValue;
             _jumpVx = vx ?? Body.Vel().x;
         }
@@ -95,7 +98,7 @@ namespace Sharik
                 _jumpQueued = false;
                 if (CanJump)
                 {
-                    v.y = Tuning.JumpSpeed;
+                    v.y = Tuning.JumpSpeed * _jumpMul;
                     v.x = Mathf.Clamp(_jumpVx, -Tuning.RunSpeed * 1.25f, Tuning.RunSpeed * 1.25f);
                     _lastGrounded = -10f;
                     Grounded = false;

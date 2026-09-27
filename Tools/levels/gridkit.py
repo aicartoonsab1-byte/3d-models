@@ -47,7 +47,8 @@ class Grid:
         return self
 
     def ground(self, x0: int, x1: int, height: int):
-        """Столбы земли от низа до height-1 включительно. Шарик стоит на клетках y = height."""
+        """Столбы земли от низа до height-1 включительно. Шарик стоит на клетках y = height.
+        Только ДОБАВЛЯЕТ землю. Чтобы понизить столб или вырезать ямку — fill(x0, x1, y0, y1, ".")."""
         return self.fill(x0, x1, 0, height - 1, "#")
 
     def pit(self, x0: int, x1: int):

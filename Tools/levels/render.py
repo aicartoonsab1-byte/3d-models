@@ -61,8 +61,8 @@ def render(lv, with_path=False, scale=2):
 
     trap_no = 0
     labels = []
-    for y in range(lv.h):
-        for x in range(lv.w):
+    for x in range(lv.w):          # слева направо — как нумерует игра (TrapController)
+        for y in range(lv.h):
             c = lv.ch(x, y)
             if c == "#":
                 top = lv.ch(x, y + 1) not in SOLID

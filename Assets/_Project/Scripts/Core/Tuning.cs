@@ -14,7 +14,7 @@ namespace Sharik
         // --- физика шарика (синхронно с levellib.py)
         public const float GravityScale = 3f;         // × Physics2D.gravity (-9.81)
         public const float RunSpeed = 6f;
-        public const float JumpSpeed = 13.5f;
+        public const float JumpSpeed = 14.5f;        // ≈3.6 клетки вверх: ступенька в 3 клетки берётся уверенно
         public const float BallRadius = 0.45f;
         public const float SplatSpeed = 17f;          // удар сильнее → лепёшка
         public const float GroundAccel = 38f;

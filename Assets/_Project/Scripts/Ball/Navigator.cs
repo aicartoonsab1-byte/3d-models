@@ -51,15 +51,22 @@ namespace Sharik
             LastObstacle = wall ? "стена" : "яма";
 
             float edgeDist = dir > 0 ? (c.x + 1) - pos.x : pos.x - c.x;
+            // вплотную к стене с места не запрыгнуть — отступаем на полшага (мини-разбег)
+            if (wall && edgeDist < Tuning.BallRadius + 0.15f)
+            {
+                ball.MoveInput = -dir * 0.6f;
+                LastObstacle = "разбег";
+                return;
+            }
             // у стены прыгаем сразу, у ямы — у самого края (импульсивный прыгает раньше)
             float trigger = wall ? 0.75f : Mathf.Lerp(0.35f, 0.75f, Impulsivity * Random.value);
             if (edgeDist > trigger && !wall) return;
 
-            if (TryAimedJump(ball, pos, c, dir, out float vx))
+            if (TryAimedJump(ball, pos, c, dir, out float vx, out float power))
             {
                 // ошибка «на глаз»: чем импульсивнее, тем сильнее промах
                 float err = 1f + Gaussian() * 0.12f * Impulsivity;
-                ball.Jump(vx * err);
+                ball.Jump(vx * err, power);
             }
             else if (wall)
             {
@@ -73,9 +80,11 @@ namespace Sharik
         }
 
         /// <summary>Найти ближайшую клетку впереди, куда можно долететь, и нужную горизонтальную скорость.</summary>
-        public bool TryAimedJump(BallController ball, Vector2 pos, Vector2Int c, int dir, out float vx)
+        static readonly float[] Powers = { 1f, 0.85f, 0.7f, 0.55f };
+
+        public bool TryAimedJump(BallController ball, Vector2 pos, Vector2Int c, int dir, out float vx, out float power)
         {
-            vx = 0;
+            vx = 0; power = 1f;
             float best = float.MaxValue;
             for (int dx = 1; dx <= 6; dx++)
             for (int dy = 3; dy >= -6; dy--)
@@ -84,25 +93,30 @@ namespace Sharik
                 if (!_g.IsStandable(tx, ty)) continue;
                 if (dx == 1 && dy == 0) continue;
                 float h = ty - c.y;                       // перепад высоты в клетках
-                float disc = Tuning.JumpSpeed * Tuning.JumpSpeed - 2f * G * (h + 0.15f);
-                if (disc < 0) continue;
-                float t = (Tuning.JumpSpeed + Mathf.Sqrt(disc)) / G;   // время до приземления (нисходящая ветвь)
-                float dist = (tx + 0.5f) - pos.x;
-                float needVx = dist / t;
-                if (Mathf.Abs(needVx) > Tuning.RunSpeed * 1.15f) continue;
-                if (!ArcClear(pos, needVx, t)) continue;
-                // предпочитаем ближние и не слишком низкие клетки
-                float score = dx * 1.0f + Mathf.Max(0, -dy) * 0.6f - Mathf.Max(0, dy) * 0.2f;
-                if (score < best) { best = score; vx = needVx; }
+                // сначала полный прыжок, под низким потолком — слабее
+                for (int k = 0; k < Powers.Length; k++)
+                {
+                    float v0 = Tuning.JumpSpeed * Powers[k];
+                    float disc = v0 * v0 - 2f * G * (h + 0.15f);
+                    if (disc < 0) break;
+                    float t = (v0 + Mathf.Sqrt(disc)) / G;   // время до приземления (нисходящая ветвь)
+                    float needVx = ((tx + 0.5f) - pos.x) / t;
+                    if (Mathf.Abs(needVx) > Tuning.RunSpeed * 1.15f) continue;
+                    if (!ArcClear(pos, needVx, v0, t)) continue;
+                    // предпочитаем ближние и не слишком низкие клетки
+                    float score = dx * 1.0f + Mathf.Max(0, -dy) * 0.6f - Mathf.Max(0, dy) * 0.2f + k * 0.3f;
+                    if (score < best) { best = score; vx = needVx; power = Powers[k]; }
+                    break;
+                }
             }
             return best < float.MaxValue;
         }
 
-        bool ArcClear(Vector2 p0, float vx, float tEnd)
+        bool ArcClear(Vector2 p0, float vx, float v0, float tEnd)
         {
             for (float t = 0.05f; t < tEnd - 0.05f; t += 0.05f)
             {
-                var p = p0 + new Vector2(vx * t, Tuning.JumpSpeed * t - 0.5f * G * t * t);
+                var p = p0 + new Vector2(vx * t, v0 * t - 0.5f * G * t * t);
                 var cell = LevelGrid.Cell(p);
                 if (_g.IsSolid(cell.x, cell.y)) return false;
                 var top = LevelGrid.Cell(p + Vector2.up * Tuning.BallRadius * 0.8f);

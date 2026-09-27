@@ -80,29 +80,34 @@ class Sim:
     def stand_cell(self):
         return math.floor(self.x), math.floor(self.y - R + 0.1)
 
+    POWERS = (1.0, 0.85, 0.7, 0.55)   # как Navigator.Powers
+
     def try_aimed(self, cx, cy, d):
-        best, vx = None, 0.0
+        best, vx, power = None, 0.0, 1.0
         for dx in range(1, 7):
             for dy in range(3, -7, -1):
                 tx, ty = cx + d * dx, cy + dy
                 if not self.standable(tx, ty) or (dx == 1 and dy == 0):
                     continue
-                disc = JUMP_SPEED ** 2 - 2 * G * (dy + 0.15)
-                if disc < 0:
-                    continue
-                t = (JUMP_SPEED + math.sqrt(disc)) / G
-                need = ((tx + 0.5) - self.x) / t
-                if abs(need) > RUN_SPEED * 1.15 or not self.arc_clear(need, t):
-                    continue
-                score = dx + max(0, -dy) * 0.6 - max(0, dy) * 0.2
-                if best is None or score < best:
-                    best, vx = score, need
-        return best is not None, vx
+                for k, pw in enumerate(self.POWERS):
+                    v0 = JUMP_SPEED * pw
+                    disc = v0 ** 2 - 2 * G * (dy + 0.15)
+                    if disc < 0:
+                        break
+                    t = (v0 + math.sqrt(disc)) / G
+                    need = ((tx + 0.5) - self.x) / t
+                    if abs(need) > RUN_SPEED * 1.15 or not self.arc_clear(need, v0, t):
+                        continue
+                    score = dx + max(0, -dy) * 0.6 - max(0, dy) * 0.2 + k * 0.3
+                    if best is None or score < best:
+                        best, vx, power = score, need, pw
+                    break
+        return best is not None, vx, power
 
-    def arc_clear(self, vx, tend):
+    def arc_clear(self, vx, v0, tend):
         t = 0.05
         while t < tend - 0.05:
-            px, py = self.x + vx * t, self.y + JUMP_SPEED * t - 0.5 * G * t * t
+            px, py = self.x + vx * t, self.y + v0 * t - 0.5 * G * t * t
             if self.solid(math.floor(px), math.floor(py)) or self.solid(math.floor(px), math.floor(py + R * 0.8)):
                 return False
             t += 0.05
@@ -120,14 +125,16 @@ class Sim:
         if not (wall or pit):
             return None, target
         edge = (cx + 1) - self.x if d > 0 else self.x - cx
+        if wall and edge < R + 0.15:          # как Navigator: отступить от стены перед прыжком
+            return None, -d * RUN_SPEED * 0.6 * 0.85
         trig = 0.75 if wall else 0.35 + (0.75 - 0.35) * self.imp * self.rng.random()
         if edge > trig and not wall:
             return None, target
-        ok, vx = self.try_aimed(cx, cy, d)
+        ok, vx, pw = self.try_aimed(cx, cy, d)
         if ok:
-            return vx * (1 + self.rng.gauss(0, 1) * 0.12 * self.imp), target
+            return (vx * (1 + self.rng.gauss(0, 1) * 0.12 * self.imp), pw), target
         if wall:
-            return d * RUN_SPEED * 0.5, target
+            return (d * RUN_SPEED * 0.5, 1.0), target
         return None, (target if yolo else 0.0)
 
     # --- шаг
@@ -170,8 +177,9 @@ class Sim:
             jump_vx, target = self.steer(-d, 0.6)
 
         if jump_vx is not None and self.grounded:
-            self.vy = JUMP_SPEED
-            self.vx = max(-RUN_SPEED * 1.25, min(RUN_SPEED * 1.25, jump_vx))
+            jvx, pw = jump_vx
+            self.vy = JUMP_SPEED * pw
+            self.vx = max(-RUN_SPEED * 1.25, min(RUN_SPEED * 1.25, jvx))
             self.aimed = True
             self.grounded = False
         elif not (self.aimed and not self.grounded):
@@ -180,6 +188,8 @@ class Sim:
             self.vx += max(-acc * DT, min(acc * DT, dv))
 
         self.vy -= G * DT
+        if not self.grounded:
+            self.peak_fall = max(self.peak_fall, -self.vy)   # учитываем и последний кадр перед ударом
         # x
         nx = self.x + self.vx * DT
         if self.hits_solid(nx, self.y):
