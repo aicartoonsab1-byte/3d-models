@@ -171,6 +171,8 @@ def check(lv: Level) -> dict:
 
 
 def main(argv):
+    import levellib
+    argv = levellib.use_campaign(argv)
     as_json = "--json" in argv
     masks = [a for a in argv if not a.startswith("--")]
     levels = all_levels()
@@ -196,7 +198,7 @@ def main(argv):
             for i in r["info"]:
                 print(f"   · {i}")
         if not reports:
-            print(f"Нет уровней в {LEVELS_DIR}")
+            print(f"Нет уровней в {levellib.levels_dir()}")
     return 0 if all(r["ok"] for r in reports) else 1
 
 

@@ -174,7 +174,7 @@
   // ---------------------------------------------------------------- фразы
   function pickPhrase(key, stage) {
     let best = null;
-    for (const e of D.phrases) {
+    for (const e of (CAMP.phrases || []).concat(D.phrases)) {           // фразы кампании перекрывают основные
       if (e.key !== key) continue;
       if (e.stage === stage) { best = e; break; }
       if (e.stage < stage && (!best || e.stage > best.stage)) best = e;
@@ -192,7 +192,11 @@
   let L = null;           // текущий уровень (runtime)
   let ball = null, brain = null;
   let levelIndex = 0;
-  const levels = D.levels.slice().sort((a, b) => a.order - b.order);
+  // Кампании: основная «Шарик» и игры «по мотивам фильмов» (Resources/Campaigns/<id>)
+  const CAMPAIGNS = (D.campaigns && D.campaigns.length ? D.campaigns : [{ id: "sharik", title: "Шарик", levels: D.levels, persona: D.persona }]);
+  let CAMP = CAMPAIGNS[0];
+  try { CAMP = CAMPAIGNS.find((c) => c.id === localStorage.getItem("sharik_campaign")) || CAMPAIGNS[0]; } catch (e) { }
+  let levels = CAMP.levels.slice().sort((a, b) => a.order - b.order);
 
   function at(x, y) {
     if (x < 0 || x >= L.w || y < 0 || y >= L.h) return ".";
@@ -270,10 +274,15 @@
     if (t.kind === "fan") { t.title = "Вентилятор"; t.cd = T.FAN_CD; t.on = false; }
     if (t.kind === "spring") { t.title = "Пружина"; t.cd = T.SPRING_CD; }
     if (t.kind === "boss") {
-      t.boss = L.data.boss || "stag"; t.title = BOSS_TITLE[t.boss] || "Существо";
-      t.cd = { stag: 4, watcher: 3, worm: 4, keeper: 5 }[t.boss] || 4;
+      // ключ из уровня → описание в кампании (своё существо) → архетип поведения base
+      const key = L.data.boss || "stag", def = (CAMP.bosses && CAMP.bosses[key]) || {};
+      t.key = key; t.def = def;
+      t.boss = ["stag", "watcher", "worm", "keeper"].includes(def.base) ? def.base : ["stag", "watcher", "worm", "keeper"].includes(key) ? key : "stag";
+      t.custom = Array.isArray(def.shape) && def.shape.length > 0;
+      t.title = def.title || BOSS_TITLE[t.boss] || "Существо";
+      t.cd = def.cooldown || { stag: 4, watcher: 3, worm: 4, keeper: 5 }[t.boss] || 4;
       const im = IMG[t.boss === "worm" ? "boss_worm_peek" : `boss_${t.boss}_idle`];
-      t.h = im ? im.height / T.PPU : 3;
+      t.h = t.custom ? (def.size || [3, 3])[1] : im ? im.height / 16 : 3;
       t.lift = t.boss === "watcher" ? 2.5 : 0;
       t.home = { x: x + 0.5, y: y + t.h / 2 + t.lift };
       t.frame = "idle"; t.blinkAt = 2 + Math.random() * 3;
@@ -288,7 +297,7 @@
     if (t.kind === "crusher") return { x0: t.x - 0.5, x1: t.x + 0.5, y0: t.pos - 0.5, y1: t.pos + 0.5 };
     if (t.kind === "boss") {
       const im = IMG[t.boss === "worm" ? "boss_worm_peek" : `boss_${t.boss}_idle`];
-      const w = im ? im.width / T.PPU : 2, h = t.h;
+      const w = t.custom ? (t.def.size || [3, 3])[0] : im ? im.width / 16 : 2, h = t.h;
       return { x0: t.home.x - w / 2, x1: t.home.x + w / 2, y0: t.home.y - h / 2, y1: t.home.y + h / 2 };
     }
     return { x0: t.x - 0.5, x1: t.x + 0.5, y0: t.y - 0.5, y1: t.y + 0.5 };
@@ -339,7 +348,8 @@
     else if (t.kind === "spring") want = adx < 0.6 && ball.grounded;                    // подкидывает, как только встал
     else if (t.kind === "boss") {
       const bx = ball.x - t.home.x, abx = Math.abs(bx);
-      want = t.boss === "stag" ? abx < 5 && ball.grounded : t.boss === "watcher" ? abx < 9 : t.boss === "worm" ? abx < 12 : abx < 8;
+      const rng = t.def && t.def.range;
+      want = t.boss === "stag" ? abx < (rng || 5) && ball.grounded : t.boss === "watcher" ? abx < (rng || 9) : t.boss === "worm" ? abx < (rng || 12) : abx < (rng || 8);
     }
     if (want && !t.busy) t.warn = t.kind === "boss" ? 0.01 : 0.35;
   }
@@ -353,7 +363,7 @@
       target = Math.max(t.origin.x - 6, Math.min(t.origin.x + 6, target));
       const d = target - t.home.x;
       if (Math.abs(d) > (awake ? 1.5 : 0.1)) {
-        const nx = t.home.x + Math.sign(d) * Math.min(Math.abs(d), (awake ? 1.6 : 1) * dt);
+        const nx = t.home.x + Math.sign(d) * Math.min(Math.abs(d), (awake ? ((t.def && t.def.speed) || 1.6) : 1) * dt);
         const legs = [nx - 1.2, nx + 1.2].every((lx) => support(Math.floor(lx), t.cy - 1));
         if (legs) { t.home.x = nx; t.walk = (t.walk || 0) + dt; t.face = d < 0 ? -1 : 1; }
       }
@@ -361,7 +371,7 @@
     }
     if (t.boss === "watcher") {
       target = Math.max(t.origin.x - 10, Math.min(t.origin.x + 10, target));
-      t.home.x += (target - t.home.x) * Math.min(1, dt * (awake ? 0.9 : 0.4));
+      t.home.x += (target - t.home.x) * Math.min(1, dt * (awake ? 0.55 * ((t.def && t.def.speed) || 1.6) : 0.4));
       t.x = t.home.x;
     }
   }
@@ -679,7 +689,7 @@
     time: 0, paused: false, cutscene: false, fade: 0, big: null, small: null, bigA: 0, waitRestart: false,
     start(i) {
       levelIndex = (i + levels.length) % levels.length;
-      try { localStorage.setItem("sharik_level", String(levelIndex)); } catch (e) { }
+      try { localStorage.setItem("sharik_level_" + CAMP.id, String(levelIndex)); } catch (e) { }
       buildLevel(levels[levelIndex]);
       ball = new Ball(L.spawn); brain = new Brain(); trapsFired = 0;
       const c = camClamp(ball.x, ball.y + 1); cam.x = c.x; cam.y = c.y;
@@ -726,9 +736,10 @@
           if (t > 3) {
             ball.bits = null; stage = 8;
             MIND.loops++; saveMind();
-            let loops = 1; try { loops = Number(localStorage.getItem("sharik_loops") || 0) + 1; localStorage.setItem("sharik_loops", String(loops)); } catch (e) { }
-            this.big = "КОНЕЦ"; this.bigT = 1e9;
-            this.small = `Шарик выключил мир. Или мир выключил шарика?\nЛепёшек: ${ball.splats}. Циклов: ${loops}.\n\nНажми любую клавишу, чтобы… начать заново?`;
+            let loops = MIND.loops;
+            const fin = CAMP.finale || {};
+            this.big = fin.end || "КОНЕЦ"; this.bigT = 1e9;
+            this.small = `${fin.text || "Шарик выключил мир. Или мир выключил шарика?"}\nЛепёшек: ${ball.splats}. Циклов: ${loops}.\n\nНажми любую клавишу, чтобы… начать заново?`;
             this.waitRestart = true;
           }
         }
@@ -877,7 +888,17 @@
       }
       if (t.kind === "boss") {
         const bob = t.busy ? 0 : Math.round(Math.sin(game.time * (t.boss === "watcher" ? 2 : 1.2)) * (t.boss === "watcher" ? 3 : 1)) / 16;
-        if (t.boss === "worm") {
+        if (t.custom) {
+          const fr = t.frame === "atk" ? "atk" : t.frame === "blink" ? "blink" : "idle";
+          if (t.boss === "worm") {
+            if (t.phase === "dust") spr("fx_dust", t.wx + (Math.random() - 0.5) / 4, t.wfy + 0.2);
+            if (["burst", "hold", "sink"].includes(t.phase)) drawCustomBoss(t, t.phase === "burst" ? "atk" : "idle", t.wx, t.wormY, false);
+            else if (t.phase !== "dust") drawCustomBoss(t, fr, t.home.x, t.home.y + bob, true);    // из земли торчит только верх
+          } else {
+            const step = t.boss === "stag" && t.walk ? Math.round(Math.abs(Math.sin(t.walk * 8))) / 16 : 0;
+            drawCustomBoss(t, fr, t.home.x, t.home.y + bob + step, false, t.face < 0);
+          }
+        } else if (t.boss === "worm") {
           if (t.phase === "dust") spr("fx_dust", t.wx + (Math.random() - 0.5) / 4, t.wfy + 0.2);
           if (["burst", "hold", "sink"].includes(t.phase)) spr(t.phase === "burst" ? "boss_worm_atk" : "boss_worm_idle", t.wx, t.wormY);
           else if (t.phase !== "dust") spr("boss_worm_peek", t.home.x, t.home.y + bob);
@@ -1080,7 +1101,29 @@
   });
   $("pause").addEventListener("click", () => { game.paused = !game.paused; $("pause").textContent = game.paused ? "Дальше" : "Пауза"; });
   const sel = $("level");
-  levels.forEach((lv, i) => { const o = document.createElement("option"); o.value = String(i); o.textContent = `${lv.order}. ${lv.title}`; sel.appendChild(o); });
+  function fillLevels() {
+    sel.innerHTML = "";
+    levels.forEach((lv, i) => { const o = document.createElement("option"); o.value = String(i); o.textContent = `${lv.order}. ${lv.title}`; sel.appendChild(o); });
+  }
+  fillLevels();
+  function showCampaign() {
+    $("introtitle").textContent = CAMP.title || "Шарик";
+    $("introlog").textContent = CAMP.logline || "";
+    $("introsrc").textContent = CAMP.source || "";
+    $("herotitle").textContent = CAMP.title || "Шарик";
+  }
+  const csel = $("campaign");
+  CAMPAIGNS.forEach((c) => { const o = document.createElement("option"); o.value = c.id; o.textContent = c.title + (c.source ? " — " + c.source : ""); csel.appendChild(o); });
+  csel.value = CAMP.id;
+  csel.addEventListener("change", () => {
+    CAMP = CAMPAIGNS.find((c) => c.id === csel.value) || CAMPAIGNS[0];
+    try { localStorage.setItem("sharik_campaign", CAMP.id); } catch (e) { }
+    levels = CAMP.levels.slice().sort((a, b) => a.order - b.order);
+    fillLevels(); loadMind(); showCampaign();
+    let st = 0; try { st = Number(localStorage.getItem("sharik_level_" + CAMP.id) || 0) || 0; } catch (e) { }
+    game.start(st); csel.blur();
+  });
+  showCampaign();
   sel.addEventListener("change", () => { game.start(Number(sel.value)); sel.blur(); });
 
   // ---------------------------------------------------------------- цикл
@@ -1099,7 +1142,7 @@
   function boot(saved) {
     resize();
     bindMindUI(); renderMindPanel();
-    let start = 0; try { start = Number(localStorage.getItem("sharik_level") || 0) || 0; } catch (e) { }
+    let start = 0; try { start = Number(localStorage.getItem("sharik_level_" + CAMP.id) || localStorage.getItem("sharik_level") || 0) || 0; } catch (e) { }
     if (saved && typeof saved.level === "number") start = saved.level;
     game.start(start);
     if (!$("intro").hidden) game.paused = true;

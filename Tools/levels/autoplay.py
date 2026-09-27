@@ -321,6 +321,8 @@ def run(lv: Level, n: int, verbose: bool, limit: float = 400.0):
 
 
 def main(argv):
+    import levellib
+    argv = levellib.use_campaign(argv)
     ap = argparse.ArgumentParser()
     ap.add_argument("masks", nargs="*")
     ap.add_argument("-n", type=int, default=5)

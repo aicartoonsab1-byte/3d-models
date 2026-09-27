@@ -133,6 +133,9 @@ def render(lv, with_path=False, scale=2):
 
 
 def main(argv):
+    import levellib
+    argv = levellib.use_campaign(argv)
+    OUT = levellib.PREVIEWS_DIR
     with_path = "--path" in argv
     masks = [a for a in argv if not a.startswith("--")]
     OUT.mkdir(parents=True, exist_ok=True)
@@ -145,7 +148,7 @@ def main(argv):
         done += 1
         print(f"→ {out.relative_to(ROOT)}")
     if masks and not done:
-        print(f"Ни один уровень не подошёл под {masks} (ищу по имени файла в {LEVELS_DIR.relative_to(ROOT)})")
+        print(f"Ни один уровень не подошёл под {masks} (ищу по имени файла в {levellib.levels_dir().relative_to(ROOT)})")
         sys.exit(1)
 
 

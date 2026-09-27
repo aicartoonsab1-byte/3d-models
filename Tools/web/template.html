@@ -68,6 +68,8 @@
   button.ghost { background: transparent; color: var(--ink-l); }
   button.ghost:hover { background: rgba(239,236,230,.06); }
   .confirm { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 15px; }
+  .introsrc { font-style: italic; color: var(--ink-l); font-size: 16px; }
+  .campaign { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
   .note { font-size: 15px; color: var(--ink-l); margin: 0; }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
 </style>
@@ -75,7 +77,7 @@
 <div class="page">
   <header>
     <div>
-      <h1>Шарик <span class="moon">◉</span></h1>
+      <h1><span id="herotitle">Шарик</span> <span class="moon">◉</span></h1>
       <p class="tag">Светящийся шарик катится сам, думает вслух и расплющивается в лепёшку. Вы — глаз в небе: будите ловушки и существ, чтобы ему мешать. Цвет свечения — его настроение.</p>
     </div>
     <div class="controls">
@@ -94,7 +96,10 @@
       <div id="stagewrap">
         <div class="screen"><canvas id="view" width="320" height="180"></canvas><canvas id="ui" width="320" height="180"></canvas>
           <div id="intro" class="intro">
-            <p class="intro-title">Шарик ждёт</p>
+            <p class="intro-title" id="introtitle">Шарик</p>
+            <p class="introsrc" id="introsrc"></p>
+            <p id="introlog"></p>
+            <label class="campaign" for="campaign">Игра <select id="campaign"></select></label>
             <p>Он покатится сам. Вы — наблюдатель: <b>кликните по ловушке или боссу</b>, чтобы разбудить его. Проснувшийся враг какое-то время действует сам.</p>
             <button id="go" type="button">Начать</button>
           </div>

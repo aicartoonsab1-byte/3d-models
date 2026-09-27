@@ -13,6 +13,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 LEVELS_DIR = ROOT / "Assets/_Project/Resources/Levels"
+PREVIEWS_DIR = ROOT / "Design/previews"
+CAMPAIGN = "sharik"
+
+
+def use_campaign(argv: list) -> list:
+    """Разбирает «--campaign <id>» из аргументов: уровни берутся из Resources/Campaigns/<id>/levels,
+    превью кладутся в Design/campaigns/<id>/previews. Возвращает argv без этого флага."""
+    global LEVELS_DIR, PREVIEWS_DIR, CAMPAIGN
+    if "--campaign" in argv:
+        i = argv.index("--campaign")
+        cid = argv[i + 1]
+        argv = argv[:i] + argv[i + 2:]
+        if cid != "sharik":
+            CAMPAIGN = cid
+            cj = ROOT / f"Assets/_Project/Resources/Campaigns/{cid}/campaign.json"
+            if cj.exists():
+                for k, d in (json.loads(cj.read_text(encoding="utf-8")).get("bosses") or {}).items():
+                    BOSSES.setdefault(k, (d or {}).get("title", k))
+            LEVELS_DIR = ROOT / f"Assets/_Project/Resources/Campaigns/{cid}/levels"
+            PREVIEWS_DIR = ROOT / f"Design/campaigns/{cid}/previews"
+    return argv
 
 # ---- физика (синхронно с Tuning.cs) -------------------------------------
 GRAVITY = 9.81 * 3.0          # Physics2D.gravity * gravityScale
@@ -134,6 +155,10 @@ def load(path: Path) -> Level:
 
 def all_levels() -> list[Level]:
     return [load(p) for p in sorted(LEVELS_DIR.glob("*.json"))]
+
+
+def levels_dir():
+    return LEVELS_DIR
 
 
 # ---- симуляция прыжка -------------------------------------------------------

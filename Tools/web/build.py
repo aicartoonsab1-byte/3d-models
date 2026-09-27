@@ -19,7 +19,22 @@ def main():
     levels = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((RES / "Levels").glob("*.json"))]
     phrases = json.loads((RES / "Brain/phrases_ru.json").read_text(encoding="utf-8"))["entries"]
     persona = (RES / "Brain/persona_ru.txt").read_text(encoding="utf-8")
-    data = json.dumps({"sprites": sprites, "levels": levels, "phrases": phrases, "persona": persona},
+    # кампании: основная «Шарик» + все Resources/Campaigns/<id>/campaign.json с их уровнями
+    campaigns = [{"id": "sharik", "title": "Шарик", "source": "", "hero": {"name": "Шарик"},
+                  "logline": "Светящийся шарик катится сам, думает вслух и расплющивается в лепёшку. Вы — глаз в небе.",
+                  "persona": persona, "levels": levels}]
+    for cj in sorted((RES / "Campaigns").glob("*/campaign.json")):
+        try:
+            c = json.loads(cj.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            print(f"! {cj.relative_to(ROOT)} не читается: {e}"); continue
+        lv = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((cj.parent / "levels").glob("*.json"))]
+        if not lv:
+            print(f"! кампания {c.get('id')} без уровней — пропускаю"); continue
+        c["levels"] = lv
+        c["persona"] = (c.get("hero") or {}).get("persona", persona)
+        campaigns.append(c)
+    data = json.dumps({"sprites": sprites, "levels": levels, "phrases": phrases, "persona": persona, "campaigns": campaigns},
                       ensure_ascii=False, separators=(",", ":"))
     html = (ROOT / "Tools/web/template.html").read_text(encoding="utf-8")
     for k, v in sprites.items():
@@ -36,7 +51,8 @@ def main():
     html = html.replace("{{GAME}}", game)
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(html, encoding="utf-8")
-    print(f"→ {OUT.relative_to(ROOT)}  ({OUT.stat().st_size // 1024} КБ, уровней: {len(levels)}, спрайтов: {len(sprites)})")
+    print(f"→ {OUT.relative_to(ROOT)}  ({OUT.stat().st_size // 1024} КБ, кампаний: {len(campaigns)}, "
+          f"уровней: {sum(len(c['levels']) for c in campaigns)}, спрайтов: {len(sprites)})")
 
 
 if __name__ == "__main__":

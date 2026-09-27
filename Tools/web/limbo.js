@@ -370,3 +370,42 @@
     }
     if (ball.bits) for (const b of ball.bits) { const p = toScreen(ball.x + b.x, ball.y + b.y); ctx.fillStyle = rgb(c, 0.9); ctx.fillRect(p.x, p.y, 2, 2); }
   }
+
+  // ---------------------------------------------------------------- свои существа кампании (силуэт из фигур + светящиеся глаза)
+  // Формат — Design/CAMPAIGN_FORMAT.md; тот же рисунок, что Tools/art/boss_preview.py.
+  const CB = {};
+  function customBossCanvas(def, frame) {
+    const key = JSON.stringify(def.shape).length + ":" + (def.title || "") + ":" + frame;
+    if (CB[key]) return CB[key];
+    const [wt, ht] = def.size || [3, 3], W = Math.round(wt * TPX), H = Math.round(ht * TPX);
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H + 8;
+    const c = cv.getContext("2d"), atk = frame === "atk";
+    const dy = atk ? ((def.atk && def.atk.dy) != null ? def.atk.dy : -4) : 0;
+    const sx = W / 100, sy = H / 100, P = (x, y) => [x * sx, (y + dy) * sy + 8];
+    c.fillStyle = SIL; c.strokeStyle = SIL; c.lineCap = "round"; c.lineJoin = "round";
+    const eyes = [];
+    for (const part of def.shape || []) {
+      if (part.e) { const [cx, cy, rx, ry] = part.e, [x, y] = P(cx, cy); c.beginPath(); c.ellipse(x, y, rx * sx, ry * sy, 0, 0, Math.PI * 2); c.fill(); }
+      else if (part.c) { const [cx, cy, r] = part.c, [x, y] = P(cx, cy); c.beginPath(); c.ellipse(x, y, r * sx, r * sy, 0, 0, Math.PI * 2); c.fill(); }
+      else if (part.p) { c.beginPath(); for (let i = 0; i + 1 < part.p.length; i += 2) { const [x, y] = P(part.p[i], part.p[i + 1]); i ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath(); c.fill(); }
+      else if (part.l) { c.lineWidth = Math.max(1, (part.w || 2) * (sx + sy) / 2); c.beginPath(); for (let i = 0; i + 1 < part.l.length; i += 2) { const [x, y] = P(part.l[i], part.l[i + 1]); i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); }
+      else if (part.eye) eyes.push(part.eye);
+    }
+    if (frame !== "blink") {
+      const k = atk ? ((def.atk && def.atk.eyes) || 1.5) : 1;
+      for (const [ex, ey, r] of eyes) {
+        const [x, y] = P(ex, ey), rr = r * (sx + sy) / 2 * k;
+        const g = c.createRadialGradient(x, y, 0, x, y, rr * 2.6);
+        g.addColorStop(0, "rgba(250,248,240,1)"); g.addColorStop(0.4, "rgba(250,248,240,0.9)"); g.addColorStop(1, "rgba(250,248,240,0)");
+        c.fillStyle = g; c.fillRect(x - rr * 2.6, y - rr * 2.6, rr * 5.2, rr * 5.2);
+      }
+    }
+    return (CB[key] = cv);
+  }
+  function drawCustomBoss(t, frame, wx, wy, peek, flip) {
+    const cv = customBossCanvas(t.def, frame), p = toScreen(wx, wy);
+    ctx.save(); ctx.translate(p.x, p.y); if (flip) ctx.scale(-1, 1);
+    if (peek) { ctx.beginPath(); ctx.rect(-cv.width / 2, -cv.height / 2, cv.width, cv.height * 0.45); ctx.clip(); }
+    ctx.drawImage(cv, Math.round(-cv.width / 2), Math.round(-cv.height / 2) - 4);
+    ctx.restore();
+  }

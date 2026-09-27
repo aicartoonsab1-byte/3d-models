@@ -8,7 +8,7 @@
   //     наблюдателя, застревание), не по таймеру; пауза между мыслями и лимит на уровень.
   //  3. Офлайн-разум — если Claude выключен: шаблоны с памятью, свои имена, гипотезы и вопросы.
 
-  const MIND_KEY = "sharik_mind_v1";
+  const mindKey = () => CAMP.id === "sharik" ? "sharik_mind_v1" : "sharik_mind_" + CAMP.id;   // у каждого героя своя память
   const MIND_LIMIT_PER_LEVEL = 30;   // обращений к Claude за уровень
   const MIND_MIN_GAP = 7;            // секунд между обращениями
 
@@ -48,15 +48,22 @@
   ];
 
   function freshMind() {
+    const ht = (CAMP.hero && CAMP.hero.traits) || {};
     return {
-      traits: { curiosity: 0.8, courage: 0.35, trust: 0.6, humor: 0.7, awareness: 0 },
+      traits: Object.assign({ curiosity: 0.8, courage: 0.35, trust: 0.6, humor: 0.7 }, ht, { awareness: 0 }),
       names: {}, beliefs: [], questions: [], diary: [],
       stats: { splats: 0, deaths: 0, crushed: 0, spikes: 0, pits: 0, trapsNear: 0, fragments: 0, levelsDone: 0, inspected: 0, calls: 0 },
       loops: 0,
     };
   }
-  let MIND = (() => { try { const m = JSON.parse(localStorage.getItem(MIND_KEY) || "null"); if (m && m.traits) return Object.assign(freshMind(), m); } catch (e) { } return freshMind(); })();
-  function saveMind() { try { localStorage.setItem(MIND_KEY, JSON.stringify(MIND)); } catch (e) { } renderMindPanel(); }
+  let MIND = freshMind();
+  function loadMind() {
+    MIND = freshMind();
+    try { const m = JSON.parse(localStorage.getItem(mindKey()) || "null"); if (m && m.traits) MIND = Object.assign(freshMind(), m); } catch (e) { }
+    renderMindPanel();
+  }
+  loadMind();
+  function saveMind() { try { localStorage.setItem(mindKey(), JSON.stringify(MIND)); } catch (e) { } renderMindPanel(); }
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
   function shiftTrait(name, d) {
     if (name === "awareness") MIND.traits.awareness = Math.max(0, Math.min(5, MIND.traits.awareness + d * 5));
@@ -79,11 +86,13 @@
 
   // ---------------------------------------------------------------- восприятие
   function thingKey(o) { return o.kind === "boss" ? o.boss : o.kind; }
+  // антагонисты кампании: как шарик их видит
+  const kindOf = (k) => (CAMP.bosses && CAMP.bosses[k] && (CAMP.bosses[k].what || CAMP.bosses[k].title)) || THING_KIND[k] || k;
   function perceive() {
     const out = [], dir = L.goal.x >= ball.x ? 1 : -1;
     const add = (id, key, x, y, state) => {
       const dx = x - ball.x; if (Math.abs(dx) > 11 || Math.abs(y - ball.y) > 7) return;
-      out.push({ id, key, what: THING_KIND[key] || key, name: MIND.names[key] || null, dx: Math.round(dx * 10) / 10, state });
+      out.push({ id, key, what: kindOf(key), name: MIND.names[key] || null, dx: Math.round(dx * 10) / 10, state });
     };
     L.decos.forEach((d) => add(d.id, d.s, d.x, d.y, null));
     L.traps.forEach((t, i) => add("trap" + i, thingKey(t), t.kind === "boss" ? t.home.x : t.x, t.kind === "boss" ? t.cy + 0.5 : t.y,
@@ -156,11 +165,11 @@
 
   // ---------------------------------------------------------------- промпт
   function persona() {
-    return (D.persona || "").split("ДЕЙСТВИЯ")[0].trim();
+    return (CAMP.persona || D.persona || "").split("ДЕЙСТВИЯ")[0].trim();
   }
   function buildPrompt(events, recentSays) {
     const per = perceive(), s = stageNow(), tr = MIND.traits;
-    const names = Object.entries(MIND.names).map(([k, v]) => `${THING_KIND[k] || k} = «${v}»`).join("; ") || "пока никому не дал имён";
+    const names = Object.entries(MIND.names).map(([k, v]) => `${kindOf(k)} = «${v}»`).join("; ") || "пока никому не дал имён";
     const things = per.things.map((t) => `- [${t.id}] ${t.what}${t.name ? ` (ты зовёшь его «${t.name}»)` : " (ещё без имени)"}, ${t.dx > 0 ? "впереди" : "позади"} в ${Math.abs(t.dx)} кл.${t.state ? ", " + t.state : ""}`).join("\n") || "- ничего особенного";
     return `${persona()}
 
@@ -282,7 +291,7 @@ ${events.map((e) => "- " + e).join("\n")}
       MIND.stats.trapsNear++; shiftTrait("trust", -0.02); shiftTrait("awareness", 0.006);
       if (!this.react("trap_fired", 0.25 + 0.4 * this.aw / 5)) ball.setMood(this.aw >= 3 ? "suspicious" : "scared", 1.5);
       if (this.aw >= 3) ball.lookAt = { x: t.x, y: t.y };
-      this.event(`${THING_KIND[thingKey(t)] || t.title}${MIND.names[thingKey(t)] ? ` («${MIND.names[thingKey(t)]}»)` : ""} сработал сам по себе рядом с тобой.`, MIND.stats.trapsNear % 2 === 1);
+      this.event(`${kindOf(thingKey(t)) || t.title}${MIND.names[thingKey(t)] ? ` («${MIND.names[thingKey(t)]}»)` : ""} сработал сам по себе рядом с тобой.`, MIND.stats.trapsNear % 2 === 1);
       saveMind();
     }
     onFragment(text) {
@@ -424,7 +433,7 @@ ${events.map((e) => "- " + e).join("\n")}
     const tr = MIND.traits, bar = (label, v, max = 1) =>
       `<div class="trait"><span>${label}</span><i style="--v:${Math.round(100 * v / max)}%"></i></div>`;
     const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-    const names = Object.entries(MIND.names).map(([k, v]) => `<li><b>${esc(v)}</b> — ${esc(THING_KIND[k] || k)}</li>`).join("");
+    const names = Object.entries(MIND.names).map(([k, v]) => `<li><b>${esc(v)}</b> — ${esc(kindOf(k))}</li>`).join("");
     el.innerHTML = `
       <p class="mstatus">${esc(mindStatus)}</p>
       ${bar("Любопытство", tr.curiosity)}${bar("Смелость", tr.courage)}${bar("Доверие к наблюдателю", tr.trust)}${bar("Прозрение", tr.awareness, 5)}
