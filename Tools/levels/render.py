@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""Рендер превью уровня в PNG теми же спрайтами, что и в игре.
+
+    python3 Tools/levels/render.py                 # все уровни → Design/previews/<id>.png
+    python3 Tools/levels/render.py 02_*.json --path  # с точками найденного пути шарика
+
+Агенты используют превью, чтобы «увидеть» уровень (Read по PNG).
+"""
+from __future__ import annotations
+
+import fnmatch
+import sys
+
+from PIL import Image, ImageDraw
+
+from levellib import PLATFORM, ROOT, SOLID, all_levels, solve
+
+SPR = ROOT / "Assets/_Project/Resources/Sprites"
+OUT = ROOT / "Design/previews"
+_cache: dict[str, Image.Image] = {}
+
+
+def spr(name: str) -> Image.Image:
+    if name not in _cache:
+        _cache[name] = Image.open(SPR / f"{name}.png").convert("RGBA")
+    return _cache[name]
+
+
+def hexrgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+SKY = {"meadow": "#78b4fc", "cave": "#1c1c34", "city": "#fc9c6c", "glitch": "#10081c", "void": "#000000"}
+
+
+def render(lv, with_path=False, scale=2):
+    pal = lv.data.get("palette", "meadow")
+    W, H = lv.w * 16, lv.h * 16
+    img = Image.new("RGBA", (W, H), hexrgb(SKY.get(pal, "#78b4fc")) + (255,))
+    hills = spr(f"bg_hills_{pal}")
+    for x in range(0, W, hills.width):
+        img.alpha_composite(hills, (x, H - hills.height - 16 * 2))
+
+    def put(name, x, y, dx=0, dy=0):
+        s = spr(name)
+        px = x * 16 + (16 - s.width) // 2 + dx
+        py = (lv.h - 1 - y) * 16 + (16 - s.height) + dy
+        img.alpha_composite(s, (px, py))
+
+    trap_no = 0
+    labels = []
+    for y in range(lv.h):
+        for x in range(lv.w):
+            c = lv.ch(x, y)
+            if c == "#":
+                put(f"tile_{pal}_top" if lv.ch(x, y + 1) not in SOLID else f"tile_{pal}_fill", x, y)
+            elif c == "=":
+                put(f"tile_{pal}_platform", x, y)
+            elif c == "S":
+                put("ball_body", x, y, dy=-1)
+                put("face_neutral", x, y, dy=-1)
+            elif c == "F":
+                put("obj_exit", x, y)
+            elif c == "R":
+                put("obj_switch_off", x, y)
+            elif c == "K":
+                put("obj_checkpoint_off", x, y)
+            elif c == "*":
+                put("obj_fragment", x, y, dy=-4)
+            elif c in "^CTWJ":
+                trap_no += 1
+                name = {"^": "trap_spikes_on", "C": "trap_crusher", "T": "trap_trapdoor_closed",
+                        "W": "trap_fan_0", "J": "trap_spring_idle"}[c]
+                if c == "C":
+                    put("trap_chain", x, y + 1)
+                put(name, x, y)
+                labels.append((x, y, trap_no))
+    d = ImageDraw.Draw(img)
+    for (x, y, n) in labels:
+        px, py = x * 16 + 1, (lv.h - 1 - y) * 16 - 9
+        d.rectangle([px, py, px + 8, py + 8], fill=(20, 20, 30, 220))
+        d.text((px + 2, py - 1), str(n % 10), fill=(252, 216, 60, 255))
+    if with_path:
+        path, _ = solve(lv)
+        if path:
+            pts = [(x * 16 + 8, (lv.h - 1 - y) * 16 + 10) for (x, y) in path]
+            d.line(pts, fill=(255, 60, 60, 200), width=1)
+            for p in pts:
+                d.ellipse([p[0] - 1, p[1] - 1, p[0] + 1, p[1] + 1], fill=(255, 255, 255, 255))
+    # сетка по 10 клеток — удобно для отладки координат
+    for x in range(0, lv.w, 10):
+        d.line([(x * 16, 0), (x * 16, 3)], fill=(255, 255, 255, 160))
+        d.text((x * 16 + 2, 0), str(x), fill=(255, 255, 255, 200))
+    return img.resize((W * scale, H * scale), Image.NEAREST)
+
+
+def main(argv):
+    with_path = "--path" in argv
+    masks = [a for a in argv if not a.startswith("--")]
+    OUT.mkdir(parents=True, exist_ok=True)
+    for lv in all_levels():
+        if masks and not any(fnmatch.fnmatch(lv.path.name, m) for m in masks):
+            continue
+        out = OUT / f"{lv.path.stem}.png"
+        render(lv, with_path).convert("RGB").save(out)
+        print(f"→ {out.relative_to(ROOT)}")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

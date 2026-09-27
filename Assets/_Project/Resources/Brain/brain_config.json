@@ -1,0 +1,16 @@
+{
+ "endpoint": "http://localhost:11434/v1/chat/completions",
+ "model": "qwen2.5:3b",
+ "apiKey": "",
+ "temperature": 0.95,
+ "maxTokens": 220,
+ "jsonMode": true,
+ "timeoutSeconds": 25,
+ "thinkMin": 4.0,
+ "thinkMax": 7.0,
+ "useLlm": true,
+ "voice": "gibberish",
+ "piperExe": "",
+ "piperModel": "",
+ "voiceVolume": 0.55
+}

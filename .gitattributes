@@ -1,0 +1,20 @@
+# Текст: единые переводы строк
+*.cs   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.py   text eol=lf
+*.txt  text eol=lf
+*.unity   text eol=lf merge=unityyamlmerge
+*.prefab  text eol=lf merge=unityyamlmerge
+*.asset   text eol=lf merge=unityyamlmerge
+*.meta    text eol=lf
+
+# Крупные бинарники — через Git LFS (git lfs install). Спрайты 16×16 маленькие, их храним обычным git.
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs -text
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.aseprite filter=lfs diff=lfs merge=lfs -text
+*.ase filter=lfs diff=lfs merge=lfs -text
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.onnx filter=lfs diff=lfs merge=lfs -text

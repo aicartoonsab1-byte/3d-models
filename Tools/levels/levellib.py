@@ -1,0 +1,217 @@
+"""Общая библиотека для инструментов уровней: загрузка, физика шарика, поиск пути.
+
+Физические константы ДОЛЖНЫ совпадать с Assets/_Project/Scripts/Core/Tuning.cs.
+Если меняете одно — меняйте и другое.
+"""
+from __future__ import annotations
+
+import json
+import math
+from collections import deque
+from dataclasses import dataclass, field
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+LEVELS_DIR = ROOT / "Assets/_Project/Resources/Levels"
+
+# ---- физика (синхронно с Tuning.cs) -------------------------------------
+GRAVITY = 9.81 * 3.0          # Physics2D.gravity * gravityScale
+RUN_SPEED = 6.0               # макс. скорость качения, тайлов/с
+JUMP_SPEED = 13.5             # начальная вертикальная скорость прыжка
+BALL_RADIUS = 0.45
+SPLAT_SPEED = 17.0            # удар о землю быстрее этого → лепёшка (без смерти)
+
+# ---- легенда --------------------------------------------------------------
+LEGEND = {
+    ".": "пусто",
+    " ": "пусто",
+    "#": "земля (твёрдый блок)",
+    "=": "тонкая платформа (запрыгнуть снизу можно, стоять сверху можно)",
+    "S": "старт шарика (ровно один)",
+    "F": "выход-дверь (финиш уровня)",
+    "R": "РУБИЛЬНИК (только в финальном уровне; вместо F)",
+    "K": "чекпоинт-флажок",
+    "*": "фрагмент кода (сюжетная находка, текст берётся из fragments[])",
+    "^": "ЛОВУШКА: шипы (стоят на земле, по умолчанию спрятаны)",
+    "C": "ЛОВУШКА: пресс (висит, по сигналу падает вниз до земли)",
+    "T": "ЛОВУШКА: люк (твёрдый, по сигналу открывается)",
+    "W": "ЛОВУШКА: вентилятор (стоит на земле, дует вверх на 5 клеток)",
+    "J": "ЛОВУШКА: пружина (стоит на земле, подбрасывает вверх)",
+}
+SOLID = set("#T")               # что считается твёрдым в пассивном состоянии ловушек
+PLATFORM = set("=")
+TRAPS = set("^CTWJ")
+TRAP_NAMES = {"^": "spikes", "C": "crusher", "T": "trapdoor", "W": "fan", "J": "spring"}
+PALETTES = ["meadow", "cave", "city", "glitch", "void"]
+MOODS = ["neutral", "happy", "scared", "angry", "sad", "awe", "pray", "dizzy",
+         "suspicious", "determined", "glitch"]
+
+MAX_W, MAX_H = 220, 40
+
+
+@dataclass
+class Level:
+    path: Path
+    data: dict
+    grid: list[str] = field(default_factory=list)
+
+    @property
+    def w(self):
+        return len(self.grid[0]) if self.grid else 0
+
+    @property
+    def h(self):
+        return len(self.grid)
+
+    # Координаты: x вправо, y ВВЕРХ (как в Unity). Строка 0 в JSON — верх уровня.
+    def ch(self, x: int, y: int) -> str:
+        if x < 0 or x >= self.w or y < 0:
+            return "."
+        if y >= self.h:
+            return "."
+        return self.grid[self.h - 1 - y][x]
+
+    def find(self, c: str) -> list[tuple[int, int]]:
+        out = []
+        for row_i, row in enumerate(self.grid):
+            for x, cc in enumerate(row):
+                if cc == c:
+                    out.append((x, self.h - 1 - row_i))
+        return out
+
+    def solid(self, x: int, y: int) -> bool:
+        if x < 0 or x >= self.w:
+            return True           # стены по краям уровня
+        return self.ch(x, y) in SOLID
+
+    def blocks_ball(self, x: int, y: int) -> bool:
+        """Твёрдое для тела шарика (кроме платформ — сквозь них можно пролететь снизу)."""
+        return self.solid(x, y)
+
+    def standable(self, x: int, y: int) -> bool:
+        """Клетка, в которой шарик может стоять (сам пустой, под ним опора)."""
+        if not (0 <= x < self.w and 0 <= y < self.h):
+            return False
+        c = self.ch(x, y)
+        if c in SOLID or c in PLATFORM:
+            return False
+        below = self.ch(x, y - 1)
+        return below in SOLID or below in PLATFORM
+
+
+def load(path: Path) -> Level:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return Level(path=path, data=data, grid=list(data.get("grid", [])))
+
+
+def all_levels() -> list[Level]:
+    return [load(p) for p in sorted(LEVELS_DIR.glob("*.json"))]
+
+
+# ---- симуляция прыжка -------------------------------------------------------
+def _collides(lv: Level, cx: float, cy: float, vy: float) -> str | None:
+    """Проверка круга шарика против тайлов. Возвращает 'solid' / 'land' / None."""
+    r = BALL_RADIUS * 0.92
+    for tx in range(math.floor(cx - r), math.floor(cx + r) + 1):
+        for ty in range(math.floor(cy - r), math.floor(cy + r) + 1):
+            c = lv.ch(tx, ty) if 0 <= tx < lv.w else "#"
+            if c in SOLID or (0 > tx or tx >= lv.w):
+                nx = min(max(cx, tx), tx + 1)
+                ny = min(max(cy, ty), ty + 1)
+                if (cx - nx) ** 2 + (cy - ny) ** 2 < r * r:
+                    return "solid"
+            elif c in PLATFORM and vy <= 0:
+                # платформа держит только сверху: верх платформы на ty+1
+                top = ty + 1
+                if cy - r <= top <= cy - r + 0.35 and tx - 0.2 <= cx <= tx + 1.2:
+                    return "land"
+    return None
+
+
+def simulate(lv: Level, sx: int, sy: int, vx: float, jump: bool, dt: float = 1 / 60,
+             tmax: float = 3.0):
+    """Бросок шарика из клетки (sx,sy). Возвращает (клетка_приземления, макс_скорость_падения) или None."""
+    x, y = sx + 0.5, sy + BALL_RADIUS
+    vy = JUMP_SPEED if jump else 0.0
+    t = 0.0
+    left_ground = jump
+    while t < tmax:
+        vy -= GRAVITY * dt
+        nx, ny = x + vx * dt, y + vy * dt
+        hit = _collides(lv, nx, ny, vy)
+        if hit == "solid":
+            # пробуем скользить: сначала только по y, потом только по x
+            if _collides(lv, x, ny, vy) != "solid":
+                nx = x
+                vx = 0.0
+            elif _collides(lv, nx, y, vy) != "solid":
+                if vy < 0:     # приземлились на твёрдое
+                    cell = (math.floor(nx), math.floor(y - BALL_RADIUS + 0.05))
+                    return (cell, -vy) if lv.standable(*cell) else None
+                ny = y
+                vy = 0.0
+            else:
+                return None
+        elif hit == "land" and left_ground:
+            cell = (math.floor(nx), math.floor(ny - BALL_RADIUS + 0.2))
+            return (cell, -vy) if lv.standable(*cell) else None
+        if ny < y and not left_ground:
+            left_ground = True
+        x, y = nx, ny
+        if y < -2:
+            return None
+        t += dt
+    return None
+
+
+def neighbors(lv: Level, x: int, y: int):
+    """Все клетки, куда шарик может попасть из стоячей клетки (x,y)."""
+    out = {}
+    # ходьба
+    for dx in (-1, 1):
+        if lv.standable(x + dx, y):
+            out[(x + dx, y)] = ("walk", 0.0)
+    # прыжки и скатывания с разной горизонтальной скоростью
+    for jump in (True, False):
+        for k in range(-8, 9):
+            vx = RUN_SPEED * k / 8
+            if not jump and abs(vx) < 1.0:
+                continue
+            res = simulate(lv, x, y, vx, jump)
+            if res:
+                cell, fall = res
+                if cell != (x, y) and cell not in out:
+                    out[cell] = ("jump" if jump else "drop", fall)
+    return out
+
+
+def solve(lv: Level):
+    """BFS от S до F/R. Возвращает (путь, все_достижимые) — путь None, если непроходимо."""
+    starts = lv.find("S")
+    goals = set(lv.find("F") + lv.find("R"))
+    if not starts or not goals:
+        return None, set()
+    start = starts[0]
+    # шарик может «проваливаться» на опору под стартом
+    while not lv.standable(*start) and start[1] > 0:
+        start = (start[0], start[1] - 1)
+    prev = {start: None}
+    q = deque([start])
+    found = None
+    while q:
+        cur = q.popleft()
+        if cur in goals or (cur[0], cur[1] + 1) in goals:
+            found = cur
+            break
+        for nb in neighbors(lv, *cur):
+            if nb not in prev:
+                prev[nb] = cur
+                q.append(nb)
+    if not found:
+        return None, set(prev)
+    path = []
+    c = found
+    while c is not None:
+        path.append(c)
+        c = prev[c]
+    return list(reversed(path)), set(prev)

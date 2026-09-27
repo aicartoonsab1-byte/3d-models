@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Проверка компиляции C#-кода игры без Unity: против справочных сборок UnityEngine (NuGet UnityEngine.Modules).
+       Unity-специфичное (linearVelocity в Unity 6) проверяется только в самом редакторе. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>$(DefineConstants);$(ExtraDefines);UNITY_2022_1_OR_NEWER</DefineConstants>
+    <NoWarn>CS0649;CS0414</NoWarn>
+    <UnityRefs Condition="'$(UnityRefs)' == ''">$(MSBuildThisFileDirectory).refs/lib/netstandard2.0</UnityRefs>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/_Project/**/*.cs" />
+    <Compile Include="Stubs.cs" />
+    <Reference Include="$(UnityRefs)/*.dll" />
+  </ItemGroup>
+</Project>
