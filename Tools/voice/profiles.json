@@ -79,7 +79,7 @@
  "ref_narrator": {
   "engine": "rhvoice",
   "speaker": "aleksandr",
-  "pitch": -1.3,
+  "pitch": -3.6,
   "tempo": 1.15,
   "fx": [],
   "moods": false,
@@ -88,7 +88,7 @@
  "ref_narrator_old": {
   "engine": "rhvoice",
   "speaker": "aleksandr",
-  "pitch": -1.3,
+  "pitch": -3.6,
   "tempo": 1.15,
   "fx": [
    "old"

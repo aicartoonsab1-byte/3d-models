@@ -212,7 +212,9 @@ ${LABEL("promptHint", "")}
  "action":"forward|back|wait|jump|yolo|pray|look|inspect","target":"id вещи для inspect или пусто",
  "name":{"thing":"id вещи","as":"новое имя"} или null,"belief":"новое убеждение или пусто","question":"новый вопрос или пусто","answered":"вопрос, на который ты ответил, или пусто",
  "traits":{"curiosity":0,"courage":0,"trust":0,"awareness":0}}
-(в traits — маленькие сдвиги от -0.1 до 0.1, как это событие меняет тебя).`;
+(в traits — маленькие сдвиги от -0.1 до 0.1, как это событие меняет тебя).${LANG === "en" ? `
+
+LANGUAGE: the player plays in ENGLISH. Write "thought", "say", "belief", "question", "answered" and names ONLY in natural, lively, emotional English (keep your character's personality). JSON keys stay as they are.` : ""}`;
   }
 
   // ---------------------------------------------------------------- применение ответа
@@ -266,6 +268,7 @@ ${LABEL("promptHint", "")}
     enqueue(text, mood, thought = false) { if (text) this.queue.push({ text, mood, thought }); }
     speechBusy() { return this.say && game.time < this.say.until; }
     speak(text, mood, thought, k = 0.5) {
+      text = tr(text);
       ball.setMood(mood, 3);
       if (thought) this.thought = { text, until: game.time + Math.min(9, Math.max(4, text.length * 0.09)) };
       else {
@@ -455,6 +458,7 @@ ${LABEL("promptHint", "")}
       ${MIND.questions.length ? `<h3>Не даёт покоя</h3><ul>${MIND.questions.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>` : ""}
       ${names ? `<h3>Его имена для вещей</h3><ul>${names}</ul>` : ""}
       ${MIND.diary.length ? `<h3>Дневник</h3><ul>${MIND.diary.slice(-4).reverse().map((d) => `<li><b>${esc(d.level)}</b>: ${esc(d.text)}</li>`).join("")}</ul>` : ""}`;
+    trDom(el);
     const sel = document.getElementById("mindmode");
     if (sel) {
       sel.value = mindMode === "claude" ? mindTier : "offline";

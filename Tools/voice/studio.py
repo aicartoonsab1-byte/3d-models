@@ -9,7 +9,8 @@
 говорит прежним голосом браузера.
 
 Движки (ставятся в систему; в облачной сессии: apt-get install rhvoice rhvoice-russian espeak-ng sox ffmpeg):
-  rhvoice — 13 русских дикторов: aleksandr anna arina artemiy elena evgeniy-rus irina mikhail pavel tatiana victoria vitaliy yuriy
+  piper   — нейросетевые голоса (живее всего): модели *.onnx(+.json) в Tools/voice/models, профиль {"engine":"piper","model":"ru_RU-denis-medium.onnx"}
+  rhvoice — 13 русских дикторов (у aleksandr есть версия высокого качества — берётся сама): aleksandr anna arina artemiy elena evgeniy-rus irina mikhail pavel tatiana victoria vitaliy yuriy
   espeak  — роботический синтез; варианты: ru, ru+m1..m7, ru+f1..f5, ru+croak, ru+whisper, ru+klatt …
 Эффекты (sox): robot, chipmunk, giant, telephone, radio, reverb, cave, hall, whisper, old, drunk.
 
@@ -73,37 +74,57 @@ def profiles() -> dict:
     return json.loads(PROFILES.read_text(encoding="utf-8"))
 
 
+SR = 24000
+CLEAN = ["highpass", "70", "equalizer", "3200", "1.2q", "+3", "treble", "+2", "6000", "compand", "0.02,0.2", "-60,-60,-30,-18,0,-8", "-2", "-90", "0.05"]
+PIPER_MODELS = ROOT / "Tools/voice/models"     # сюда кладутся модели Piper (*.onnx + *.onnx.json)
+
+
 def synth(prof: dict, text: str, out_mp3: Path, mood: str | None = None):
-    """Текст → mp3 по профилю."""
+    """Текст → mp3 по профилю. Высота и темп — средствами самого движка (без «мыла» от пересэмплирования);
+    sox — только эффекты и лёгкая «чистка» (яснее середина, чуть воздуха сверху, мягкая компрессия)."""
     need("sox"); need("ffmpeg")
+    semi, tempo = prof.get("pitch", 0.0), prof.get("tempo", 1.0)
+    if mood and prof.get("moods", True):
+        ms, mt = MOOD.get(mood, (0, 1))
+        semi += ms * prof.get("moodScale", 1.0); tempo *= 1 + (mt - 1) * prof.get("moodScale", 1.0)
     with tempfile.TemporaryDirectory() as td:
         raw, fx = Path(td) / "raw.wav", Path(td) / "fx.wav"
         eng = prof.get("engine", "rhvoice")
+        post = []                                   # что осталось сделать через sox
         if eng == "rhvoice":
             need("RHVoice-test")
-            subprocess.run(["RHVoice-test", "-p", prof.get("speaker", "aleksandr"), "-o", str(raw)],
+            spk = prof.get("speaker", "aleksandr")
+            if Path(f"/usr/share/RHVoice/voices/{spk}-hq").exists(): spk += "-hq"        # есть версия высокого качества — берём её
+            subprocess.run(["RHVoice-test", "-p", spk, "-q", "max", "-R", str(SR),
+                            "-r", str(int(round(100 * tempo))), "-t", str(int(round(100 * 2 ** (semi / 12)))), "-o", str(raw)],
                            input=text.encode("utf-8"), check=True, capture_output=True)
         elif eng == "espeak":
             need("espeak-ng")
-            subprocess.run(["espeak-ng", "-v", prof.get("speaker", "ru"), "-s", str(int(165 * prof.get("tempo", 1.0))),
-                            "-w", str(raw), text], check=True, capture_output=True)
+            subprocess.run(["espeak-ng", "-v", prof.get("speaker", "ru"), "-s", str(int(165 * tempo)),
+                            "-p", str(int(max(0, min(99, 50 + semi * 4)))), "-w", str(raw), text], check=True, capture_output=True)
+        elif eng == "piper":
+            import wave
+            from piper import PiperVoice, SynthesisConfig
+            model = Path(prof["model"]); model = model if model.is_absolute() else PIPER_MODELS / model
+            if not model.exists(): sys.exit(f"Нет модели Piper {model}. Положите .onnx и .onnx.json в {PIPER_MODELS}")
+            voice = _PIPER.get(str(model)) or _PIPER.setdefault(str(model), PiperVoice.load(str(model)))
+            cfg = SynthesisConfig(speaker_id=prof.get("speaker_id"), length_scale=1.0 / max(0.5, tempo),
+                                  noise_scale=prof.get("noise", 0.667), noise_w_scale=prof.get("noise_w", 0.8))
+            with wave.open(str(raw), "wb") as w: voice.synthesize_wav(text, w, syn_config=cfg)
+            if abs(semi) > 0.05: post += ["pitch", str(int(semi * 100))]   # у Piper нет своей высоты
         else:
             sys.exit(f"Неизвестный движок {eng}")
         if not raw.exists() or raw.stat().st_size < 2000:
             raise Silent(text)
-        semi, tempo = prof.get("pitch", 0.0), prof.get("tempo", 1.0) if eng != "espeak" else 1.0
-        if mood and prof.get("moods", True):
-            ms, mt = MOOD.get(mood, (0, 1))
-            semi += ms * prof.get("moodScale", 1.0); tempo *= 1 + (mt - 1) * prof.get("moodScale", 1.0)
-        chain = []
-        if abs(semi) > 0.05: chain += ["pitch", str(int(semi * 100))]
-        if abs(tempo - 1) > 0.01: chain += ["tempo", "-s", f"{tempo:.3f}"]
         for f in prof.get("fx", []):
-            chain += FX.get(f, [])
-        chain += ["norm", "-1"]
-        subprocess.run(["sox", str(raw), "-r", "22050", "-c", "1", str(fx)] + chain, check=True, capture_output=True)
+            post += FX.get(f, [])
+        post += ([] if prof.get("raw") else CLEAN) + ["norm", "-1"]
+        subprocess.run(["sox", str(raw), "-r", str(SR), "-c", "1", str(fx)] + post, check=True, capture_output=True)
         out_mp3.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(fx), "-ac", "1", "-ar", "22050", "-b:a", "40k", str(out_mp3)], check=True)
+        subprocess.run(["ffmpeg", "-nostdin", "-y", "-loglevel", "error", "-i", str(fx), "-ac", "1", "-ar", str(SR), "-b:a", "64k", str(out_mp3)], check=True)
+
+
+_PIPER = {}
 
 
 # ---------------------------------------------------------------- какие реплики озвучивать

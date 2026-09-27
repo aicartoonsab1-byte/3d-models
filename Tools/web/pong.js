@@ -34,6 +34,7 @@
       if (NARR.busy() || VOICE.busy()) return;
       const n = this.sayQ.shift(); if (!n) { this.say = null; return; }
       this.say = { text: n.text, start: this.t, until: this.t + n.text.length / T.CPS + T.HOLD };
+      n.text = tr(n.text); this.say.text = n.text;
       this.mood = n.mood; speakVoice(n.text, n.mood, 0.5); log(n.text, false);
     },
     // ---------------------------------------------------------------- подача и удар
@@ -56,7 +57,7 @@
     },
     point(to, why) {
       this.score[to]++; this.ball = null; this.wait = 1.4; this.rally = 0;
-      this.fx.push({ text: why, t: 0 });
+      this.fx.push({ text: tr(why), t: 0 });
       const [a, b] = this.score;
       if (to === 0) this.line(a === this.to - 1 && b < this.to - 1 ? "matchpoint" : "win_point", "happy");
       else this.line("lose_point", b > a ? "sad" : "determined");
@@ -229,11 +230,11 @@
       c.textAlign = "center"; c.textBaseline = "top";
       c.font = M ? `${Math.round(S * 12)}px Pangolin, sans-serif` : `italic ${Math.round(S * 12)}px "Cormorant Garamond", Georgia, serif`;
       c.fillStyle = M ? "#141414" : "#efece6";
-      const who = (this.cfg.names || ["Фантик", "Чемпион"]);
+      const who = (this.cfg.names || ["Фантик", "Чемпион"]).map(tr);
       c.fillText(`${who[0]}  ${this.score[0]} : ${this.score[1]}  ${who[1]}`, ui.width / 2, S * 4);
       c.font = M ? `${Math.round(S * 4.4)}px Pangolin, sans-serif` : `${Math.round(S * 4.4)}px Lora, Georgia, serif`;
       c.fillStyle = M ? "#55534f" : "#cfcac0";
-      c.fillText(`до ${this.to} очков · вы — ${who[1]}: мышь или ↑↓ · клик — порыв Ветра${this.t < this.gustReady ? " (копится)" : ""}`, ui.width / 2, S * 19);
+      c.fillText(tr(`до ${this.to} очков · вы — ${who[1]}: мышь или ↑↓ · клик — порыв Ветра${this.t < this.gustReady ? " (копится)" : ""}`), ui.width / 2, S * 19);
       for (const f of this.fx) { c.globalAlpha = 1 - f.t / 1.4; c.font = M ? `${Math.round(S * 7)}px Pangolin, sans-serif` : `italic ${Math.round(S * 7)}px "Cormorant Garamond", serif`; c.fillStyle = M ? "#141414" : "#efece6"; c.fillText(f.text, ui.width / 2, ui.height * 0.35 - f.t * 20 * S); c.globalAlpha = 1; }
       c.textAlign = "left";
       bubble.rects = [];
@@ -246,10 +247,10 @@
       if (game.paused && $("intro").hidden) {
         c.fillStyle = "rgba(0,0,0,.6)"; c.fillRect(0, 0, ui.width, ui.height);
         c.textAlign = "center"; c.fillStyle = "#efece6"; c.font = `italic ${Math.round(S * 14)}px "Cormorant Garamond", Georgia, serif`;
-        c.fillText("ПАУЗА", ui.width / 2, ui.height / 2); c.textAlign = "left";
+        c.fillText(tr("ПАУЗА"), ui.width / 2, ui.height / 2); c.textAlign = "left";
       }
-      $("stats").textContent = `Счёт ${this.score[0]} : ${this.score[1]} · розыгрыш ${this.rally}`;
-      $("stage").textContent = `${(CAMP.world && CAMP.world.labels && CAMP.world.labels.stage) || "стадия прозрения"} ${this.data.awareness || 0}/5`;
+      $("stats").textContent = tr(`Счёт ${this.score[0]} : ${this.score[1]} · розыгрыш ${this.rally}`);
+      $("stage").textContent = `${tr((CAMP.world && CAMP.world.labels && CAMP.world.labels.stage) || "стадия прозрения")} ${this.data.awareness || 0}/5`;
     },
     keys: {},
   };

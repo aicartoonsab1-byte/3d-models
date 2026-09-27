@@ -4,6 +4,60 @@
 "use strict";
 (function () {
   const D = window.SHARIK_DATA;
+  // ---------------------------------------------------------------- язык (RU по умолчанию, EN — переводы из Resources/Locale/en/*.json)
+  let LANG = "ru";
+  try { LANG = localStorage.getItem("sharik_lang") || "ru"; } catch (e) { }
+  const I18N = { dict: null, tpl: null, cache: new Map() };
+  function i18nPrep() {
+    const d = (D.locale && D.locale[LANG]) || null;
+    I18N.dict = d; I18N.cache.clear(); I18N.tpl = [];
+    if (!d) return;
+    const esc = (x) => x.replace(/[.*+?^$()|[\]\\]/g, "\\$&");
+    for (const [ru, en] of Object.entries(d)) {
+      if (!/\{(\w+)\}/.test(ru)) continue;                 // шаблоны с {0} {name} … → регулярка с группами
+      const names = []; const re = new RegExp("^" + ru.split(/(\{\w+\})/).map((part) => {
+        const m = part.match(/^\{(\w+)\}$/); if (m) { names.push(m[1]); return "([\\s\\S]*?)"; } return esc(part);
+      }).join("") + "$");
+      I18N.tpl.push({ re, names, en, len: ru.length });
+    }
+    I18N.tpl.sort((a, b) => b.len - a.len);
+  }
+  // перевести готовую строку: точное совпадение, иначе — по шаблону (подставленные куски тоже переводим)
+  function tr(s) {
+    if (LANG === "ru" || !I18N.dict || s == null) return s;
+    s = String(s);
+    if (I18N.cache.has(s)) return I18N.cache.get(s);
+    let out = I18N.dict[s];
+    if (out == null) {
+      const t = s.trim(); if (t !== s && I18N.dict[t] != null) out = s.replace(t, I18N.dict[t]);
+    }
+    if (out == null) for (const t of I18N.tpl) {
+      const m = s.match(t.re); if (!m) continue;
+      out = t.en; t.names.forEach((n, i) => { out = out.split("{" + n + "}").join(tr(m[i + 1])); }); break;
+    }
+    if (out == null) out = s;
+    if (I18N.cache.size > 3000) I18N.cache.clear();
+    I18N.cache.set(s, out); return out;
+  }
+  // перевести тексты на странице (узлы-тексты и подписи); исходник помним, чтобы вернуться к русскому
+  const DOM_ORIG = new WeakMap();
+  function trDom(root) {
+    if (!root) return;
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      if (!/\S/.test(n.nodeValue) || (n.parentNode && /^(SCRIPT|STYLE)$/.test(n.parentNode.nodeName))) continue;
+      if (!DOM_ORIG.has(n)) DOM_ORIG.set(n, n.nodeValue);
+      const o = DOM_ORIG.get(n), t = o.trim();
+      n.nodeValue = LANG === "ru" ? o : o.replace(t, tr(t));
+    }
+    root.querySelectorAll && root.querySelectorAll("[aria-label],[title]").forEach((el) => {
+      for (const a of ["aria-label", "title"]) if (el.hasAttribute(a)) {
+        const k = "data-orig-" + a; if (!el.hasAttribute(k)) el.setAttribute(k, el.getAttribute(a));
+        el.setAttribute(a, LANG === "ru" ? el.getAttribute(k) : tr(el.getAttribute(k)));
+      }
+    });
+  }
+  i18nPrep();
   // ---------------------------------------------------------------- Tuning (синхронно с Tuning.cs)
   const T = {
     PPU: 32, VW: 640, VH: 360,          // ночная точечная графика: 32 px на клетку
@@ -91,9 +145,10 @@
   // «Google русский»); «писклявый» — он же, задранный «бурундуком»; «лепет» — мультяшное бормотание; «выкл».
   const VOICE_MODES = ["studio", "natural", "squeaky", "babble", "off"];
   const VOICE_LABEL = { studio: "Голос: студия", natural: "Голос: живой", squeaky: "Голос: писклявый", babble: "Голос: лепет", off: "Голос: выкл" };
-  let voiceMode = "studio", ruVoice = null, ruVoices = [];
-  try { voiceMode = localStorage.getItem("sharik_voice_mode") || "studio"; } catch (e) { }
-  if (!VOICE_MODES.includes(voiceMode)) voiceMode = "studio";
+  // по умолчанию — живой нейро-голос браузера (Edge «Natural», Google): он эмоциональнее студийного RHVoice
+  let voiceMode = "natural", ruVoice = null, ruVoices = [];
+  try { voiceMode = localStorage.getItem("sharik_voice_mode2") || "natural"; } catch (e) { }
+  if (!VOICE_MODES.includes(voiceMode)) voiceMode = "natural";
 
   // ---------------------------------------------------------------- студийная озвучка (Tools/voice/studio.py → voice/<кампания>.js)
   const VOICE = {
@@ -109,7 +164,7 @@
     busy() { return performance.now() < this.busyUntil; },
     stop() { if (this.audio) { try { this.audio.pause(); } catch (e) { } this.audio = null; } this.busyUntil = 0; },
     play(role, text) {
-      if (muted || voiceMode !== "studio") return false;
+      if (muted || voiceMode !== "studio" || LANG !== "ru") return false;     // студийные пакеты пока только русские
       const src = this.clip(role, String(text).trim()); if (!src) return false;
       this.stop(); try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { }
       const a = new Audio(src); this.audio = a; this.busyUntil = performance.now() + 1500;
@@ -131,14 +186,14 @@
   function findRuVoice() {
     try {
       const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
-      ruVoices = vs.filter((v) => /^ru/i.test(v.lang)).sort((a, b) => voiceScore(b) - voiceScore(a));
+      ruVoices = vs.filter((v) => new RegExp("^" + LANG, "i").test(v.lang)).sort((a, b) => voiceScore(b) - voiceScore(a));
       let saved = null; try { saved = localStorage.getItem("sharik_voice_name"); } catch (e) { }
       ruVoice = ruVoices.find((v) => v.name === saved) || ruVoices[0] || null;
     } catch (e) { ruVoices = []; ruVoice = null; }
     const pick = document.getElementById("voicepick");
     if (pick) {
       pick.innerHTML = ruVoices.length ? ruVoices.map((v) => `<option value="${v.name.replace(/"/g, "&quot;")}">${v.name}${/maxim|максим/i.test(v.name) ? " 🤖" : voiceScore(v) >= 4 ? " ★" : ""}</option>`).join("")
-        : `<option value="">нет русского голоса в системе</option>`;
+        : `<option value="">${tr("нет русского голоса в системе")}</option>`;
       if (ruVoice) pick.value = ruVoice.name;
       pick.disabled = !ruVoices.length;
     }
@@ -198,7 +253,7 @@
   }
   function updateVoiceLabel() {
     const b = document.getElementById("voice"); if (!b) return;
-    b.textContent = VOICE_LABEL[voiceMode] + ((voiceMode === "natural" || voiceMode === "squeaky") && !ruVoice ? " (нет рус. голоса → лепет)" : "");
+    b.textContent = tr(VOICE_LABEL[voiceMode]) + ((voiceMode === "natural" || voiceMode === "squeaky") && !ruVoice ? tr(" (нет рус. голоса → лепет)") : "");
   }
 
   // ---------------------------------------------------------------- фразы
@@ -750,12 +805,12 @@
       $("log").innerHTML = "";
       // карточка-глава: сюжет уровня словами героя/рассказчика, потом уровень
       const txt = L.data.chapter || (CAMP.id !== "sharik" ? L.data.storyBeat || "" : "");
-      this.card = txt ? { title: L.data.title, head: CAMP.chapterHead || "", text: txt, t: 0, need: 3 + txt.length / 16 } : null;
+      this.card = txt ? { title: tr(L.data.title), head: tr(CAMP.chapterHead || ""), text: tr(txt), t: 0, need: 3 + txt.length / 16 } : null;
       if (this.card) this.big = null;
       if (this.card) NARR.read(this.card.text); else NARR.level();
     },
     closeCard() { if (!this.card) return; this.card = null; NARR.hush(); NARR.level(); },
-    title(t) { this.big = t; this.small = null; this.bigT = 3; },
+    title(t) { this.big = tr(t); this.small = null; this.bigT = 3; },
     levelDone() {
       if (this.cutscene) return;
       reflectLevel(L.data.title);
@@ -795,8 +850,8 @@
             MIND.loops++; saveMind();
             let loops = MIND.loops;
             const fin = CAMP.finale || {};
-            this.big = fin.end || "КОНЕЦ"; this.bigT = 1e9;
-            this.small = `${fin.text || "Шарик выключил мир. Или мир выключил шарика?"}\nЛепёшек: ${ball.splats}. Циклов: ${loops}.\n\nНажми любую клавишу, чтобы… начать заново?`;
+            this.big = tr(fin.end || "КОНЕЦ"); this.bigT = 1e9;
+            this.small = tr(fin.text || "Шарик выключил мир. Или мир выключил шарика?") + tr(`\nЛепёшек: ${ball.splats}. Циклов: ${loops}.\n\nНажми любую клавишу, чтобы… начать заново?`);
             this.waitRestart = true;
           }
         }
@@ -1116,10 +1171,10 @@
     if (game.paused && $("intro").hidden) {
       c.fillStyle = "rgba(0,0,0,.6)"; c.fillRect(0, 0, ui.width, ui.height);
       c.textAlign = "center"; c.fillStyle = "#efece6"; c.font = `italic ${Math.round(S * 14)}px "Cormorant Garamond", Georgia, serif`;
-      c.fillText("ПАУЗА", ui.width / 2, ui.height / 2); c.textAlign = "left";
+      c.fillText(tr("ПАУЗА"), ui.width / 2, ui.height / 2); c.textAlign = "left";
     }
-    $("stats").textContent = `Лепёшек ${ball.splats} · смертей ${ball.deaths} · ловушек ${trapsFired}`;
-    $("stage").textContent = `${(CAMP.world && CAMP.world.labels && CAMP.world.labels.stage) || "стадия прозрения"} ${L.data.awareness}/5`;
+    $("stats").textContent = tr(`Лепёшек ${ball.splats} · смертей ${ball.deaths} · ловушек ${trapsFired}`);
+    $("stage").textContent = `${tr((CAMP.world && CAMP.world.labels && CAMP.world.labels.stage) || "стадия прозрения")} ${L.data.awareness}/5`;
   }
   // карточка-глава поверх кадра: как интертитр в немом кино / страница из рассказа героя
   function drawCard(c, S) {
@@ -1140,7 +1195,7 @@
     let left = shown;
     for (const l of wrap(c, k.text, maxW)) { if (left > 0) c.fillText(l.slice(0, left), ui.width / 2, y); left -= l.length + 1; y += fs * 1.45; }
     c.font = M ? `${Math.round(S * 4.6)}px Pangolin, sans-serif` : `italic ${Math.round(S * 4.6)}px "Cormorant Garamond", Georgia, serif`;
-    c.fillStyle = dim; c.fillText("клик или любая клавиша — дальше", ui.width / 2, ui.height * 0.86);
+    c.fillStyle = dim; c.fillText(tr("клик или любая клавиша — дальше"), ui.width / 2, ui.height * 0.86);
     c.restore(); c.textAlign = "left";
   }
   function visibleTraps() {
@@ -1216,12 +1271,28 @@
   $("mute").addEventListener("click", () => { audio(); toggleMute(); });
   $("restart").addEventListener("click", () => game.start(levelIndex));
   const STYLE_LABEL = { mult: "Стиль: мульт", limbo: "Стиль: Лимбо" };
-  function showStyle() { $("style").textContent = STYLE_LABEL[styleName]; document.body.dataset.style = styleName; }
+  function showStyle() { $("style").textContent = tr(STYLE_LABEL[styleName]); document.body.dataset.style = styleName; }
+  // язык: RU ⇄ EN. Всё, что уже на экране, переводится заново, уровень начинается сначала
+  function applyLang() {
+    i18nPrep(); document.documentElement.lang = LANG;
+    $("lang").textContent = LANG === "ru" ? "EN" : "RU";
+    trDom(document.body);
+    fillLevels(); $("level").value = String(levelIndex);
+    [...$("campaign").options].forEach((o) => { const c = CAMPAIGNS.find((x) => x.id === o.value); o.textContent = tr(c.title) + (c.source ? " — " + tr(c.source) : ""); });
+    [...$("campaigntop").options].forEach((o) => { const c = CAMPAIGNS.find((x) => x.id === o.value); o.textContent = tr("Игра: ") + tr(c.title); });
+    showCampaign(); showStyle(); findRuVoice(); updateVoiceLabel(); renderMindPanel();
+  }
+  $("lang").addEventListener("click", () => {
+    LANG = LANG === "ru" ? "en" : "ru";
+    try { localStorage.setItem("sharik_lang", LANG); } catch (e) { }
+    VOICE.stop(); try { speechSynthesis.cancel(); } catch (e) { }
+    applyLang(); if ($("intro").hidden) game.start(levelIndex);
+  });
   $("style").addEventListener("click", () => { setStyle(styleName === "mult" ? "limbo" : "mult"); showStyle(); });
   showStyle();
   $("voice").addEventListener("click", () => {
     voiceMode = VOICE_MODES[(VOICE_MODES.indexOf(voiceMode) + 1) % VOICE_MODES.length];
-    try { speechSynthesis.cancel(); localStorage.setItem("sharik_voice_mode", voiceMode); } catch (e) { }
+    try { speechSynthesis.cancel(); localStorage.setItem("sharik_voice_mode2", voiceMode); } catch (e) { }
     updateVoiceLabel(); speakVoice("Привет! Это мой голос. Смешно?", "happy", 0.7);
   });
   $("voicepick").addEventListener("change", () => {
@@ -1238,20 +1309,20 @@
   const sel = $("level");
   function fillLevels() {
     sel.innerHTML = "";
-    levels.forEach((lv, i) => { const o = document.createElement("option"); o.value = String(i); o.textContent = `${lv.order}. ${lv.title}`; sel.appendChild(o); });
+    levels.forEach((lv, i) => { const o = document.createElement("option"); o.value = String(i); o.textContent = `${lv.order}. ${tr(lv.title)}`; sel.appendChild(o); });
   }
   fillLevels();
   function showCampaign() {
     VOICE.load(CAMP.id);
-    $("introtitle").textContent = CAMP.title || "Шарик";
-    $("introlog").textContent = CAMP.logline || "";
-    $("introsrc").textContent = CAMP.source || "";
-    $("herotitle").textContent = CAMP.title || "Шарик";
+    $("introtitle").textContent = tr(CAMP.title || "Шарик");
+    $("introlog").textContent = tr(CAMP.logline || "");
+    $("introsrc").textContent = tr(CAMP.source || "");
+    $("herotitle").textContent = tr(CAMP.title || "Шарик");
   }
   const csel = $("campaign"), ctop = $("campaigntop");
   CAMPAIGNS.forEach((c) => {
-    const o = document.createElement("option"); o.value = c.id; o.textContent = c.title + (c.source ? " — " + c.source : ""); csel.appendChild(o);
-    const o2 = document.createElement("option"); o2.value = c.id; o2.textContent = "Игра: " + c.title; ctop.appendChild(o2);
+    const o = document.createElement("option"); o.value = c.id; o.textContent = tr(c.title) + (c.source ? " — " + tr(c.source) : ""); csel.appendChild(o);
+    const o2 = document.createElement("option"); o2.value = c.id; o2.textContent = tr("Игра: ") + tr(c.title); ctop.appendChild(o2);
   });
   csel.value = ctop.value = CAMP.id;
   ctop.addEventListener("change", () => { csel.value = ctop.value; csel.dispatchEvent(new Event("change")); ctop.blur(); });
@@ -1266,6 +1337,7 @@
   });
   showCampaign();
   sel.addEventListener("change", () => { game.start(Number(sel.value)); sel.blur(); });
+  if (LANG !== "ru") applyLang(); else $("lang").textContent = "EN";
 
   // ---------------------------------------------------------------- цикл
   let last = 0, acc = 0;

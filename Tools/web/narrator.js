@@ -32,7 +32,7 @@
     fill(t) { const h = (CAMP.hero && CAMP.hero.name) || "Шарик"; return t.replace(/\{hero\}/g, h); },
     pick(key) { const a = this.lines(key); return a.length ? this.fill(a[Math.floor(Math.random() * a.length)]) : null; },
     busy() { return !!(this.cur && game.time < this.cur.until) || this.queue.length > 0 || (this.cur && VOICE.busy()); },
-    say(text) { if (text) this.queue.push(text); },
+    say(text) { if (text) this.queue.push(tr(text)); },
     // по событию: не чаще раза в 25 с и не всегда
     maybe(key, chance) {
       if (this.busy() || game.time - this.lastAt < 25 || Math.random() > chance) return;
@@ -44,7 +44,7 @@
       this.say(own ? this.fill(own) : this.pick("start" + Math.min(5, L.data.awareness || 0)));
     },
     // прочитать карточку-главу голосом рассказчика (без субтитров — текст на карточке)
-    read(text) { this.cur = null; this.queue = []; this.speak(this.fill(text)); },
+    read(text) { this.cur = null; this.queue = []; this.speak(tr(this.fill(text))); },
     hush() { VOICE.stop(); try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { } },
     update() {
       if (this.cur && (game.time < this.cur.until || VOICE.busy())) return;
@@ -55,13 +55,14 @@
       this.cur = { text, start: game.time, until: game.time + 1.2 + text.length / 15 };
       this.lastAt = game.time;
       this.speak(text);
-      log("Рассказчик: " + text, true);
+      log(tr("Рассказчик: ") + text, true);
     },
     pickVoice() {
       // низкий «дикторский» голос: мужской, если есть
       const maxim = ruVoices.find((v) => /maxim|максим/i.test(v.name));      // «бот Максим» — лучший рассказчик для мультов
       if (maxim) return maxim;
-      const male = ruVoices.find((v) => /dmitry|pavel|yuri|дмитрий|павел|юрий|male/i.test(v.name));
+      // мужской голос с лучшей оценкой (ruVoices уже отсортированы: нейро-голоса «Natural/Online» первыми)
+      const male = ruVoices.find((v) => /dmitry|pavel|yuri|дмитрий|павел|юрий|guy|andrew|brian|christopher|eric|roger|davis|ryan|george|thomas|daniel|male/i.test(v.name));
       return male || ruVoice;
     },
     speak(text) {

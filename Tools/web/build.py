@@ -34,7 +34,15 @@ def main():
         c["levels"] = lv
         c["persona"] = (c.get("hero") or {}).get("persona", persona)
         campaigns.append(c)
-    data = json.dumps({"sprites": sprites, "levels": levels, "phrases": phrases, "persona": persona, "campaigns": campaigns},
+    locale = {}
+    for d in sorted((RES / "Locale").glob("*")) if (RES / "Locale").exists() else []:
+        merged = {}
+        for f in sorted(d.glob("*.json")):
+            for k, v in json.loads(f.read_text(encoding="utf-8")).items():
+                if isinstance(v, str) and v.strip():
+                    merged[k.replace("\\n", "\n")] = v.replace("\\n", "\n")   # ключи из JS-исходника: «\n» → перенос строки
+        locale[d.name] = merged
+    data = json.dumps({"sprites": sprites, "levels": levels, "phrases": phrases, "persona": persona, "campaigns": campaigns, "locale": locale},
                       ensure_ascii=False, separators=(",", ":"))
     html = (ROOT / "Tools/web/template.html").read_text(encoding="utf-8")
     for k, v in sprites.items():
