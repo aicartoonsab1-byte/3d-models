@@ -55,6 +55,18 @@
   .intro-title { font-family: var(--display); font-size: clamp(20px, 3vw, 30px); }
   .intro button { justify-self: center; background: var(--coral); border-color: var(--coral); color: var(--ink); font-size: 14px; padding: 12px 22px; }
   .intro button:hover { background: var(--cream); }
+  .mindcard { display: grid; gap: 8px; }
+  .mmode { display: grid; gap: 4px; font-size: 15px; color: var(--ink-l); }
+  .mstatus { margin: 0; font-size: 15px; color: var(--coral-d); }
+  .trait { display: grid; grid-template-columns: 1fr 110px; align-items: center; gap: 8px; font-size: 15px; }
+  .trait i { display: block; height: 8px; background: linear-gradient(90deg, var(--coral) var(--v), var(--paper-d) var(--v)); border: 1px solid var(--ink); }
+  .mnums { margin: 0; font-size: 14px; color: var(--ink-l); font-variant-numeric: tabular-nums; }
+  #mind h3 { font-family: var(--display); font-weight: 400; font-size: 11px; letter-spacing: .06em; margin: 6px 0 2px; }
+  #mind ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 15px; line-height: 1.25; }
+  #mind { display: grid; gap: 6px; }
+  button.ghost { background: transparent; color: var(--ink); }
+  button.ghost:hover { background: var(--paper-d); }
+  .confirm { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 15px; }
   .note { font-size: 15px; color: var(--ink-l); margin: 0; }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
 </style>
@@ -70,7 +82,8 @@
       <select id="level" aria-label="Уровень"></select>
       <button id="restart" type="button">Заново</button>
       <button id="pause" type="button">Пауза</button>
-      <button id="voice" type="button">Голос: писклявый</button>
+      <button id="voice" type="button">Голос: живой</button>
+      <select id="voicepick" aria-label="Русский голос системы"></select>
       <button id="mute" type="button" aria-pressed="true">Звук: вкл</button>
     </div>
   </header>
@@ -89,6 +102,22 @@
       </div>
     </section>
     <aside>
+      <div class="card mindcard">
+        <h2>РАЗУМ ШАРИКА</h2>
+        <label class="mmode" for="mindmode">Кто думает
+          <select id="mindmode">
+            <option value="quick" data-claude>Claude — быстрый</option>
+            <option value="default" data-claude>Claude — глубокий (медленнее)</option>
+            <option value="offline">Сам (офлайн, без нейросети)</option>
+          </select>
+        </label>
+        <div id="mind"></div>
+        <button id="forget" type="button" class="ghost">Стереть память</button>
+        <div id="forgetconfirm" class="confirm" hidden>
+          <span>Шарик забудет всё: имена, убеждения, дневник.</span>
+          <button id="forgetyes" type="button">Стереть</button><button id="forgetno" type="button" class="ghost">Оставить</button>
+        </div>
+      </div>
       <div class="card">
         <h2>ВАШИ ЛОВУШКИ</h2>
         <ul class="traps">
@@ -112,7 +141,7 @@
         <h2>ЧТО ОН ГОВОРИТ</h2>
         <ul id="log" aria-live="polite"></ul>
       </div>
-      <p class="note">Это браузерный прототип Unity-проекта: здесь шарик говорит заготовленными фразами. В Unity с Ollama он думает сам через нейросеть.</p>
+      <p class="note">Шарик думает через Claude на вашем аккаунте: по событиям, не чаще раза в 7 секунд и не больше 30 мыслей за уровень. Его память хранится в этом браузере и переживает уровни и циклы. Лучшие голоса — нейро-голоса Edge «Светлана» и «Дмитрий» (помечены ★).</p>
     </aside>
   </div>
 </div>

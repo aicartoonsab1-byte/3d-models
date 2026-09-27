@@ -18,12 +18,19 @@ def main():
                for p in sorted((RES / "Sprites").glob("*.png"))}
     levels = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((RES / "Levels").glob("*.json"))]
     phrases = json.loads((RES / "Brain/phrases_ru.json").read_text(encoding="utf-8"))["entries"]
-    data = json.dumps({"sprites": sprites, "levels": levels, "phrases": phrases}, ensure_ascii=False, separators=(",", ":"))
+    persona = (RES / "Brain/persona_ru.txt").read_text(encoding="utf-8")
+    data = json.dumps({"sprites": sprites, "levels": levels, "phrases": phrases, "persona": persona},
+                      ensure_ascii=False, separators=(",", ":"))
     html = (ROOT / "Tools/web/template.html").read_text(encoding="utf-8")
     for k, v in sprites.items():
         html = html.replace("{{" + k + "}}", v)
     html = html.replace("{{DATA}}", data.replace("</", "<\\/"))
-    html = html.replace("{{GAME}}", (ROOT / "Tools/web/game.js").read_text(encoding="utf-8"))
+    game = (ROOT / "Tools/web/game.js").read_text(encoding="utf-8")
+    mind = (ROOT / "Tools/web/mind.js").read_text(encoding="utf-8")
+    marker = "  // @@MIND@@"
+    assert marker in game, "в game.js нет маркера @@MIND@@"
+    game = game.replace(marker, mind + "\n" + marker, 1)
+    html = html.replace("{{GAME}}", game)
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(html, encoding="utf-8")
     print(f"→ {OUT.relative_to(ROOT)}  ({OUT.stat().st_size // 1024} КБ, уровней: {len(levels)}, спрайтов: {len(sprites)})")

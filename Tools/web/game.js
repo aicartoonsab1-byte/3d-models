@@ -84,30 +84,55 @@
   //  • «писклявый» — настоящая русская речь синтезатором браузера, задранная по высоте (бурундук),
   //    интонация и скорость зависят от настроения, в «матрице» — наоборот, басовитый робот;
   //  • «бормотание» — мультяшный лепет: слоги-«боинги» с глиссандо и вибрато, писк в конце фразы.
-  const VOICE_MODES = ["speech", "babble", "off"];
-  let voiceMode = "speech", ruVoice = null;
+  // Стили: «живой» — лучший русский голос системы почти без искажений (нейро-голоса Edge «Светлана»/«Дмитрий»,
+  // «Google русский»); «писклявый» — он же, задранный «бурундуком»; «лепет» — мультяшное бормотание; «выкл».
+  const VOICE_MODES = ["natural", "squeaky", "babble", "off"];
+  const VOICE_LABEL = { natural: "Голос: живой", squeaky: "Голос: писклявый", babble: "Голос: лепет", off: "Голос: выкл" };
+  let voiceMode = "natural", ruVoice = null, ruVoices = [];
+  try { voiceMode = localStorage.getItem("sharik_voice_mode") || "natural"; } catch (e) { }
+  function voiceScore(v) {
+    let sc = 0;
+    if (/natural|neural|online/i.test(v.name)) sc += 4;          // нейро-голоса (Edge, Windows 11)
+    if (/google/i.test(v.name)) sc += 2;
+    if (/svetlana|dmitry|dariya|milena|yuri|irina|pavel/i.test(v.name)) sc += 1;
+    if (!v.localService) sc += 1;
+    return sc;
+  }
   function findRuVoice() {
     try {
       const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
-      ruVoice = vs.find((v) => /^ru/i.test(v.lang) && /google|milena|irina|yuri|pavel|natalia/i.test(v.name)) || vs.find((v) => /^ru/i.test(v.lang)) || null;
-    } catch (e) { ruVoice = null; }
+      ruVoices = vs.filter((v) => /^ru/i.test(v.lang)).sort((a, b) => voiceScore(b) - voiceScore(a));
+      let saved = null; try { saved = localStorage.getItem("sharik_voice_name"); } catch (e) { }
+      ruVoice = ruVoices.find((v) => v.name === saved) || ruVoices[0] || null;
+    } catch (e) { ruVoices = []; ruVoice = null; }
+    const pick = document.getElementById("voicepick");
+    if (pick) {
+      pick.innerHTML = ruVoices.length ? ruVoices.map((v) => `<option value="${v.name.replace(/"/g, "&quot;")}">${v.name}${voiceScore(v) >= 4 ? " ★" : ""}</option>`).join("")
+        : `<option value="">нет русского голоса в системе</option>`;
+      if (ruVoice) pick.value = ruVoice.name;
+      pick.disabled = !ruVoices.length;
+    }
     updateVoiceLabel();
   }
   if (window.speechSynthesis) { findRuVoice(); try { speechSynthesis.onvoiceschanged = findRuVoice; } catch (e) { } }
-  const MOOD_VOICE = {   // pitch 0..2, rate 0.1..10 — для speechSynthesis
-    neutral: [1.85, 1.05], happy: [2, 1.15], scared: [2, 1.4], sad: [1.3, 0.8], angry: [1.55, 1.25], awe: [1.95, 0.9],
-    pray: [1.6, 0.78], dizzy: [1.75, 0.85], suspicious: [1.45, 0.85], determined: [1.35, 1.0], glitch: [0.2, 0.72],
+  // [высота, скорость] для «живого»; «писклявый» поднимает высоту к 2
+  const MOOD_VOICE = {
+    neutral: [1.15, 1.0], happy: [1.3, 1.1], scared: [1.4, 1.3], sad: [0.95, 0.82], angry: [1.05, 1.2], awe: [1.3, 0.88],
+    pray: [1.1, 0.8], dizzy: [1.2, 0.85], suspicious: [1.0, 0.85], determined: [1.0, 1.0], glitch: [0.3, 0.75],
   };
-  function speakVoice(text, mood) {
+  function speakVoice(text, mood, k = 0.5) {
     if (muted || voiceMode === "off") return;
-    if (voiceMode === "speech" && ruVoice && window.speechSynthesis) {
+    if ((voiceMode === "natural" || voiceMode === "squeaky") && ruVoice && window.speechSynthesis) {
       try {
-        const u = new SpeechSynthesisUtterance(text), mv = MOOD_VOICE[mood] || MOOD_VOICE.neutral;
-        u.voice = ruVoice; u.lang = ruVoice.lang; u.pitch = mv[0]; u.rate = mv[1]; u.volume = 1;
+        const mv = MOOD_VOICE[mood] || MOOD_VOICE.neutral, u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, ""));
+        const excite = (k - 0.5) * (mood === "sad" || mood === "pray" ? -0.3 : 0.4);   // сила эмоции слышна
+        let pitch = mv[0] + excite * 0.5, rate = mv[1] * (1 + excite * 0.5);
+        if (voiceMode === "squeaky") pitch = mood === "glitch" ? 0.2 : Math.min(2, pitch + 0.75);
+        u.voice = ruVoice; u.lang = ruVoice.lang; u.pitch = Math.max(0, Math.min(2, pitch)); u.rate = Math.max(0.5, Math.min(1.8, rate)); u.volume = 1;
         speechSynthesis.cancel(); speechSynthesis.speak(u);
-        if (Math.random() < 0.3) squeak(text.length / T.CPS * 0.9 + 0.2);   // смешной «пик» после фразы
+        if (voiceMode === "squeaky" && Math.random() < 0.3) squeak(text.length / T.CPS * 0.9 + 0.2);
         return;
-      } catch (e) { /* упадём в бормотание */ }
+      } catch (e) { /* упадём в лепет */ }
     }
     babble(text, mood);
   }
@@ -140,7 +165,7 @@
   }
   function updateVoiceLabel() {
     const b = document.getElementById("voice"); if (!b) return;
-    b.textContent = voiceMode === "speech" ? (ruVoice ? "Голос: писклявый" : "Голос: писклявый (нет рус. голоса → лепет)") : voiceMode === "babble" ? "Голос: лепет" : "Голос: выкл";
+    b.textContent = VOICE_LABEL[voiceMode] + ((voiceMode === "natural" || voiceMode === "squeaky") && !ruVoice ? " (нет рус. голоса → лепет)" : "");
   }
 
   // ---------------------------------------------------------------- фразы
@@ -193,7 +218,7 @@
 
   function buildLevel(data) {
     L = { data, w: Math.max(...data.grid.map((r) => r.length)), h: data.grid.length, pal: SKY[data.palette] ? data.palette : "meadow",
-          tiles: [], objects: [], traps: [], trapdoors: {}, fragments: [], checkpoints: [], spawn: null, goal: null, exit: null, sw: null,
+          tiles: [], decos: [], objects: [], traps: [], trapdoors: {}, fragments: [], checkpoints: [], spawn: null, goal: null, exit: null, sw: null,
           hidden: new Set(), fx: [], glitchT: 4 + Math.random() * 6, glitches: [], dissolve: -1, sky: SKY[data.palette] || SKY.meadow };
     const frag = [];
     for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
@@ -201,7 +226,10 @@
       if (c === "#") {
         const top = at(x, y + 1) !== "#" && at(x, y + 1) !== "T";
         L.tiles.push({ s: `tile_${L.pal}_${top ? "top" : "fill"}${variant(x, y)}`, x: cx, y: cy });
-        if (top && at(x, y + 1) === "." && decoOk(x, y)) L.tiles.push({ s: `deco_${(x * 7 + y) % 4}`, x: cx, y: cy + 1, deco: true });
+        if (top && at(x, y + 1) === "." && decoOk(x, y)) {
+          const d = { s: `deco_${(x * 7 + y) % 4}`, x: cx, y: cy + 1, deco: true, id: "deco" + L.decos.length };
+          L.tiles.push(d); L.decos.push(d);
+        }
       } else if (c === "=") L.tiles.push({ s: `tile_${L.pal}_platform`, x: cx, y: cy });
       else if (c === "S") L.spawn = { x: cx, y: y + T.R + 0.02 };
       else if (c === "F") { L.exit = { x: cx, y: y + 1, used: false }; L.goal = { x: cx, y: cy }; }
@@ -604,92 +632,7 @@
     },
   };
 
-  // ---------------------------------------------------------------- мозг (офлайн, как BallBrain.cs без нейросети)
-  class Brain {
-    constructor() {
-      this.aw = L.data.awareness || 0; nav.imp = 0.8 + (0.35 - 0.8) * this.aw / 5;
-      this.intent = "forward"; this.until = 0; this.nextThink = game.time + 6; this.queue = [];
-      this.say = null; this.thought = null; this.linesDone = new Set(); this.memory = [];
-      this.stuckRef = ball.x; this.stuckSince = game.time; this.stuckTries = 0; this.deathsAt = {};
-      this.bossesSeen = new Set(); this.cursorNoticed = false;
-      (L.data.intro || []).forEach((t) => this.enqueue(t, this.aw >= 4 ? "glitch" : "neutral"));
-      this.introPending = this.queue.length > 0;
-    }
-    enqueue(text, mood, thought = false) { if (text) this.queue.push({ text, mood, thought }); }
-    speechBusy() { return this.say && game.time < this.say.until; }
-    speak(text, mood, thought) {
-      ball.setMood(mood, 3);
-      if (thought) this.thought = { text, until: game.time + Math.min(9, Math.max(4, text.length * 0.09)) };
-      else { this.say = { text, start: game.time, until: game.time + text.length / T.CPS + T.HOLD }; speakVoice(text, mood); }
-      log(text, thought);
-    }
-    react(key, chance = 1) {
-      if (Math.random() > chance || this.speechBusy()) return false;
-      const p = pickPhrase(key, this.aw); if (!p) return false;
-      this.speak(p.text, p.mood, false); return true;
-    }
-    remember(s) { this.memory.push(s); if (this.memory.length > 10) this.memory.shift(); }
-    onSplat(kind, dies) {
-      const k = { crushed: "crushed", spikes: "spikes", pit: "pit" }[kind] || "splat_land";
-      this.remember(k); this.react(k);
-      if (dies) { const c = Math.floor(ball.x / 4); this.deathsAt[c] = (this.deathsAt[c] || 0) + 1; if (this.deathsAt[c] >= 2) nav.imp = Math.max(0.05, nav.imp * 0.6); }
-      this.nextThink = game.time + 1.8;
-    }
-    onReformed() { if (Math.random() < 0.6) this.react("respawn"); this.intent = "forward"; this.stuckSince = game.time; this.stuckRef = ball.x; }
-    onTrap(t) {
-      if (Math.hypot(t.x - ball.x, t.y - ball.y) > 7) return;
-      if (!this.react("trap_fired", 0.35 + 0.55 * this.aw / 5)) ball.setMood(this.aw >= 3 ? "suspicious" : "scared", 1.5);
-      if (this.aw >= 3) ball.lookAt = { x: t.x, y: t.y };
-    }
-    onFragment(text) { this.enqueue(text, "awe"); const p = pickPhrase("fragment_react", this.aw); if (p) this.enqueue(p.text, p.mood, true); }
-    onCheckpoint() { this.react("checkpoint", 0.7); }
-    onJump() { this.react("jump", 0.06); }
-    setIntent(i, d) { this.intent = i; this.until = game.time + d; if (i === "pray") ball.setMood("pray", d); }
-    update() {
-      const gapOk = !this.say || game.time > this.say.until + 0.5;   // пауза между репликами
-      if (!this.speechBusy() && gapOk && this.queue.length) { const s = this.queue.shift(); this.speak(s.text, s.mood, s.thought); this.scripted = true; }
-      else if (!this.queue.length && !this.speechBusy()) this.scripted = false;
-      if (!ball.alive() || game.cutscene) return;
-      (L.data.lines || []).forEach((ln, i) => { if (!this.linesDone.has(i) && ball.x >= ln.x) { this.linesDone.add(i); this.enqueue(ln.text, ln.mood || "neutral"); } });
-      // боссы
-      for (const t of L.traps) if (t.kind === "boss" && !this.bossesSeen.has(t) && Math.abs(t.x - ball.x) < 9) {
-        this.bossesSeen.add(t); ball.lookAt = { x: t.home.x, y: t.home.y }; if (!this.react("boss_seen")) ball.setMood("awe", 2);
-      }
-      // курсор
-      if (this.aw >= 3 && mouse.world && Math.hypot(mouse.world.x - ball.x, mouse.world.y - ball.y) < 1.6) {
-        ball.lookAt = mouse.world;
-        if (!this.cursorNoticed && this.react("cursor")) this.cursorNoticed = true;
-      } else if (ball.lookAt && Math.random() < 0.01) ball.lookAt = null;
-      // застревание
-      if (this.introPending) { this.stuckSince = game.time; this.stuckRef = ball.x; }
-      else if (["forward", "yolo", "run_jump"].includes(this.intent)) {
-        if (Math.abs(ball.x - this.stuckRef) > 1.2) { this.stuckRef = ball.x; this.stuckSince = game.time; this.stuckTries = 0; }
-        else if (game.time - this.stuckSince > 8) {
-          this.stuckTries++; this.stuckSince = game.time; this.react("stuck", 0.8);
-          const k = this.stuckTries % 3;
-          if (k === 1) this.setIntent("back", 0.8); else if (k === 2) this.setIntent("yolo", 3); else { this.setIntent("pray", 2); this.react("pray"); }
-        }
-      } else { this.stuckSince = game.time; this.stuckRef = ball.x; }
-      if (game.time >= this.until && this.intent !== "forward") this.intent = "forward";
-      if (game.time >= this.nextThink && !this.scripted && !this.queue.length) {
-        this.nextThink = game.time + 8 + Math.random() * 4;
-        const p = pickPhrase("idle", this.aw); if (p) this.speak(p.text, p.mood, Math.random() < 0.55);
-        const r = Math.random();
-        if (r < 0.08) this.setIntent("pray", 2); else if (r < 0.14) this.setIntent("look", 1.6); else if (r < 0.14 + 0.08 * nav.imp) this.setIntent("yolo", 2.5);
-      }
-    }
-    fixed() {
-      if (!ball.alive() || game.cutscene) { ball.move = 0; return; }
-      const dir = L.goal.x >= ball.x ? 1 : -1;
-      // пока звучит вступление — стоит и слушает себя; пока говорит сценарную реплику — катится задумчиво
-      if (this.introPending) { if (!this.queue.length && !this.speechBusy()) this.introPending = false; else { ball.move = 0; return; } }
-      const talking = this.scripted && this.speechBusy();
-      if (this.intent === "forward") nav.steer(dir, talking ? T.WALK_TALK : T.WALK, false);
-      else if (this.intent === "back") nav.steer(-dir, T.BACK, false);
-      else if (this.intent === "yolo") nav.steer(dir, T.YOLO, true);
-      else ball.move = 0;
-    }
-  }
+  // @@MIND@@  (сюда сборщик вклеивает Tools/web/mind.js: психика, разум на Claude, мозг шарика)
 
   // ---------------------------------------------------------------- камера и эффекты
   const cam = { x: 0, y: 0, shakeT: 0, shakeA: 0, look: 0 };
@@ -717,6 +660,7 @@
     title(t) { this.big = t; this.small = null; this.bigT = 3; },
     levelDone() {
       if (this.cutscene) return;
+      reflectLevel(L.data.title);
       this.cutscene = true; ball.move = 0;
       const outro = (L.data.outro || []).slice();
       let stage = 0;
@@ -750,6 +694,7 @@
           ball.bits && ball.bits.forEach((b) => { b.x += b.vx * dt; b.y += b.vy * dt; });
           if (t > 3) {
             ball.bits = null; stage = 8;
+            MIND.loops++; saveMind();
             let loops = 1; try { loops = Number(localStorage.getItem("sharik_loops") || 0) + 1; localStorage.setItem("sharik_loops", String(loops)); } catch (e) { }
             this.big = "КОНЕЦ"; this.bigT = 1e9;
             this.small = `Шарик выключил мир. Или мир выключил шарика?\nЛепёшек: ${ball.splats}. Циклов: ${loops}.\n\nНажми любую клавишу, чтобы… начать заново?`;
@@ -767,6 +712,7 @@
     // снаряды и эффекты
     for (const f of L.fx) {
       f.t += dt;
+      if (f.px && f.t > 0) { f.x += f.vx * dt; f.y += f.vy * dt; if (f.g) f.vy += f.g * dt; }
       if (f.orb) {
         const dx = ball.x - f.x, dy = ball.y - f.y, d = Math.hypot(dx, dy) || 1;
         if (f.t < 0.05) { f.vx = dx / d * f.speed; f.vy = dy / d * f.speed; }
@@ -886,6 +832,8 @@
     // шарик
     if (ball.visible) {
       const p = toScreen(ball.x, ball.y - T.R);
+      const emo = ball.emo && game.time < ball.emo.until ? ball.emo : null;
+      if (emo && (emo.mood === "scared" || emo.mood === "angry") && emo.k > 0.4) p.x += Math.round((Math.random() - 0.5) * 2 * emo.k);
       let sx = ball.sx, sy = ball.sy;
       if (!ball.grounded && ball.alive()) { const s = Math.min(0.18, Math.abs(ball.vy) / 30); sx *= 1 - s * 0.6; sy *= 1 + s; }
       ctx.save(); ctx.translate(p.x, p.y); ctx.scale(sx, sy);
@@ -907,6 +855,7 @@
     }
     if (ball.bits) for (const b of ball.bits) { const p = toScreen(ball.x + b.x, ball.y + b.y); ctx.fillStyle = "#e2615c"; ctx.fillRect(p.x, p.y, 2, 2); }
     for (const f of L.fx) {
+      if (f.px) { if (f.t > 0) { const p = toScreen(f.x, f.y); ctx.globalAlpha = Math.max(0, 1 - f.t / f.life); ctx.fillStyle = f.px; ctx.fillRect(p.x, p.y, f.spark ? 1 : 2, f.spark ? 1 : 2); if (f.spark) { ctx.fillRect(p.x - 1, p.y, 3, 1); ctx.fillRect(p.x, p.y - 1, 1, 3); } ctx.globalAlpha = 1; } continue; }
       if (f.grow) { const im = IMG[f.s]; const p = toScreen(f.x, f.y); ctx.save(); ctx.globalAlpha = 1 - f.t / f.life; ctx.translate(p.x, p.y); ctx.scale(1 + f.t * f.grow, 1); ctx.drawImage(im, -16, -4); ctx.restore(); }
       else spr(f.s, f.x, f.y);
     }
@@ -951,7 +900,8 @@
       let bottom = p.y * S;
       if (brain.say && game.time < brain.say.until) {
         const shown = Math.min(brain.say.text.length, Math.ceil((game.time - brain.say.start) * T.CPS));
-        const top = bubble(brain.say.text, p.x * S, bottom - 6 * S / 3, false, S, shown);
+        const jit = brain.say.k > 0.75 ? (Math.random() - 0.5) * 3 * S / 3 : 0;
+        const top = bubble(brain.say.text, p.x * S + jit, bottom - 6 * S / 3 + jit, false, S, shown);
         bottom = top - 4;
       }
       if (brain.thought && game.time < brain.thought.until) bubble(brain.thought.text, p.x * S + 20, bottom - 10 * S / 3, true, S);
@@ -1060,8 +1010,13 @@
   $("restart").addEventListener("click", () => game.start(levelIndex));
   $("voice").addEventListener("click", () => {
     voiceMode = VOICE_MODES[(VOICE_MODES.indexOf(voiceMode) + 1) % VOICE_MODES.length];
-    try { speechSynthesis.cancel(); } catch (e) { }
-    updateVoiceLabel(); speakVoice("Привет! Это мой голос.", "happy");
+    try { speechSynthesis.cancel(); localStorage.setItem("sharik_voice_mode", voiceMode); } catch (e) { }
+    updateVoiceLabel(); speakVoice("Привет! Это мой голос. Смешно?", "happy", 0.7);
+  });
+  $("voicepick").addEventListener("change", () => {
+    ruVoice = ruVoices.find((v) => v.name === $("voicepick").value) || ruVoice;
+    try { localStorage.setItem("sharik_voice_name", ruVoice ? ruVoice.name : ""); } catch (e) { }
+    speakVoice("Так я звучу лучше?", "awe", 0.6); $("voicepick").blur();
   });
   // Звук и речь в браузере разрешены только после действия пользователя — поэтому стартовый экран
   $("go").addEventListener("click", () => {
@@ -1088,6 +1043,7 @@
 
   function boot(saved) {
     resize();
+    bindMindUI(); renderMindPanel();
     let start = 0; try { start = Number(localStorage.getItem("sharik_level") || 0) || 0; } catch (e) { }
     if (saved && typeof saved.level === "number") start = saved.level;
     game.start(start);
