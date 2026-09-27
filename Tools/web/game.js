@@ -6,7 +6,7 @@
   const D = window.SHARIK_DATA;
   // ---------------------------------------------------------------- Tuning (синхронно с Tuning.cs)
   const T = {
-    PPU: 16, VW: 320, VH: 180,
+    PPU: 32, VW: 640, VH: 360,          // ночная точечная графика: 32 px на клетку
     G: 9.81 * 3, RUN: 6, JUMP: 14.5, R: 0.45, SPLAT: 17,
     GACC: 38, AACC: 16, COYOTE: 0.1, KILLY: -3,
     SPIKES_ON: 1.6, SPIKES_CD: 3, CR_HOLD: 0.6, CR_CD: 3.5, CR_FALL: 22, CR_RISE: 3,
@@ -252,6 +252,7 @@
     for (let i = 0; i + 1 < L.portals.length; i += 2) { L.portals[i].exit = L.portals[i + 1]; L.portals[i + 1].isExit = true; }
     frag.sort((a, b) => a.y !== b.y ? b.y - a.y : a.x - b.x);
     frag.forEach((f, i) => L.fragments.push({ x: f.x + 0.5, y: f.y + 0.5, text: data.fragments[i] || "...", taken: false }));
+    bakeWorld();
   }
 
   // ---------------------------------------------------------------- ловушки и боссы
@@ -300,6 +301,7 @@
     const wasAwake = t.awake > 0;
     t.awake = t.kind === "boss" ? T.AWAKE_BOSS : T.AWAKE_TRAP;
     if (!wasAwake) { t.acts = 0; SFX.wake(); }
+    L.eyeFlash = game.time + 0.45;       // глаз в небе вспыхивает: это ты, наблюдатель
     if (game.time < t.ready) { if (wasAwake) SFX.denied(); return; }
     trapsFired++;
     act(t);
@@ -660,6 +662,7 @@
     },
   };
 
+  // @@NIGHT@@  (сюда сборщик вклеивает Tools/web/night.js: точечная графика, глаз-наблюдатель, свечение шарика)
   // @@MIND@@  (сюда сборщик вклеивает Tools/web/mind.js: психика, разум на Claude, мозг шарика)
 
   // ---------------------------------------------------------------- камера и эффекты
@@ -812,7 +815,7 @@
   let CO = { cx: 0, cy: 0 };
   const toScreen = (wx, wy) => ({ x: Math.round((wx - CO.cx) * T.PPU + T.VW / 2), y: Math.round(T.VH / 2 - (wy - CO.cy) * T.PPU) });
   function spr(name, wx, wy, opt = {}) {
-    const im = IMG[name]; if (!im) return;
+    const im = nightSprite(name); if (!im) return;
     const p = toScreen(wx, wy);
     if (p.x < -im.width || p.x > T.VW + im.width || p.y < -im.height || p.y > T.VH + im.height) return;
     ctx.save();
@@ -827,25 +830,17 @@
   function render() {
     CO = camOffset();
     const darkT = game.cutscene && L.dissolve >= 0 ? Math.min(1, L.dissolve) : 0;
-    ctx.fillStyle = L.sky; ctx.fillRect(0, 0, T.VW, T.VH);
-    if (darkT > 0) { ctx.globalAlpha = darkT; ctx.fillStyle = "#000"; ctx.fillRect(0, 0, T.VW, T.VH); ctx.globalAlpha = 1; }
-    // фон: холмы с параллаксом
-    const hills = IMG[`bg_hills_${L.pal}`];
-    if (hills && !L.swHidden) {
-      const off = CO.cx * 0.5 * T.PPU, base = toScreen(0, 2.5 + CO.cy * 0.3).y;
-      ctx.globalAlpha = 1 - darkT;
-      for (let x = -((off % hills.width) + hills.width); x < T.VW; x += hills.width) ctx.drawImage(hills, Math.round(x), base - 16);
-      ctx.globalAlpha = 1;
-    }
-    if ((L.pal === "meadow" || L.pal === "city") && IMG.bg_cloud && darkT < 1) {
-      for (let i = 0; i < 6; i++) {
-        const wx = (i * 37 % 97) + CO.cx * 0.75, wy = L.h - 1.5 - (i * 3 % 4);
-        spr("bg_cloud", ((wx - CO.cx * 0.75) % (L.w + 20)) + CO.cx * 0.75 - 5, wy, { alpha: 1 - darkT });
-      }
-    }
+    renderNight(1 / 60);
     const gl = L.glitchUntil && game.time < L.glitchUntil ? new Map(L.glitches.map((g) => [g.tile, g])) : null;
     for (const t of L.tiles) {
       if (L.hidden.has(t)) continue;
+      if (/^tile_.*_(top|fill)/.test(t.s) || t.s === "mech_ice") continue;          // запечено в рельеф
+      if (t.anim) {                                                                    // конвейер: бегущие точки-шевроны
+        const p = toScreen(t.x, t.y + 0.5), dir = t.s.endsWith("_r") ? 1 : -1, ph = (game.time * 2 * TPX * dir) % 16;
+        ctx.fillStyle = "rgba(240,236,228,0.85)";
+        for (let k = -16; k < 32; k += 16) { const x0 = p.x - 16 + ((k + ph + 32) % 32); for (let j = 0; j < 4; j++) ctx.fillRect(x0 + (dir > 0 ? j : 3 - j), p.y + 1 + (j < 2 ? j : 3 - j) * 1, 1, 1); }
+        continue;
+      }
       if (L.dissolve > 0 && Math.random() < 0.02) continue;   // мерцание при выключении мира
       const g = gl && gl.get(t);
       let name = t.s, ox = g ? g.dx / 16 : 0;
@@ -856,7 +851,7 @@
       } else if (t.bounce) { if (game.time - (L.bounceAt[t.bounce] || -9) < 0.25) name = "mech_bounce_squash"; }
       else if (t.anim) name = `${t.s}_${Math.floor(game.time * 8) % 2}`;
       spr(name, t.x + ox, t.y);
-      if (g) { const p = toScreen(t.x, t.y); ctx.globalAlpha = 0.5; ctx.fillStyle = g.c; ctx.fillRect(p.x - 8, p.y - 8, 16, 16); ctx.globalAlpha = 1; }
+      if (g) { const p = toScreen(t.x, t.y); ctx.globalAlpha = 0.5; ctx.fillStyle = g.c; ctx.fillRect(p.x - 16, p.y - 16, 32, 32); ctx.globalAlpha = 1; }
     }
     // объекты
     for (const p of L.portals) if (!L.hidden.has(p)) spr(`mech_portal_${(Math.floor(game.time * 4) + (p.isExit ? 1 : 0)) % 2}`, p.x, p.cy + 1);
@@ -892,47 +887,26 @@
         }
       }
     }
-    // шарик
-    if (ball.visible) {
-      const p = toScreen(ball.x, ball.y - T.R);
-      const emo = ball.emo && game.time < ball.emo.until ? ball.emo : null;
-      if (emo && (emo.mood === "scared" || emo.mood === "angry") && emo.k > 0.4) p.x += Math.round((Math.random() - 0.5) * 2 * emo.k);
-      let sx = ball.sx, sy = ball.sy;
-      if (!ball.grounded && ball.alive()) { const s = Math.min(0.18, Math.abs(ball.vy) / 30); sx *= 1 - s * 0.6; sy *= 1 + s; }
-      ctx.save(); ctx.translate(p.x, p.y); ctx.scale(sx, sy);
-      ctx.drawImage(IMG.ball_body, -8, -16);
-      ctx.save(); ctx.translate(0, -8); ctx.rotate(Math.round(ball.roll / (Math.PI / 8)) * (Math.PI / 8)); ctx.drawImage(IMG.ball_spots, -8, -8); ctx.restore();
-      if (ball.lookLeft) ctx.scale(-1, 1);
-      ctx.drawImage(IMG["face_" + ball.mood] || IMG.face_neutral, -8, -16);
-      ctx.restore();
-    }
-    if (ball.pancake) {
-      const k = Math.min(1, ball.pancake.t / 0.25), e = 1 - Math.pow(1 - k, 3);
-      const p = toScreen(ball.x, ball.pancake.up ? ball.y + T.R - 0.25 : ball.y - T.R + 0.25);
-      ctx.save(); ctx.translate(p.x, p.y); if (ball.pancake.up) ctx.scale(1, -1);
-      ctx.scale(0.6 + 0.48 * e, 2.2 - 1.3 * e); ctx.drawImage(IMG.ball_pancake, -14, -4); ctx.restore();
-    }
-    if (ball.blobs) {
-      const k = 1 - Math.max(0, ball.timer) / 0.45, e = k * k * (3 - 2 * k);
-      for (const b of ball.blobs) spr("ball_blob", ball.x + b.x * (1 - e), ball.y + b.y * (1 - e) + Math.sin(e * Math.PI) * 0.4);
-    }
-    if (ball.bits) for (const b of ball.bits) { const p = toScreen(ball.x + b.x, ball.y + b.y); ctx.fillStyle = "#e2615c"; ctx.fillRect(p.x, p.y, 2, 2); }
+    // шарик — светящийся (night.js)
+    drawBall();
     for (const f of L.fx) {
       if (f.px) { if (f.t > 0) { const p = toScreen(f.x, f.y); ctx.globalAlpha = Math.max(0, 1 - f.t / f.life); ctx.fillStyle = f.px; ctx.fillRect(p.x, p.y, f.spark ? 1 : 2, f.spark ? 1 : 2); if (f.spark) { ctx.fillRect(p.x - 1, p.y, 3, 1); ctx.fillRect(p.x, p.y - 1, 1, 3); } ctx.globalAlpha = 1; } continue; }
-      if (f.grow) { const im = IMG[f.s]; const p = toScreen(f.x, f.y); ctx.save(); ctx.globalAlpha = 1 - f.t / f.life; ctx.translate(p.x, p.y); ctx.scale(1 + f.t * f.grow, 1); ctx.drawImage(im, -16, -4); ctx.restore(); }
+      if (f.grow) { const im = nightSprite(f.s); const p = toScreen(f.x, f.y); ctx.save(); ctx.globalAlpha = 1 - f.t / f.life; ctx.translate(p.x, p.y); ctx.scale(1 + f.t * f.grow, 1); ctx.drawImage(im, -32, -8); ctx.restore(); }
       else spr(f.s, f.x, f.y);
     }
     if (L.data.dark && ball) {
       // видно только вокруг шарика (и чуть-чуть вокруг проснувшихся врагов)
-      dark.ctx.globalCompositeOperation = "source-over"; dark.ctx.fillStyle = "rgba(10,8,7,0.93)"; dark.ctx.fillRect(0, 0, T.VW, T.VH);
+      dark.ctx.globalCompositeOperation = "source-over"; dark.ctx.fillStyle = "rgba(3,3,4,0.9)"; dark.ctx.fillRect(0, 0, T.VW, T.VH);
       dark.ctx.globalCompositeOperation = "destination-out";
       const hole = (wx, wy, r) => { const p = toScreen(wx, wy), gr = dark.ctx.createRadialGradient(p.x, p.y, r * 0.35, p.x, p.y, r); gr.addColorStop(0, "rgba(0,0,0,1)"); gr.addColorStop(1, "rgba(0,0,0,0)"); dark.ctx.fillStyle = gr; dark.ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2); };
-      hole(ball.x, ball.y, 58 + Math.sin(game.time * 3) * 2);
-      for (const t of L.traps) if (t.awake > 0 || trapDangerous(t)) hole(t.kind === "boss" ? t.home.x : t.x, t.kind === "boss" ? t.home.y : t.y, 26);
-      for (const f of L.fragments) if (!f.taken) hole(f.x, f.y, 14);
-      if (L.exit) hole(L.exit.x, L.exit.y, 20);
+      hole(ball.x, ball.y, (100 + Math.sin(game.time * 3) * 4) * glowState.r);
+      for (const t of L.traps) if (t.awake > 0 || trapDangerous(t)) hole(t.kind === "boss" ? t.home.x : t.x, t.kind === "boss" ? t.home.y : t.y, 52);
+      for (const f of L.fragments) if (!f.taken) hole(f.x, f.y, 28);
+      for (const p of L.portals) hole(p.x, p.cy + 1, 34);
+      if (L.exit) hole(L.exit.x, L.exit.y, 40);
       ctx.drawImage(dark.cv, 0, 0);
     }
+    renderGlow();
     if (game.fade > 0) { ctx.globalAlpha = Math.min(1, game.fade); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, T.VW, T.VH); ctx.globalAlpha = 1; }
 
     // на экран
@@ -948,37 +922,43 @@
     if (cur) lines.push(cur); return lines;
   }
   function bubble(text, anchorX, bottomY, thought, S, shown = Infinity) {
-    const c = uctx, fs = Math.max(13, Math.round(S * 6.5));
-    c.font = `${thought ? "italic " : ""}${fs}px Neucha, "Comic Sans MS", cursive`;
-    const maxW = Math.min(ui.width * 0.42, 340 * S / 3.2), lines = wrap(c, text, maxW);
-    const w = Math.max(...lines.map((l) => c.measureText(l).width)) + fs * 1.1, h = lines.length * fs * 1.2 + fs * 0.7;
+    // тёмная полупрозрачная плашка с тонкой рамкой (как в визуальной новелле); мысли — курсивом, без рамки
+    const c = uctx, fs = Math.max(14, Math.round(S * 7));
+    c.font = thought ? `italic ${fs}px "Cormorant Garamond", Georgia, serif` : `${Math.round(fs * 0.92)}px Lora, Georgia, serif`;
+    const maxW = Math.min(ui.width * 0.42, 360 * S / 3.2), lines = wrap(c, text, maxW);
+    const w = Math.max(...lines.map((l) => c.measureText(l).width)) + fs * 1.2, h = lines.length * fs * 1.25 + fs * 0.8;
     let x = anchorX - w * (thought ? 0.5 : 0.3), y = bottomY - h;
     x = Math.max(6, Math.min(ui.width - w - 6, x)); y = Math.max(6, y);
-    const px = Math.max(2, Math.round(S / 1.5));
-    c.fillStyle = thought ? "#e9dcc0" : "#faf3e1"; c.strokeStyle = thought ? "#8a7560" : "#1c1714"; c.lineWidth = px;
-    c.fillRect(x, y, w, h); c.strokeRect(x, y, w, h);
-    if (thought) { c.fillStyle = "#e9dcc0"; c.fillRect(anchorX + px, y + h + px * 2, px * 3, px * 3); c.strokeRect(anchorX + px, y + h + px * 2, px * 3, px * 3); c.fillRect(anchorX - px, y + h + px * 7, px * 2, px * 2); }
-    else { c.fillStyle = "#1c1714"; c.fillRect(Math.max(x + 4, Math.min(x + w - 10, anchorX)), y + h, px * 3, px * 3); }
-    c.fillStyle = thought ? "#5b4a3b" : "#1c1714"; c.textBaseline = "top";
+    const gc = glowState.c;
+    c.fillStyle = thought ? "rgba(5,5,6,0.55)" : "rgba(8,8,9,0.86)"; c.fillRect(x, y, w, h);
+    if (!thought) {
+      c.strokeStyle = "rgba(239,236,230,0.75)"; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+      c.fillStyle = rgb(gc, 0.9); c.fillRect(x, y + h - 2, w * 0.18, 2);          // цвет настроения — полоской
+      const tx = Math.max(x + 6, Math.min(x + w - 12, anchorX));
+      c.fillStyle = "rgba(239,236,230,0.75)"; c.beginPath(); c.moveTo(tx, y + h); c.lineTo(tx + 8, y + h); c.lineTo(tx + 2, y + h + 8); c.fill();
+    } else {
+      c.fillStyle = "rgba(239,236,230,0.5)"; c.beginPath(); c.arc(anchorX + 6, y + h + 6, 3, 0, 6.3); c.arc(anchorX, y + h + 14, 2, 0, 6.3); c.fill();
+    }
+    c.fillStyle = thought ? "rgba(214,209,200,0.95)" : "#efece6"; c.textBaseline = "top";
     let left = shown;                         // печать по буквам в такт голосу
-    lines.forEach((l, i) => { if (left > 0) c.fillText(l.slice(0, left), x + fs * 0.55, y + fs * 0.4 + i * fs * 1.2); left -= l.length + 1; });
+    lines.forEach((l, i) => { if (left > 0) c.fillText(l.slice(0, left), x + fs * 0.6, y + fs * 0.4 + i * fs * 1.25); left -= l.length + 1; });
     return y;
   }
   function renderUI() {
-    const c = uctx, S = ui.width / T.VW;
+    const c = uctx, S = ui.width / 320, SP = ui.width / T.VW;   // S — масштаб шрифтов, SP — экранные позиции
     c.clearRect(0, 0, ui.width, ui.height);
     c.textAlign = "left";
     // облачка
     if (ball.visible || brain.say) {
       const p = toScreen(ball.x, ball.y + 0.75);
-      let bottom = p.y * S;
+      let bottom = p.y * SP;
       if (brain.say && game.time < brain.say.until) {
         const shown = Math.min(brain.say.text.length, Math.ceil((game.time - brain.say.start) * T.CPS));
         const jit = brain.say.k > 0.75 ? (Math.random() - 0.5) * 3 * S / 3 : 0;
-        const top = bubble(brain.say.text, p.x * S + jit, bottom - 6 * S / 3 + jit, false, S, shown);
+        const top = bubble(brain.say.text, p.x * SP + jit, bottom - 6 * S / 3 + jit, false, S, shown);
         bottom = top - 4;
       }
-      if (brain.thought && game.time < brain.thought.until) bubble(brain.thought.text, p.x * S + 20, bottom - 10 * S / 3, true, S);
+      if (brain.thought && game.time < brain.thought.until) bubble(brain.thought.text, p.x * SP + 20, bottom - 10 * S / 3, true, S);
     }
     // номера ловушек
     const onScreen = visibleTraps();
@@ -990,31 +970,32 @@
       const s = fs * 1.35, awake = t.awake > 0;
       if (awake) {   // проснулся: коралловая рамка и полоска оставшегося бодрствования
         const full = t.kind === "boss" ? T.AWAKE_BOSS : T.AWAKE_TRAP;
-        c.fillStyle = "#e2615c"; c.fillRect(p.x * S - s / 2 - 3, p.y * S - s / 2 - 3, s + 6, s + 6);
-        c.fillStyle = "#faf3e1"; c.fillRect(p.x * S - s / 2 - 3, p.y * S - s / 2 - 8, (s + 6) * Math.max(0, t.awake / full), 3);
+        c.fillStyle = "#e8c27a"; c.fillRect(p.x * SP - s / 2 - 3, p.y * SP - s / 2 - 3, s + 6, s + 6);
+        c.fillStyle = "#efece6"; c.fillRect(p.x * SP - s / 2 - 3, p.y * SP - s / 2 - 8, (s + 6) * Math.max(0, t.awake / full), 3);
       }
-      c.fillStyle = ready ? "#1c1714" : "rgba(168,63,61,.85)";
-      c.fillRect(p.x * S - s / 2, p.y * S - s / 2, s, s);
-      if (!ready) { c.fillStyle = "#e2615c"; c.fillRect(p.x * S - s / 2, p.y * S + s / 2 - 3, s * (1 - (t.ready - game.time) / t.cd), 3); }
-      c.fillStyle = ready ? "#faf3e1" : "#f0a193"; c.font = `${fs}px "Rubik Mono One", monospace`; c.fillText(String(t.key), p.x * S, p.y * S + 1);
+      c.fillStyle = ready ? "rgba(8,8,8,.9)" : "rgba(40,30,28,.85)";
+      c.fillRect(p.x * SP - s / 2, p.y * SP - s / 2, s, s);
+      c.strokeStyle = "rgba(239,236,230,.7)"; c.lineWidth = 1; c.strokeRect(p.x * SP - s / 2 + 0.5, p.y * SP - s / 2 + 0.5, s - 1, s - 1);
+      if (!ready) { c.fillStyle = "#e2615c"; c.fillRect(p.x * SP - s / 2, p.y * SP + s / 2 - 3, s * (1 - (t.ready - game.time) / t.cd), 3); }
+      c.fillStyle = ready ? "#efece6" : "#8f8a82"; c.font = `${fs}px "Cormorant Garamond", Georgia, serif`; c.fillText(String(t.key), p.x * SP, p.y * SP + 1);
     }
     c.textAlign = "left";
     // заголовок/финал
     if (game.big && game.bigA > 0) {
       c.globalAlpha = Math.min(1, game.bigA); c.textAlign = "center";
-      c.font = `${Math.round(S * 14)}px "Rubik Mono One", monospace`;
+      c.font = `italic ${Math.round(S * 15)}px "Cormorant Garamond", Georgia, serif`;
       c.fillStyle = "rgba(0,0,0,.35)"; c.fillText(game.big, ui.width / 2 + 3, ui.height * 0.32 + 3);
-      c.fillStyle = game.small ? "#faf3e1" : L.pal === "cave" || L.pal === "void" ? "#efe3c8" : "#1c1714";
+      c.fillStyle = "#efece6";
       c.fillText(game.big, ui.width / 2, ui.height * 0.32);
       if (game.small) {
-        c.font = `${Math.round(S * 6.5)}px Neucha, cursive`; c.fillStyle = "#efe3c8";
+        c.font = `${Math.round(S * 6.5)}px Lora, Georgia, serif`; c.fillStyle = "#cfcac0";
         game.small.split("\n").forEach((l, i) => c.fillText(l, ui.width / 2, ui.height * 0.47 + i * S * 8));
       }
       c.globalAlpha = 1; c.textAlign = "left";
     }
     if (game.paused && $("intro").hidden) {
-      c.fillStyle = "rgba(28,23,20,.6)"; c.fillRect(0, 0, ui.width, ui.height);
-      c.textAlign = "center"; c.fillStyle = "#faf3e1"; c.font = `${Math.round(S * 12)}px "Rubik Mono One", monospace`;
+      c.fillStyle = "rgba(0,0,0,.6)"; c.fillRect(0, 0, ui.width, ui.height);
+      c.textAlign = "center"; c.fillStyle = "#efece6"; c.font = `italic ${Math.round(S * 14)}px "Cormorant Garamond", Georgia, serif`;
       c.fillText("ПАУЗА", ui.width / 2, ui.height / 2); c.textAlign = "left";
     }
     $("stats").textContent = `Лепёшек ${ball.splats} · смертей ${ball.deaths} · ловушек ${trapsFired}`;
