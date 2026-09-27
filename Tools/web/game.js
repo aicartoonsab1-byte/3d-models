@@ -704,9 +704,16 @@
     start(i) {
       levelIndex = (i + levels.length) % levels.length;
       try { localStorage.setItem("sharik_level_" + CAMP.id, String(levelIndex)); } catch (e) { }
-      buildLevel(levels[levelIndex]);
-      ball = new Ball(L.spawn); brain = new Brain(); trapsFired = 0; nav.runup = null;
-      const c = camClamp(ball.x, ball.y + 1); cam.x = c.x; cam.y = c.y;
+      const lvData = levels[levelIndex];
+      if (lvData.mode === "pingpong") {                 // мини-игра: свой стол, своя физика (pong.js)
+        L = { data: lvData, w: 0, h: 0, traps: [], hidden: new Set(), fx: [], pal: lvData.palette || "city" };
+        brain = null; PONG.start(lvData);
+      } else {
+        PONG.stop();
+        buildLevel(lvData);
+        ball = new Ball(L.spawn); brain = new Brain(); trapsFired = 0; nav.runup = null;
+        const c = camClamp(ball.x, ball.y + 1); cam.x = c.x; cam.y = c.y;
+      }
       this.cutscene = false; this.fade = 0; this.waitRestart = false; this.flow = null;
       this.title(levels[levelIndex].title);
       $("level").value = String(levelIndex);
@@ -1132,12 +1139,17 @@
     const r = ui.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * T.VW, py = (ev.clientY - r.top) / r.height * T.VH;
     return { x: (px - T.VW / 2) / T.PPU + CO.cx, y: (T.VH / 2 - py) / T.PPU + CO.cy };
   }
-  ui.addEventListener("pointermove", (e) => { mouse.world = screenToWorld(e); });
+  ui.addEventListener("pointermove", (e) => {
+    const r = ui.getBoundingClientRect(); mouse.sx = (e.clientX - r.left) / r.width * T.VW; mouse.sy = (e.clientY - r.top) / r.height * T.VH;
+    if (PONG.on) { PONG.lastInput = PONG.t; return; }
+    mouse.world = screenToWorld(e);
+  });
   ui.addEventListener("pointerleave", () => { mouse.world = null; });
   ui.addEventListener("pointerdown", (e) => {
     audio(); if (AC && AC.state === "suspended") AC.resume();
     if (game.waitRestart) { restartLoop(); return; }
     if (game.card) { game.closeCard(); return; }
+    if (PONG.on) { const r = ui.getBoundingClientRect(); PONG.click((e.clientX - r.left) / r.width * T.VW, (e.clientY - r.top) / r.height * T.VH); return; }
     const w = screenToWorld(e);
     let best = null, bd = 1.1;
     for (const t of visibleTraps()) {
@@ -1149,11 +1161,14 @@
     if (best && !game.cutscene) fireTrap(best);
   });
   function restartLoop() { game.waitRestart = false; game.big = null; game.start(0); }
+  window.addEventListener("keyup", (e) => { if (e.key === "ArrowUp") PONG.keys.up = false; if (e.key === "ArrowDown") PONG.keys.down = false; });
   window.addEventListener("keydown", (e) => {
     if (e.target.tagName === "SELECT") return;
     audio(); if (AC && AC.state === "suspended") AC.resume();
     if (game.waitRestart) { restartLoop(); return; }
     if (game.card && !game.paused) { game.closeCard(); return; }
+    if (PONG.on && (e.key === "ArrowUp" || e.key === "ArrowDown")) { PONG.keys[e.key === "ArrowUp" ? "up" : "down"] = true; e.preventDefault(); return; }
+    if (PONG.on && e.key >= "1" && e.key <= "9") return;
     if (e.key >= "1" && e.key <= "9") { const t = visibleTraps().find((x) => x.key === Number(e.key)); if (t && !game.cutscene) fireTrap(t); }
     else if (e.key === "r" || e.key === "R" || e.key === "к" || e.key === "К") game.start(levelIndex);
     else if (e.key === "Escape" || e.key === "p" || e.key === "з") game.paused = !game.paused;
@@ -1217,12 +1232,14 @@
     if (game.card && !game.paused) {
       game.card.t += dt;
       if (game.card.t > game.card.need && !(window.speechSynthesis && speechSynthesis.speaking && game.card.t < game.card.need + 12)) game.closeCard();
+    } else if (PONG.on) {
+      if (!game.paused) PONG.update(dt);
     } else if (!game.paused) {
       acc += dt;
       while (acc >= 1 / 60) { fixedStep(1 / 60); acc -= 1 / 60; }
       update(dt);
     }
-    render();
+    if (PONG.on) { PONG.render(); PONG.ui(); } else render();
     requestAnimationFrame(frame);
   }
 

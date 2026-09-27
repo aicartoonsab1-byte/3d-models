@@ -154,7 +154,8 @@ def load(path: Path) -> Level:
 
 
 def all_levels() -> list[Level]:
-    return [load(p) for p in sorted(LEVELS_DIR.glob("*.json"))]
+    # мини-игры ("mode": "pingpong" и т.п.) — не платформер, валидатор/автоплей их пропускают
+    return [lv for lv in (load(p) for p in sorted(LEVELS_DIR.glob("*.json"))) if lv.data.get("mode", "platform") == "platform"]
 
 
 def levels_dir():
