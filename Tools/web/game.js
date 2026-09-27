@@ -174,7 +174,7 @@
   // ---------------------------------------------------------------- фразы
   function pickPhrase(key, stage) {
     let best = null;
-    for (const e of (CAMP.phrases || []).concat(D.phrases)) {           // фразы кампании перекрывают основные
+    for (const e of (CAMP.phrases && CAMP.phrases.length ? CAMP.phrases : D.phrases)) {   // у кампании — только свои фразы, без чужого мира
       if (e.key !== key) continue;
       if (e.stage === stage) { best = e; break; }
       if (e.stage < stage && (!best || e.stage > best.stage)) best = e;
@@ -711,8 +711,12 @@
       this.title(levels[levelIndex].title);
       $("level").value = String(levelIndex);
       $("log").innerHTML = "";
-      NARR.level();
+      // карточка-глава: сюжет уровня словами героя/рассказчика, потом уровень
+      const txt = L.data.chapter || (CAMP.id !== "sharik" ? L.data.storyBeat || "" : "");
+      this.card = txt ? { title: L.data.title, head: CAMP.chapterHead || "", text: txt, t: 0, need: 3 + txt.length / 16 } : null;
+      if (this.card) NARR.read(this.card.text); else NARR.level();
     },
+    closeCard() { if (!this.card) return; this.card = null; NARR.hush(); NARR.level(); },
     title(t) { this.big = t; this.small = null; this.bigT = 3; },
     levelDone() {
       if (this.cutscene) return;
@@ -1065,13 +1069,36 @@
       }
       c.globalAlpha = 1; c.textAlign = "left";
     }
+    if (game.card && $("intro").hidden) drawCard(c, S);
     if (game.paused && $("intro").hidden) {
       c.fillStyle = "rgba(0,0,0,.6)"; c.fillRect(0, 0, ui.width, ui.height);
       c.textAlign = "center"; c.fillStyle = "#efece6"; c.font = `italic ${Math.round(S * 14)}px "Cormorant Garamond", Georgia, serif`;
       c.fillText("ПАУЗА", ui.width / 2, ui.height / 2); c.textAlign = "left";
     }
     $("stats").textContent = `Лепёшек ${ball.splats} · смертей ${ball.deaths} · ловушек ${trapsFired}`;
-    $("stage").textContent = `стадия прозрения ${L.data.awareness}/5`;
+    $("stage").textContent = `${(CAMP.world && CAMP.world.labels && CAMP.world.labels.stage) || "стадия прозрения"} ${L.data.awareness}/5`;
+  }
+  // карточка-глава поверх кадра: как интертитр в немом кино / страница из рассказа героя
+  function drawCard(c, S) {
+    const k = game.card, M = styleName === "mult", a = Math.min(1, k.t * 3);
+    c.save(); c.globalAlpha = a;
+    c.fillStyle = M ? "rgba(253,253,251,.97)" : "rgba(5,5,6,.93)"; c.fillRect(0, 0, ui.width, ui.height);
+    const pad = ui.width * 0.1, maxW = ui.width - pad * 2;
+    if (M) { c.strokeStyle = "#141414"; c.lineWidth = Math.max(1.5, S * 0.6); c.strokeRect(pad * 0.6, ui.height * 0.08, ui.width - pad * 1.2, ui.height * 0.84); }
+    c.textAlign = "center"; c.textBaseline = "top";
+    const ink = M ? "#141414" : "#efece6", dim = M ? "#55534f" : "#a8a39a";
+    let y = ui.height * 0.14;
+    if (k.head) { c.font = M ? `${Math.round(S * 5.5)}px Pangolin, sans-serif` : `italic ${Math.round(S * 5.5)}px "Cormorant Garamond", Georgia, serif`; c.fillStyle = dim; c.fillText(k.head, ui.width / 2, y); y += S * 9; }
+    c.font = M ? `${Math.round(S * 11)}px Pangolin, sans-serif` : `italic ${Math.round(S * 12)}px "Cormorant Garamond", Georgia, serif`;
+    c.fillStyle = ink; c.fillText(k.title, ui.width / 2, y); y += S * 17;
+    const fs = Math.round(S * 6.6);
+    c.font = M ? `${fs}px Pangolin, sans-serif` : `${fs}px Lora, Georgia, serif`;
+    const shown = Math.ceil(k.t * 40);
+    let left = shown;
+    for (const l of wrap(c, k.text, maxW)) { if (left > 0) c.fillText(l.slice(0, left), ui.width / 2, y); left -= l.length + 1; y += fs * 1.45; }
+    c.font = M ? `${Math.round(S * 4.6)}px Pangolin, sans-serif` : `italic ${Math.round(S * 4.6)}px "Cormorant Garamond", Georgia, serif`;
+    c.fillStyle = dim; c.fillText("клик или любая клавиша — дальше", ui.width / 2, ui.height * 0.86);
+    c.restore(); c.textAlign = "left";
   }
   function visibleTraps() {
     const hw = T.VW / T.PPU / 2, hh = T.VH / T.PPU / 2;
@@ -1110,6 +1137,7 @@
   ui.addEventListener("pointerdown", (e) => {
     audio(); if (AC && AC.state === "suspended") AC.resume();
     if (game.waitRestart) { restartLoop(); return; }
+    if (game.card) { game.closeCard(); return; }
     const w = screenToWorld(e);
     let best = null, bd = 1.1;
     for (const t of visibleTraps()) {
@@ -1125,6 +1153,7 @@
     if (e.target.tagName === "SELECT") return;
     audio(); if (AC && AC.state === "suspended") AC.resume();
     if (game.waitRestart) { restartLoop(); return; }
+    if (game.card && !game.paused) { game.closeCard(); return; }
     if (e.key >= "1" && e.key <= "9") { const t = visibleTraps().find((x) => x.key === Number(e.key)); if (t && !game.cutscene) fireTrap(t); }
     else if (e.key === "r" || e.key === "R" || e.key === "к" || e.key === "К") game.start(levelIndex);
     else if (e.key === "Escape" || e.key === "p" || e.key === "з") game.paused = !game.paused;
@@ -1185,7 +1214,10 @@
   let last = 0, acc = 0;
   function frame(ts) {
     const dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts;
-    if (!game.paused) {
+    if (game.card && !game.paused) {
+      game.card.t += dt;
+      if (game.card.t > game.card.need && !(window.speechSynthesis && speechSynthesis.speaking && game.card.t < game.card.need + 12)) game.closeCard();
+    } else if (!game.paused) {
       acc += dt;
       while (acc >= 1 / 60) { fixedStep(1 / 60); acc -= 1 / 60; }
       update(dt);

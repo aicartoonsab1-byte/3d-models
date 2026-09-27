@@ -47,6 +47,13 @@
     { need: (m) => m.traits.awareness >= 3.5, text: "Этот мир — программа. А я в ней — ошибка, которая думает." },
   ];
 
+  // мир кампании: свои названия вещей, имена, вопросы, убеждения и подписи (campaign.json → "world")
+  const W = () => (CAMP && CAMP.world) || {};
+  const WL = (key, def) => { const l = W().lines && W().lines[key]; return l && l.length ? l[Math.floor(Math.random() * l.length)] : def; };
+  const fillT = (t, v) => t.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m);
+  const LABEL = (key, def) => (W().labels && W().labels[key]) || def;
+  const thingWord = (k) => (W().things && W().things[k]) || THING_KIND[k] || k;
+
   function freshMind() {
     const ht = (CAMP.hero && CAMP.hero.traits) || {};
     return {
@@ -88,7 +95,7 @@
   // ---------------------------------------------------------------- восприятие
   function thingKey(o) { return o.kind === "boss" ? o.boss : o.kind; }
   // антагонисты кампании: как шарик их видит
-  const kindOf = (k) => (CAMP.bosses && CAMP.bosses[k] && (CAMP.bosses[k].what || CAMP.bosses[k].title)) || THING_KIND[k] || k;
+  const kindOf = (k) => (CAMP.bosses && CAMP.bosses[k] && (CAMP.bosses[k].what || CAMP.bosses[k].title)) || thingWord(k);
   mindReady = true;
   function perceive() {
     const out = [], dir = L.goal.x >= ball.x ? 1 : -1;
@@ -140,27 +147,30 @@
     const s = stageNow(), st = MIND.stats, per = perceive();
     const unnamed = per.things.find((t) => !t.name && !/exit|checkpoint|fragment/.test(t.key));
     if (unnamed && Math.random() < 0.5 + MIND.traits.curiosity * 0.4) {
-      const own = KIND_NAMES[unnamed.key] || [];
-      const pool = own.concat(FUNNY_NAMES).filter((n) => !Object.values(MIND.names).includes(n));
+      const own = (W().names && W().names[unnamed.key]) || (W().names ? [] : KIND_NAMES[unnamed.key] || []);
+      const pool = own.concat(W().funnyNames || FUNNY_NAMES).filter((n) => !Object.values(MIND.names).includes(n));
       const name = pool[Math.floor(Math.random() * pool.length)] || "Штука";
       MIND.names[unnamed.key] = name; saveMind();
-      return { say: `Ты — ${unnamed.what}? Нет. Ты — ${name}. Я так решил.`, emotion: "happy", intensity: 0.6, action: Math.abs(unnamed.dx) < 5 ? "inspect" : "forward", target: unnamed.id };
+      return { say: fillT(WL("naming", "Ты — {what}? Нет. Ты — {name}. Я так решил."), { what: unnamed.what, name }), emotion: "happy", intensity: 0.6, action: Math.abs(unnamed.dx) < 5 ? "inspect" : "forward", target: unnamed.id };
     }
     const named = per.things.filter((t) => t.name);
     const lines = [];
-    if (named.length) { const t = named[0]; lines.push([`${t.name}, это снова ты? Я тебя помню.`, "suspicious"], [`Привет, ${t.name}. Ты сегодня какой-то подозрительно тихий.`, "suspicious"]); }
-    if (st.splats > 1) lines.push([`Это была моя ${st.splats}-я лепёшка. Я начинаю различать полы на вкус.`, "sad"], [`${st.splats} лепёшек. Если бы за них давали медали, я был бы генералом.`, "determined"]);
+    if (named.length) { const t = named[0]; lines.push([fillT(WL("seeAgain", "{name}, это снова ты? Я тебя помню."), { name: t.name }), "suspicious"], [fillT(WL("seeAgain", "Привет, {name}. Ты сегодня какой-то подозрительно тихий."), { name: t.name }), "suspicious"]); }
+    if (st.splats > 1) lines.push([fillT(WL("splats", "Это была моя {n}-я лепёшка. Я начинаю различать полы на вкус."), { n: st.splats }), "sad"], [fillT(WL("splats", "{n} лепёшек. Если бы за них давали медали, я был бы генералом."), { n: st.splats }), "determined"]);
     if (MIND.beliefs.length) lines.push([`Я знаю точно: ${MIND.beliefs[MIND.beliefs.length - 1].toLowerCase()}`, s >= 3 ? "suspicious" : "determined"]);
     if (MIND.questions.length) lines.push([`Всё думаю: ${MIND.questions[0].toLowerCase()}`, "awe"]);
-    if (MIND.traits.courage < 0.25) lines.push(["Мне страшно. Но я всё равно покачусь. Чуть-чуть. Медленно.", "scared"]);
-    if (MIND.traits.courage > 0.7) lines.push(["Я уже ничего не боюсь. Кроме пола. И прессов. И шипов. Ну, почти ничего.", "determined"]);
-    if (MIND.traits.trust < 0.3 && s >= 3) lines.push(["Я тебе больше не верю, наблюдатель. Совсем. Ну, может, капельку.", "angry"]);
-    if (MIND.diary.length && Math.random() < 0.3) lines.push([`Помню «${MIND.diary[MIND.diary.length - 1].level}». Там я был моложе. На целый уровень.`, "sad"]);
+    if (MIND.traits.courage < 0.25) lines.push([WL("fear", "Мне страшно. Но я всё равно покачусь. Чуть-чуть. Медленно."), "scared"]);
+    if (MIND.traits.courage > 0.7) lines.push([WL("brave", "Я уже ничего не боюсь. Кроме пола. И прессов. И шипов. Ну, почти ничего."), "determined"]);
+    if (MIND.traits.trust < 0.3 && s >= 3) lines.push([WL("distrust", "Я тебе больше не верю, наблюдатель. Совсем. Ну, может, капельку."), "angry"]);
+    if (MIND.diary.length && Math.random() < 0.3) lines.push([fillT(WL("diary", "Помню «{level}». Там я был моложе. На целый уровень."), { level: MIND.diary[MIND.diary.length - 1].level }), "sad"]);
     const p = pickPhrase("idle", s); if (p) lines.push([p.text, p.mood]);
     const pick = lines[Math.floor(Math.random() * lines.length)] || ["...", "neutral"];
     // новые вопросы и убеждения по опыту
-    if (Math.random() < 0.3) { const q = OFFLINE_QUESTIONS[Math.min(5, s)]; addUnique(MIND.questions, q[Math.floor(Math.random() * q.length)], 5); }
-    for (const b of OFFLINE_BELIEFS) if (b.need(MIND) && addUnique(MIND.beliefs, b.text, 8)) { saveMind(); return { thought: "Кажется, я понял: " + b.text, emotion: "awe", intensity: 0.8, action: "wait" }; }
+    if (Math.random() < 0.3) { const q = (W().questions || OFFLINE_QUESTIONS)[Math.min(5, s)] || []; if (q.length) addUnique(MIND.questions, q[Math.floor(Math.random() * q.length)], 5); }
+    for (let i = 0; i < OFFLINE_BELIEFS.length; i++) {
+      const b = OFFLINE_BELIEFS[i], text = (W().beliefs && W().beliefs[i]) || b.text;
+      if (b.need(MIND) && addUnique(MIND.beliefs, text, 8)) { saveMind(); return { thought: WL("understood", "Кажется, я понял: ") + text, emotion: "awe", intensity: 0.8, action: "wait" }; }
+    }
     saveMind();
     return { [Math.random() < 0.5 ? "say" : "thought"]: pick[0], emotion: pick[1], intensity: 0.4 + Math.random() * 0.4, action: "forward" };
   }
@@ -176,8 +186,8 @@
     return `${persona()}
 
 ТЫ СЕЙЧАС (это твоя живая психика, она меняется от пережитого):
-- стадия прозрения ${s} из 5 (сюжет уровня: «${L.data.title}». ${L.data.storyBeat || ""})
-- любопытство ${tr.curiosity.toFixed(2)}, смелость ${tr.courage.toFixed(2)}, доверие к «тому, кто смотрит» ${tr.trust.toFixed(2)}, юмор ${tr.humor.toFixed(2)}
+- ${LABEL("stage", "стадия прозрения")} ${s} из 5 (сюжет уровня: «${L.data.title}». ${L.data.storyBeat || ""})
+- любопытство ${tr.curiosity.toFixed(2)}, смелость ${tr.courage.toFixed(2)}, доверие к «${LABEL("watcher", "тому, кто смотрит")}» ${tr.trust.toFixed(2)}, юмор ${tr.humor.toFixed(2)}
 - циклов жизни: ${MIND.loops}; за всё время лепёшек ${MIND.stats.splats}, смертей ${MIND.stats.deaths}, ловушки «сами» срабатывали рядом ${MIND.stats.trapsNear} раз
 - твои имена для вещей: ${names}
 - во что ты веришь: ${MIND.beliefs.join(" | ") || "пока ни во что уверенно"}
@@ -192,6 +202,7 @@ ${events.map((e) => "- " + e).join("\n")}
 
 НЕ ПОВТОРЯЙ: ${recentSays.join(" | ") || "—"}
 
+${LABEL("promptHint", "")}
 Подумай по-настоящему: будь любопытным (разглядывай новое, давай имена, строй гипотезы о мире), эмоциональным (сила эмоции 0..1),
 развивайся: делай выводы из опыта, меняй убеждения, задавай новые вопросы и отвечай на старые, когда понял.
 Реплики короткие (до 100 символов), живые, смешные и немного грустные. Не описывай себя со стороны.
@@ -299,10 +310,10 @@ ${events.map((e) => "- " + e).join("\n")}
     onFragment(text) {
       MIND.stats.fragments++; shiftTrait("awareness", 0.03); shiftTrait("curiosity", 0.03);
       this.enqueue(text, "awe");
-      this.event("Ты нашёл светящийся осколок, в нём написано: " + text, true);
+      this.event(`Ты нашёл: ${thingWord("fragment")}. Там написано: ` + text, true);
       saveMind();
     }
-    onCheckpoint() { this.react("checkpoint", 0.5); this.event("Ты дотронулся до тотема-флажка, он загорелся."); }
+    onCheckpoint() { this.react("checkpoint", 0.5); this.event(`Ты дотронулся до вещи «${thingWord("checkpoint")}», и она ожила.`); }
     onJump() { this.react("jump", 0.04); }
     setIntent(i, d) { this.intent = i; this.until = game.time + d; if (i === "pray") ball.setMood("pray", d); if (i !== "inspect") this.inspecting = null; }
     inspect(th) {
@@ -354,7 +365,7 @@ ${events.map((e) => "- " + e).join("\n")}
       // курсор наблюдателя
       if (this.aw >= 3 && mouse.world && Math.hypot(mouse.world.x - ball.x, mouse.world.y - ball.y) < 1.6) {
         ball.lookAt = mouse.world;
-        if (!this.cursorNoticed) { this.cursorNoticed = true; this.react("cursor"); this.event("Рядом с тобой странная стрелочка (курсор наблюдателя). Она двигается.", true); }
+        if (!this.cursorNoticed) { this.cursorNoticed = true; this.react("cursor"); this.event(`Рядом с тобой странная стрелочка (${LABEL("cursor", "курсор наблюдателя")}). Она двигается.`, true); }
       } else if (ball.lookAt && Math.random() < 0.01) ball.lookAt = null;
       // застревание
       if (this.introPending || this.intent === "inspect") { this.stuckSince = game.time; this.stuckRef = ball.x; }
@@ -409,7 +420,7 @@ ${events.map((e) => "- " + e).join("\n")}
     MIND.stats.levelsDone++; shiftTrait("courage", 0.05);
     const fallback = () => {
       const st = MIND.stats;
-      const text = st.splats > 3 ? `Много падал. ${st.splats} лепёшек за жизнь. Но я всё ещё круглый.` : "Прошёл. Мир стал чуть понятнее и чуть страшнее.";
+      const text = st.splats > 3 ? fillT(WL("diaryHard", "Много падал. {n} лепёшек за жизнь. Но я всё ещё круглый."), { n: st.splats }) : WL("diaryDone", "Прошёл. Мир стал чуть понятнее и чуть страшнее.");
       MIND.diary.push({ level: title, text }); while (MIND.diary.length > 12) MIND.diary.shift(); saveMind();
     };
     if (mindMode !== "claude" || !SAMPLE) return fallback();
@@ -417,7 +428,7 @@ ${events.map((e) => "- " + e).join("\n")}
       const r = await SAMPLE.json(`${persona()}
 
 Ты только что прошёл уровень «${title}». С тобой было: ${brain.events.concat(brain.recentSays).slice(-8).join(" | ") || "всякое"}.
-Твои убеждения: ${MIND.beliefs.join(" | ") || "нет"}. Вопросы: ${MIND.questions.join(" | ") || "нет"}. Стадия прозрения ${stageNow()}/5.
+Твои убеждения: ${MIND.beliefs.join(" | ") || "нет"}. Вопросы: ${MIND.questions.join(" | ") || "нет"}. ${LABEL("stageCap", "Стадия прозрения")} ${stageNow()}/5.
 Запиши в дневник 1–2 коротких предложения (как ты изменился), обнови список убеждений (до 6, самые важные, можно переформулировать) и вопросов (до 4).
 Ответь ТОЛЬКО JSON: {"diary":"...","beliefs":["..."],"questions":["..."]}`, { modelTier: mindTier, cache: false });
       if (r && r.diary) MIND.diary.push({ level: title, text: String(r.diary).slice(0, 200) });
@@ -438,7 +449,7 @@ ${events.map((e) => "- " + e).join("\n")}
     const names = Object.entries(MIND.names).map(([k, v]) => `<li><b>${esc(v)}</b> — ${esc(kindOf(k))}</li>`).join("");
     el.innerHTML = `
       <p class="mstatus">${esc(mindStatus)}</p>
-      ${bar("Любопытство", tr.curiosity)}${bar("Смелость", tr.courage)}${bar("Доверие к наблюдателю", tr.trust)}${bar("Прозрение", tr.awareness, 5)}
+      ${bar("Любопытство", tr.curiosity)}${bar("Смелость", tr.courage)}${bar(LABEL("trustBar", "Доверие к наблюдателю"), tr.trust)}${bar(LABEL("awareBar", "Прозрение"), tr.awareness, 5)}
       <p class="mnums">Жизней-циклов ${MIND.loops} · лепёшек ${MIND.stats.splats} · смертей ${MIND.stats.deaths} · разглядел вещей ${MIND.stats.inspected}</p>
       ${MIND.beliefs.length ? `<h3>Верит</h3><ul>${MIND.beliefs.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>` : ""}
       ${MIND.questions.length ? `<h3>Не даёт покоя</h3><ul>${MIND.questions.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>` : ""}
