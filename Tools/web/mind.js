@@ -79,17 +79,17 @@
 
   // ---------------------------------------------------------------- Claude
   let SAMPLE = null, mindMode = "offline", mindStatus = "офлайн: свои фразы и память";
-  mindReady = true;
   (async () => {
     try { SAMPLE = window.claude && window.claude.use ? await window.claude.use("sample") : null; } catch (e) { SAMPLE = null; }
     if (SAMPLE) { mindMode = "claude"; mindStatus = "Claude подключается при первой мысли"; }
-    renderMindPanel();
+    if (mindReady) renderMindPanel();
   })();
 
   // ---------------------------------------------------------------- восприятие
   function thingKey(o) { return o.kind === "boss" ? o.boss : o.kind; }
   // антагонисты кампании: как шарик их видит
   const kindOf = (k) => (CAMP.bosses && CAMP.bosses[k] && (CAMP.bosses[k].what || CAMP.bosses[k].title)) || THING_KIND[k] || k;
+  mindReady = true;
   function perceive() {
     const out = [], dir = L.goal.x >= ball.x ? 1 : -1;
     const add = (id, key, x, y, state) => {

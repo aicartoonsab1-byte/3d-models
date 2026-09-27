@@ -134,6 +134,13 @@ class Sim:
         cx, cy = self.stand_cell()
         nx = cx + d
         target = d * RUN_SPEED * speed_mul
+        # разбег к грибу позади (как Navigator.MushBehind)
+        if getattr(self, "runup", None) is not None:
+            rx, until = self.runup
+            if self.t > until or cx == rx:
+                self.runup = None
+            else:
+                return None, -d * RUN_SPEED * speed_mul
         wall = self.solid(nx, cy)
         pit = not self.support(nx, cy - 1) and self.floor_below(nx, cy) is None
         # на грибе-батуте: если впереди (1–3 кл.) стена выше обычного прыжка — прыгаем с гриба сразу
@@ -157,6 +164,13 @@ class Sim:
         if ok:
             return (vx * (1 + self.rng.gauss(0, 1) * 0.12 * self.imp), pw), target
         if wall:
+            for k in range(1, 6):
+                x = cx - d * k
+                if self.solid(x, cy):
+                    break
+                if self.lv.ch(x, cy - 1) == "O":
+                    self.runup = (x, self.t + 3)
+                    return None, -d * RUN_SPEED * speed_mul
             return (d * RUN_SPEED * 0.5, 1.0), target
         return None, (target if yolo else 0.0)
 

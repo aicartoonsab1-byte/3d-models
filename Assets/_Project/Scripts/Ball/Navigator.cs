@@ -23,6 +23,20 @@ namespace Sharik
             new Vector2Int(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y - Tuning.BallRadius + 0.1f));
 
         /// <summary>Вызывать каждый FixedUpdate, когда шарик хочет двигаться в направлении dir.</summary>
+        int? _runupX; float _runupUntil;
+
+        /// <summary>Гриб-батут позади (до 5 клеток, без стен между) — с него можно взять стену, которую не взять с места.</summary>
+        int? MushBehind(Vector2Int c, int dir)
+        {
+            for (int k = 1; k <= 5; k++)
+            {
+                int x = c.x - dir * k;
+                if (_g.IsSolid(x, c.y)) break;
+                if (_g.Data.At(x, c.y - 1) == 'O') return x;
+            }
+            return null;
+        }
+
         public void Steer(BallController ball, int dir, float speedMul)
         {
             ball.SpeedMul = speedMul;
@@ -30,6 +44,13 @@ namespace Sharik
             var pos = (Vector2)ball.transform.position;
             var c = StandCell(pos);
             int nx = c.x + dir;
+
+            // разбег к грибу позади: стену с места не взять, но с гриба — можно
+            if (_runupX.HasValue)
+            {
+                if (Time.time > _runupUntil || c.x == _runupX.Value) _runupX = null;
+                else { ball.MoveInput = -dir; LastObstacle = "к грибу"; return; }
+            }
 
             // опасность впереди (включённые ловушки) — притормаживаем
             if (!IgnoreDanger && DangerAhead(pos, dir))
@@ -82,6 +103,8 @@ namespace Sharik
             }
             else if (wall)
             {
+                int? m = MushBehind(c, dir);
+                if (m.HasValue) { _runupX = m; _runupUntil = Time.time + 3f; ball.MoveInput = -dir; LastObstacle = "к грибу"; return; }
                 ball.Jump(dir * Tuning.RunSpeed * 0.5f);   // не знаем как — прыгаем в стену (смешно)
             }
             else if (!IgnoreDanger)

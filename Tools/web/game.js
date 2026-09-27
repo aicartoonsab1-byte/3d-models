@@ -637,12 +637,22 @@
       }
       return res;
     },
+    // гриб позади: откатиться к нему для прыжка через стену, которую с места не взять
+    findMush(c, dir) {
+      for (let k = 1; k <= 5; k++) { const x = c.x - dir * k; if (solid(x, c.y)) break; if (at(x, c.y - 1) === "O") return x; }
+      return null;
+    },
+    runup: null,
     steer(dir, speedMul, yolo) {
       ball.speedMul = speedMul;
       if (!ball.grounded) return;
+      const c = this.standCell(), nx = c.x + dir;
+      if (this.runup) {
+        if (game.time > this.runup.until || c.x === this.runup.x) this.runup = null;
+        else { ball.move = -dir; return; }
+      }
       if (!yolo && this.dangerAhead(dir)) { ball.move = 0; return; }
       ball.move = dir;
-      const c = this.standCell(), nx = c.x + dir;
       const wall = solid(nx, c.y), pit = !support(nx, c.y - 1) && floorBelow(nx, c.y) === null;
       // на грибе: высокая стена в 2–3 клетках — прыгаем с гриба заранее
       if (at(c.x, c.y - 1) === "O" && !wall) {
@@ -658,7 +668,11 @@
       if (edge > trig && !wall) return;
       const a = this.aimed(c, dir);
       if (a) { const g = Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.sin(2 * Math.PI * Math.random()); ball.jump(a.vx * (1 + g * 0.12 * this.imp), a.power); }
-      else if (wall) ball.jump(dir * T.RUN * 0.5);
+      else if (wall) {
+        const m = this.findMush(c, dir);
+        if (m !== null) { this.runup = { x: m, until: game.time + 3 }; ball.move = -dir; return; }
+        ball.jump(dir * T.RUN * 0.5);
+      }
       else if (!yolo) ball.move = 0;
     },
     describe(dir) {
@@ -691,7 +705,7 @@
       levelIndex = (i + levels.length) % levels.length;
       try { localStorage.setItem("sharik_level_" + CAMP.id, String(levelIndex)); } catch (e) { }
       buildLevel(levels[levelIndex]);
-      ball = new Ball(L.spawn); brain = new Brain(); trapsFired = 0;
+      ball = new Ball(L.spawn); brain = new Brain(); trapsFired = 0; nav.runup = null;
       const c = camClamp(ball.x, ball.y + 1); cam.x = c.x; cam.y = c.y;
       this.cutscene = false; this.fade = 0; this.waitRestart = false; this.flow = null;
       this.title(levels[levelIndex].title);
