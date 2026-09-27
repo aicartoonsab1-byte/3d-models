@@ -60,8 +60,9 @@
   function loadMind() {
     MIND = freshMind();
     try { const m = JSON.parse(localStorage.getItem(mindKey()) || "null"); if (m && m.traits) MIND = Object.assign(freshMind(), m); } catch (e) { }
-    renderMindPanel();
+    if (mindReady) renderMindPanel();
   }
+  let mindReady = false;
   loadMind();
   function saveMind() { try { localStorage.setItem(mindKey(), JSON.stringify(MIND)); } catch (e) { } renderMindPanel(); }
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
@@ -78,6 +79,7 @@
 
   // ---------------------------------------------------------------- Claude
   let SAMPLE = null, mindMode = "offline", mindStatus = "офлайн: свои фразы и память";
+  mindReady = true;
   (async () => {
     try { SAMPLE = window.claude && window.claude.use ? await window.claude.use("sample") : null; } catch (e) { SAMPLE = null; }
     if (SAMPLE) { mindMode = "claude"; mindStatus = "Claude подключается при первой мысли"; }

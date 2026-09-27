@@ -44,8 +44,10 @@ def main():
     mind = (ROOT / "Tools/web/mind.js").read_text(encoding="utf-8")
     marker = "  // @@MIND@@"
     assert marker in game, "в game.js нет маркера @@MIND@@"
+    mind += "\n" + (ROOT / "Tools/web/narrator.js").read_text(encoding="utf-8")
     game = game.replace(marker, mind + "\n" + marker, 1)
     night = (ROOT / "Tools/web/limbo.js").read_text(encoding="utf-8")
+    night += "\n" + (ROOT / "Tools/web/mult.js").read_text(encoding="utf-8")
     assert "  // @@NIGHT@@" in game, "в game.js нет маркера @@NIGHT@@"
     game = game.replace("  // @@NIGHT@@", night + "\n  // @@NIGHT@@", 1)
     html = html.replace("{{GAME}}", game)
