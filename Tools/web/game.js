@@ -662,7 +662,7 @@
     },
   };
 
-  // @@NIGHT@@  (сюда сборщик вклеивает Tools/web/night.js: точечная графика, глаз-наблюдатель, свечение шарика)
+  // @@NIGHT@@  (сюда сборщик вклеивает Tools/web/limbo.js: силуэты в тумане, глаз-солнце, свечение шарика)
   // @@MIND@@  (сюда сборщик вклеивает Tools/web/mind.js: психика, разум на Claude, мозг шарика)
 
   // ---------------------------------------------------------------- камера и эффекты
@@ -837,7 +837,7 @@
       if (/^tile_.*_(top|fill)/.test(t.s) || t.s === "mech_ice") continue;          // запечено в рельеф
       if (t.anim) {                                                                    // конвейер: бегущие точки-шевроны
         const p = toScreen(t.x, t.y + 0.5), dir = t.s.endsWith("_r") ? 1 : -1, ph = (game.time * 2 * TPX * dir) % 16;
-        ctx.fillStyle = "rgba(240,236,228,0.85)";
+        ctx.fillStyle = "rgba(90,90,86,0.9)";      // зубцы ленты — чуть светлее чёрного силуэта
         for (let k = -16; k < 32; k += 16) { const x0 = p.x - 16 + ((k + ph + 32) % 32); for (let j = 0; j < 4; j++) ctx.fillRect(x0 + (dir > 0 ? j : 3 - j), p.y + 1 + (j < 2 ? j : 3 - j) * 1, 1, 1); }
         continue;
       }
@@ -896,7 +896,7 @@
     }
     if (L.data.dark && ball) {
       // видно только вокруг шарика (и чуть-чуть вокруг проснувшихся врагов)
-      dark.ctx.globalCompositeOperation = "source-over"; dark.ctx.fillStyle = "rgba(3,3,4,0.9)"; dark.ctx.fillRect(0, 0, T.VW, T.VH);
+      dark.ctx.globalCompositeOperation = "source-over"; dark.ctx.fillStyle = "rgba(2,2,2,0.92)"; dark.ctx.fillRect(0, 0, T.VW, T.VH);
       dark.ctx.globalCompositeOperation = "destination-out";
       const hole = (wx, wy, r) => { const p = toScreen(wx, wy), gr = dark.ctx.createRadialGradient(p.x, p.y, r * 0.35, p.x, p.y, r); gr.addColorStop(0, "rgba(0,0,0,1)"); gr.addColorStop(1, "rgba(0,0,0,0)"); dark.ctx.fillStyle = gr; dark.ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2); };
       hole(ball.x, ball.y, (100 + Math.sin(game.time * 3) * 4) * glowState.r);
