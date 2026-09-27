@@ -23,6 +23,7 @@ python3 Tools/levels/render.py --path       # превью → Design/previews/*
 python3 Tools/levels/autoplay.py            # дойдёт ли шарик сам (порт Navigator.cs)
 python3 Tools/art/generate_sprites.py       # перерисовать все спрайты
 Tools/compile_check/check.sh                # C# компилируется без Unity
+python3 Tools/web/build.py                  # браузерный прототип → Web/sharik.html (порт логики в Tools/web/game.js)
 ```
 
 ## Мультиагентная работа над уровнями

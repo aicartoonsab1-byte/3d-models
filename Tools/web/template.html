@@ -1,0 +1,104 @@
+<title>Шарик</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Neucha&family=Rubik+Mono+One&display=swap">
+<style>
+  /* Один осознанный облик — «мистическая гравюра»: бумага, тушь, коралл. Тема хоста не меняет палитру. */
+  :root {
+    --paper: #efe3c8; --paper-d: #d8c6a0; --ink: #1c1714; --ink-l: #3b302a;
+    --coral: #e2615c; --coral-d: #a83f3d; --cream: #faf3e1;
+    --display: "Rubik Mono One", "Arial Black", system-ui, sans-serif;
+    --hand: "Neucha", "Comic Sans MS", "Segoe Print", cursive;
+    color-scheme: light;
+  }
+  html, body { background: var(--paper); color: var(--ink); }
+  body { font-family: var(--hand); font-size: 17px; padding-inline: 16px; padding-block: 18px 32px; }
+  .page { max-width: 1320px; margin: 0 auto; display: grid; gap: 14px; }
+  header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px 18px; }
+  h1 { font-family: var(--display); font-weight: 400; font-size: clamp(26px, 5vw, 44px); line-height: 1; margin: 0; letter-spacing: .02em; }
+  h1 .moon { color: var(--coral); }
+  .tag { margin: 4px 0 0; font-size: 18px; color: var(--ink-l); max-width: 60ch; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  select, button {
+    font-family: var(--display); font-size: 12px; letter-spacing: .04em; color: var(--cream); background: var(--ink);
+    border: 2px solid var(--ink); padding: 9px 12px; cursor: pointer; border-radius: 0;
+  }
+  select { max-width: 100%; }
+  button:hover, select:hover { background: var(--ink-l); }
+  button:focus-visible, select:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+  @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+  #stagewrap { position: relative; width: 100%; background: var(--ink); padding: 6px; box-sizing: border-box; }
+  #stagewrap::after { content: ""; position: absolute; inset: -6px; border: 2px solid var(--ink); pointer-events: none; }
+  .screen { position: relative; margin: 0 auto; width: max-content; max-width: 100%; }
+  #view, #ui { display: block; image-rendering: pixelated; }
+  #ui { position: absolute; left: 0; top: 0; cursor: crosshair; touch-action: manipulation; }
+  .bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; color: var(--paper); font-size: 16px; padding: 8px 4px 2px; }
+  .bar b { color: var(--coral); font-weight: 400; }
+  aside { display: grid; gap: 14px; }
+  .card { background: var(--cream); border: 2px solid var(--ink); padding: 12px 14px; }
+  .card h2 { font-family: var(--display); font-weight: 400; font-size: 13px; letter-spacing: .06em; margin: 0 0 8px; }
+  .traps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .traps li { display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: center; line-height: 1.2; }
+  .traps img { width: 32px; height: 32px; image-rendering: pixelated; object-fit: contain; }
+  .keys { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+  kbd { font-family: var(--display); font-size: 11px; background: var(--ink); color: var(--cream); padding: 2px 6px; }
+  #log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 260px; overflow-y: auto; }
+  #log li { line-height: 1.25; }
+  #log li.sp::before { content: "— "; color: var(--coral-d); }
+  #log li.th { color: var(--ink-l); font-style: italic; }
+  #log li.th::before { content: "∘ "; color: var(--ink-l); }
+  .note { font-size: 15px; color: var(--ink-l); margin: 0; }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<div class="page">
+  <header>
+    <div>
+      <h1>Шарик <span class="moon">☾</span></h1>
+      <p class="tag">Пластилиновый шарик катится сам, думает вслух и расплющивается в лепёшку. Вы — наблюдатель: жмите на ловушки и боссов, чтобы ему мешать.</p>
+    </div>
+    <div class="controls">
+      <label for="level" class="note" style="position:absolute;left:-9999px">Уровень</label>
+      <select id="level" aria-label="Уровень"></select>
+      <button id="restart" type="button">Заново</button>
+      <button id="pause" type="button">Пауза</button>
+      <button id="mute" type="button" aria-pressed="true">Звук: вкл</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section>
+      <div id="stagewrap">
+        <div class="screen"><canvas id="view" width="320" height="180"></canvas><canvas id="ui" width="320" height="180"></canvas></div>
+        <div class="bar"><span id="stats">Лепёшек 0</span><span><b id="stage">стадия прозрения 0/5</b></span></div>
+      </div>
+    </section>
+    <aside>
+      <div class="card">
+        <h2>ВАШИ ЛОВУШКИ</h2>
+        <ul class="traps">
+          <li><img alt="" src="{{trap_spikes_on}}"><span><b>Шипы</b> — выдвигаются на 1,6 с</span></li>
+          <li><img alt="" src="{{trap_crusher}}"><span><b>Пресс</b> — падает, делает лепёшку</span></li>
+          <li><img alt="" src="{{trap_trapdoor_closed}}"><span><b>Люк</b> — открывается над ямой</span></li>
+          <li><img alt="" src="{{trap_fan_0}}"><span><b>Вентилятор</b> — дует вверх</span></li>
+          <li><img alt="" src="{{trap_spring_idle}}"><span><b>Пружина</b> — подбрасывает к небу</span></li>
+          <li><img alt="" src="{{boss_stag_idle}}"><span><b>Боссы</b> — Олень, Всевидящий, Червь, Хранитель</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>УПРАВЛЕНИЕ</h2>
+        <ul class="keys">
+          <li>Клик по ловушке или <kbd>1</kbd>–<kbd>9</kbd> — включить</li>
+          <li><kbd>R</kbd> — уровень заново · <kbd>Esc</kbd> — пауза · <kbd>M</kbd> — звук</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>ЧТО ОН ГОВОРИТ</h2>
+        <ul id="log" aria-live="polite"></ul>
+      </div>
+      <p class="note">Это браузерный прототип Unity-проекта: здесь шарик говорит заготовленными фразами. В Unity с Ollama он думает сам через нейросеть.</p>
+    </aside>
+  </div>
+</div>
+<script>window.SHARIK_DATA = {{DATA}};</script>
+<script>{{GAME}}</script>
