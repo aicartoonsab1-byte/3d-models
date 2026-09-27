@@ -13,7 +13,7 @@ import sys
 
 from PIL import Image, ImageDraw
 
-from levellib import PLATFORM, ROOT, SOLID, all_levels, solve
+from levellib import LEVELS_DIR, PLATFORM, ROOT, SOLID, all_levels, solve
 
 SPR = ROOT / "Assets/_Project/Resources/Sprites"
 OUT = ROOT / "Design/previews"
@@ -136,12 +136,17 @@ def main(argv):
     with_path = "--path" in argv
     masks = [a for a in argv if not a.startswith("--")]
     OUT.mkdir(parents=True, exist_ok=True)
+    done = 0
     for lv in all_levels():
-        if masks and not any(fnmatch.fnmatch(lv.path.name, m) for m in masks):
+        if masks and not any(fnmatch.fnmatch(lv.path.name, m.split('/')[-1]) for m in masks):
             continue
         out = OUT / f"{lv.path.stem}.png"
         render(lv, with_path).convert("RGB").save(out)
+        done += 1
         print(f"→ {out.relative_to(ROOT)}")
+    if masks and not done:
+        print(f"Ни один уровень не подошёл под {masks} (ищу по имени файла в {LEVELS_DIR.relative_to(ROOT)})")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
