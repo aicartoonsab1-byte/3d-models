@@ -100,6 +100,7 @@
     </div>
     <div class="controls">
       <label for="level" class="note" style="position:absolute;left:-9999px">Уровень</label>
+      <select id="campaigntop" aria-label="Игра"></select>
       <select id="level" aria-label="Уровень"></select>
       <button id="restart" type="button">Заново</button>
       <button id="pause" type="button">Пауза</button>
@@ -1992,6 +1993,7 @@
         c.fillText("ПАУЗА", ui.width / 2, ui.height / 2); c.textAlign = "left";
       }
       $("stats").textContent = `Счёт ${this.score[0]} : ${this.score[1]} · розыгрыш ${this.rally}`;
+      $("stage").textContent = `${(CAMP.world && CAMP.world.labels && CAMP.world.labels.stage) || "стадия прозрения"} ${this.data.awareness || 0}/5`;
     },
     keys: {},
   };
@@ -3103,11 +3105,16 @@ ${LABEL("promptHint", "")}
     $("introsrc").textContent = CAMP.source || "";
     $("herotitle").textContent = CAMP.title || "Шарик";
   }
-  const csel = $("campaign");
-  CAMPAIGNS.forEach((c) => { const o = document.createElement("option"); o.value = c.id; o.textContent = c.title + (c.source ? " — " + c.source : ""); csel.appendChild(o); });
-  csel.value = CAMP.id;
+  const csel = $("campaign"), ctop = $("campaigntop");
+  CAMPAIGNS.forEach((c) => {
+    const o = document.createElement("option"); o.value = c.id; o.textContent = c.title + (c.source ? " — " + c.source : ""); csel.appendChild(o);
+    const o2 = document.createElement("option"); o2.value = c.id; o2.textContent = "Игра: " + c.title; ctop.appendChild(o2);
+  });
+  csel.value = ctop.value = CAMP.id;
+  ctop.addEventListener("change", () => { csel.value = ctop.value; csel.dispatchEvent(new Event("change")); ctop.blur(); });
   csel.addEventListener("change", () => {
     CAMP = CAMPAIGNS.find((c) => c.id === csel.value) || CAMPAIGNS[0];
+    ctop.value = CAMP.id;
     try { localStorage.setItem("sharik_campaign", CAMP.id); } catch (e) { }
     levels = CAMP.levels.slice().sort((a, b) => a.order - b.order);
     fillLevels(); loadMind(); showCampaign();

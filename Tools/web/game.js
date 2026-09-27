@@ -1211,11 +1211,16 @@
     $("introsrc").textContent = CAMP.source || "";
     $("herotitle").textContent = CAMP.title || "Шарик";
   }
-  const csel = $("campaign");
-  CAMPAIGNS.forEach((c) => { const o = document.createElement("option"); o.value = c.id; o.textContent = c.title + (c.source ? " — " + c.source : ""); csel.appendChild(o); });
-  csel.value = CAMP.id;
+  const csel = $("campaign"), ctop = $("campaigntop");
+  CAMPAIGNS.forEach((c) => {
+    const o = document.createElement("option"); o.value = c.id; o.textContent = c.title + (c.source ? " — " + c.source : ""); csel.appendChild(o);
+    const o2 = document.createElement("option"); o2.value = c.id; o2.textContent = "Игра: " + c.title; ctop.appendChild(o2);
+  });
+  csel.value = ctop.value = CAMP.id;
+  ctop.addEventListener("change", () => { csel.value = ctop.value; csel.dispatchEvent(new Event("change")); ctop.blur(); });
   csel.addEventListener("change", () => {
     CAMP = CAMPAIGNS.find((c) => c.id === csel.value) || CAMPAIGNS[0];
+    ctop.value = CAMP.id;
     try { localStorage.setItem("sharik_campaign", CAMP.id); } catch (e) { }
     levels = CAMP.levels.slice().sort((a, b) => a.order - b.order);
     fillLevels(); loadMind(); showCampaign();

@@ -248,6 +248,7 @@
         c.fillText("ПАУЗА", ui.width / 2, ui.height / 2); c.textAlign = "left";
       }
       $("stats").textContent = `Счёт ${this.score[0]} : ${this.score[1]} · розыгрыш ${this.rally}`;
+      $("stage").textContent = `${(CAMP.world && CAMP.world.labels && CAMP.world.labels.stage) || "стадия прозрения"} ${this.data.awareness || 0}/5`;
     },
     keys: {},
   };
