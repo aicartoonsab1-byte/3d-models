@@ -55,7 +55,7 @@
       lines: tl.lines.map(({ env, ...l }) => l), sfx: tl.sfx,
       beats: tl.scenes.flatMap((s) => s.beats.map((b) => ({ scene: s.id, beat: b.i, id: b.id, t0: b.t0, t1: b.t1, say: b.say || null, do: b.do, note: b.note || null }))) }),
     draw: (t) => stage.draw(t),
-    frames: (i0, n, fps, type = "image/png") => { const out = []; for (let i = i0; i < i0 + n; i++) { stage.draw(i / fps); out.push(cv.toDataURL(type)); } return out; },
+    frames: (i0, n, fps, type = "image/png", q = 0.95) => { const out = []; for (let i = i0; i < i0 + n; i++) { stage.draw(i / fps); out.push(cv.toDataURL(type, q)); } return out; },
   };
   window.SAM_READY = true;
   if (q.get("mode") === "render") return;

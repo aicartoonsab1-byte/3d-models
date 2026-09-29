@@ -19,14 +19,17 @@ def render(d: Path, name: str, film: dict, width: int = 1920, height: int = 1080
         audio = mix(d, film, info)
         frames = math.ceil(info["duration"] * fps)
         say(f"Рендер «{info.get('title')}»: {info['duration']:.1f} с, {frames} кадров {width}×{height} @ {fps}")
-        cmd = [ffmpeg(), "-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", str(fps), "-c:v", "png", "-i", "-",
+        # «зернистые» кадры стиля dusk в PNG сжимаются плохо и медленно — их передаём JPEG высокого качества
+        jpeg = (film.get("style") or {}).get("look") == "dusk"
+        ftype, codec = ("image/jpeg", "mjpeg") if jpeg else ("image/png", "png")
+        cmd = [ffmpeg(), "-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", str(fps), "-c:v", codec, "-i", "-",
                "-i", str(audio), "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-preset", "medium", "-crf", "18",
                "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", str(out)]
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
         t0, step = time.time(), max(1, frames // 10)
         for i in range(0, frames, batch):
             n = min(batch, frames - i)
-            for url in page.evaluate(f"SAM.api.frames({i}, {n}, {fps})"):
+            for url in page.evaluate(f"SAM.api.frames({i}, {n}, {fps}, '{ftype}', 0.95)"):
                 proc.stdin.write(base64.b64decode(url.split(",", 1)[1]))
             if (i // batch) % max(1, step // batch) == 0:
                 el = time.time() - t0
