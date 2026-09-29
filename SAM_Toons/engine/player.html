@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAM_Toons · плеер</title>
+<style>
+  :root { --ink: #161616; --paper: #ffffff; --line: #d8d8d8; --muted: #666; }
+  html, body { margin: 0; background: #f3f3f1; color: var(--ink); font: 15px system-ui, sans-serif; }
+  #wrap { max-width: 1280px; margin: 0 auto; padding: 16px; }
+  canvas { width: 100%; height: auto; display: block; background: var(--paper); border: 1px solid var(--line); }
+  .bar { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  button { font: inherit; padding: 6px 14px; border: 1px solid var(--ink); background: var(--paper); border-radius: 6px; cursor: pointer; }
+  input[type=range] { flex: 1; min-width: 200px; }
+  #info { color: var(--muted); font-size: 13px; margin-top: 8px; white-space: pre-wrap; }
+  body.render #wrap { max-width: none; padding: 0; }
+  body.render .bar, body.render #info { display: none; }
+  body.render canvas { border: 0; width: auto; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="1920" height="1080"></canvas>
+  <div class="bar">
+    <button id="play">▶ Играть</button>
+    <input id="seek" type="range" min="0" max="1000" value="0">
+    <span id="time">0:00</span>
+  </div>
+  <div id="info"></div>
+</div>
+<script src="pen.js"></script>
+<script src="character.js"></script>
+<script src="props.js"></script>
+<script src="timeline.js"></script>
+<script src="stage.js"></script>
+<script>
+// Плеер: ?film=<папка в films/>. В режиме &mode=render (его открывает studio/render.py) интерфейс скрыт,
+// а наружу выставлен SAM.api — рисовать любой момент и отдавать кадры PNG.
+(async function () {
+  const q = new URLSearchParams(location.search), film = q.get("film") || "ufo_casino";
+  const cv = document.getElementById("cv");
+  if (q.get("w")) { cv.width = +q.get("w"); cv.height = +q.get("h"); }
+  if (q.get("mode") === "render") document.body.classList.add("render");
+  const base = `../films/${film}/`;
+  const getJSON = async (u) => { const r = await fetch(u, { cache: "no-store" }); if (!r.ok) throw new Error(u + " → " + r.status); return r.json(); };
+  let data, manifest = null;
+  try { data = await getJSON(base + "film.json"); } catch (e) { document.getElementById("info").textContent = "Не найден фильм: " + e.message; return; }
+  try { manifest = await getJSON(base + "build/voice/manifest.json"); } catch (e) { }
+  const stage = new SAM.Stage(cv, data, manifest);
+  const tl = stage.tl;
+
+  SAM.api = {
+    info: () => ({ title: tl.title, fps: tl.fps, duration: tl.duration, warnings: tl.warnings,
+      lines: tl.lines.map(({ env, ...l }) => l), sfx: tl.sfx,
+      beats: tl.scenes.flatMap((s) => s.beats.map((b) => ({ scene: s.id, beat: b.i, id: b.id, t0: b.t0, t1: b.t1, say: b.say || null, do: b.do, note: b.note || null }))) }),
+    draw: (t) => stage.draw(t),
+    frames: (i0, n, fps, type = "image/png") => { const out = []; for (let i = i0; i < i0 + n; i++) { stage.draw(i / fps); out.push(cv.toDataURL(type)); } return out; },
+  };
+  window.SAM_READY = true;
+  if (q.get("mode") === "render") return;
+
+  // ------------------------------------------------ живой просмотр со звуком
+  const $ = (id) => document.getElementById(id), fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  const clips = tl.lines.filter((l) => l.file).map((l) => ({ l, a: new Audio(base + "build/voice/" + l.file) }));
+  const sfxClips = tl.sfx.map((s) => ({ s, a: new Audio(base + `build/sfx/${s.name}.wav`) }));
+  let t = 0, playing = false, last = 0;
+  const stopAll = () => { for (const c of [...clips, ...sfxClips]) { c.a.pause(); c.started = false; } };
+  $("info").textContent = `${tl.title || film} · ${fmt(tl.duration)} · реплик ${tl.lines.length} (озвучено ${clips.length})` + (tl.warnings.length ? "\n⚠ " + tl.warnings.join("\n⚠ ") : "");
+  $("play").onclick = () => { playing = !playing; $("play").textContent = playing ? "⏸ Пауза" : "▶ Играть"; if (!playing) stopAll(); last = performance.now(); if (t >= tl.duration) t = 0; };
+  $("seek").oninput = (e) => { t = e.target.value / 1000 * tl.duration; stopAll(); stage.draw(t); };
+  function loop(now) {
+    if (playing) {
+      t += (now - last) / 1000;
+      if (t >= tl.duration) { t = tl.duration; playing = false; $("play").textContent = "▶ Играть"; }
+      for (const c of clips) if (!c.started && t >= c.l.t0 && t < c.l.t1) { c.started = true; c.a.currentTime = t - c.l.t0; c.a.play().catch(() => { }); }
+      for (const c of sfxClips) if (!c.started && t >= c.s.t && t < c.s.t + 0.3) { c.started = true; c.a.volume = Math.min(1, c.s.vol); c.a.play().catch(() => { }); }
+    }
+    last = now;
+    stage.draw(t);
+    $("seek").value = Math.round(t / tl.duration * 1000);
+    const b = stage.beatAt(t); $("time").textContent = `${fmt(t)} / ${fmt(tl.duration)}  ·  ${b ? b.id : ""}`;
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

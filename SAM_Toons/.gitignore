@@ -1,0 +1,4 @@
+films/*/build/
+models/piper/
+.venv/
+__pycache__/

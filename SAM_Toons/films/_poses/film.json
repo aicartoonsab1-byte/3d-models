@@ -1,0 +1,536 @@
+{
+ "title": "Справочник поз",
+ "fps": 25,
+ "subtitles": false,
+ "cast": {
+  "a0": {
+   "type": "person",
+   "h": 7,
+   "hair": "none",
+   "extra": [
+    "glasses"
+   ]
+  },
+  "a1": {
+   "type": "person",
+   "h": 7,
+   "hair": "bun",
+   "extra": [
+    "tie"
+   ]
+  },
+  "a2": {
+   "type": "person",
+   "h": 7,
+   "hair": "tuft",
+   "extra": [
+    "mustache"
+   ]
+  },
+  "a3": {
+   "type": "person",
+   "h": 7,
+   "hair": "spiky",
+   "extra": [
+    "bow"
+   ]
+  },
+  "a4": {
+   "type": "person",
+   "h": 7,
+   "hair": "curly",
+   "extra": [
+    "dress"
+   ]
+  },
+  "a5": {
+   "type": "person",
+   "h": 7,
+   "hair": "long",
+   "extra": []
+  },
+  "a6": {
+   "type": "person",
+   "h": 7,
+   "hair": "cap",
+   "extra": [
+    "glasses"
+   ]
+  },
+  "a7": {
+   "type": "person",
+   "h": 7,
+   "hair": "hat",
+   "extra": [
+    "tie"
+   ]
+  },
+  "a8": {
+   "type": "person",
+   "h": 7,
+   "hair": "bald",
+   "extra": [
+    "mustache"
+   ]
+  },
+  "a9": {
+   "type": "person",
+   "h": 7,
+   "hair": "none",
+   "extra": [
+    "bow"
+   ]
+  },
+  "a10": {
+   "type": "person",
+   "h": 7,
+   "hair": "bun",
+   "extra": [
+    "dress"
+   ]
+  },
+  "a11": {
+   "type": "person",
+   "h": 7,
+   "hair": "tuft",
+   "extra": []
+  },
+  "a12": {
+   "type": "person",
+   "h": 7,
+   "hair": "spiky",
+   "extra": [
+    "glasses"
+   ]
+  },
+  "a13": {
+   "type": "person",
+   "h": 7,
+   "hair": "curly",
+   "extra": [
+    "tie"
+   ]
+  },
+  "a14": {
+   "type": "person",
+   "h": 7,
+   "hair": "long",
+   "extra": [
+    "mustache"
+   ]
+  },
+  "a15": {
+   "type": "person",
+   "h": 7,
+   "hair": "cap",
+   "extra": [
+    "bow"
+   ]
+  },
+  "a16": {
+   "type": "person",
+   "h": 7,
+   "hair": "hat",
+   "extra": [
+    "dress"
+   ]
+  },
+  "a17": {
+   "type": "person",
+   "h": 7,
+   "hair": "bald",
+   "extra": []
+  },
+  "a18": {
+   "type": "person",
+   "h": 7,
+   "hair": "none",
+   "extra": [
+    "glasses"
+   ]
+  },
+  "a19": {
+   "type": "person",
+   "h": 7,
+   "hair": "bun",
+   "extra": [
+    "tie"
+   ]
+  },
+  "a20": {
+   "type": "person",
+   "h": 7,
+   "hair": "tuft",
+   "extra": [
+    "mustache"
+   ]
+  },
+  "a21": {
+   "type": "person",
+   "h": 7,
+   "hair": "spiky",
+   "extra": [
+    "bow"
+   ]
+  },
+  "al": {
+   "type": "alien",
+   "h": 6
+  }
+ },
+ "scenes": [
+  {
+   "id": "poses",
+   "camera": {
+    "x": 50,
+    "y": 14,
+    "zoom": 1
+   },
+   "set": {
+    "ground": {
+     "decor": 0,
+     "line": false
+    },
+    "props": [
+     {
+      "id": "l0",
+      "type": "text",
+      "x": 5,
+      "y": 17.8,
+      "s": 0.28,
+      "text": "stand"
+     },
+     {
+      "id": "l1",
+      "type": "text",
+      "x": 14,
+      "y": 17.8,
+      "s": 0.28,
+      "text": "walk"
+     },
+     {
+      "id": "l2",
+      "type": "text",
+      "x": 23,
+      "y": 17.8,
+      "s": 0.28,
+      "text": "run"
+     },
+     {
+      "id": "l3",
+      "type": "text",
+      "x": 32,
+      "y": 17.8,
+      "s": 0.28,
+      "text": "pray"
+     },
+     {
+      "id": "l4",
+      "type": "text",
+      "x": 41,
+      "y": 17.8,
+      "s": 0.28,
+      "text": "kneel"
+     },
+     {
+      "id": "l5",
+      "type": "text",
+      "x": 50,
+      "y": 17.8,
+      "s": 0.28,
+      "text": "sit"
+     },
+     {
+      "id": "l6",
+      "type": "text",
+      "x": 59,
+      "y": 17.8,
+      "s": 0.28,
+      "text": "lie"
+     },
+     {
+      "id": "l7",
+      "type": "text",
+      "x": 68,
+      "y": 17.8,
+      "s": 0.28,
+      "text": "arms_up"
+     },
+     {
+      "id": "l8",
+      "type": "text",
+      "x": 77,
+      "y": 17.8,
+      "s": 0.28,
+      "text": "wave"
+     },
+     {
+      "id": "l9",
+      "type": "text",
+      "x": 86,
+      "y": 17.8,
+      "s": 0.28,
+      "text": "point"
+     },
+     {
+      "id": "l10",
+      "type": "text",
+      "x": 95,
+      "y": 17.8,
+      "s": 0.28,
+      "text": "shrug"
+     },
+     {
+      "id": "l11",
+      "type": "text",
+      "x": 5,
+      "y": -2.2,
+      "s": 0.28,
+      "text": "hips"
+     },
+     {
+      "id": "l12",
+      "type": "text",
+      "x": 14,
+      "y": -2.2,
+      "s": 0.28,
+      "text": "think"
+     },
+     {
+      "id": "l13",
+      "type": "text",
+      "x": 23,
+      "y": -2.2,
+      "s": 0.28,
+      "text": "facepalm"
+     },
+     {
+      "id": "l14",
+      "type": "text",
+      "x": 32,
+      "y": -2.2,
+      "s": 0.28,
+      "text": "cross"
+     },
+     {
+      "id": "l15",
+      "type": "text",
+      "x": 41,
+      "y": -2.2,
+      "s": 0.28,
+      "text": "scared"
+     },
+     {
+      "id": "l16",
+      "type": "text",
+      "x": 50,
+      "y": -2.2,
+      "s": 0.28,
+      "text": "float"
+     },
+     {
+      "id": "l17",
+      "type": "text",
+      "x": 59,
+      "y": -2.2,
+      "s": 0.28,
+      "text": "jump"
+     },
+     {
+      "id": "l18",
+      "type": "text",
+      "x": 68,
+      "y": -2.2,
+      "s": 0.28,
+      "text": "dance"
+     },
+     {
+      "id": "l19",
+      "type": "text",
+      "x": 77,
+      "y": -2.2,
+      "s": 0.28,
+      "text": "laugh"
+     },
+     {
+      "id": "l20",
+      "type": "text",
+      "x": 86,
+      "y": -2.2,
+      "s": 0.28,
+      "text": "slouch"
+     },
+     {
+      "id": "l21",
+      "type": "text",
+      "x": 95,
+      "y": -2.2,
+      "s": 0.28,
+      "text": "reach"
+     }
+    ]
+   },
+   "actors": {
+    "a0": {
+     "x": 5,
+     "z": 0,
+     "y": 20,
+     "pose": "stand",
+     "mood": "neutral"
+    },
+    "a1": {
+     "x": 14,
+     "z": 0,
+     "y": 20,
+     "pose": "walk",
+     "mood": "happy"
+    },
+    "a2": {
+     "x": 23,
+     "z": 0,
+     "y": 20,
+     "pose": "run",
+     "mood": "sad"
+    },
+    "a3": {
+     "x": 32,
+     "z": 0,
+     "y": 20,
+     "pose": "pray",
+     "mood": "angry"
+    },
+    "a4": {
+     "x": 41,
+     "z": 0,
+     "y": 20,
+     "pose": "kneel",
+     "mood": "scared"
+    },
+    "a5": {
+     "x": 50,
+     "z": 0,
+     "y": 20,
+     "pose": "sit",
+     "mood": "surprised"
+    },
+    "a6": {
+     "x": 59,
+     "z": 0,
+     "y": 20,
+     "pose": "lie",
+     "mood": "pray"
+    },
+    "a7": {
+     "x": 68,
+     "z": 0,
+     "y": 20,
+     "pose": "arms_up",
+     "mood": "sly"
+    },
+    "a8": {
+     "x": 77,
+     "z": 0,
+     "y": 20,
+     "pose": "wave",
+     "mood": "dizzy"
+    },
+    "a9": {
+     "x": 86,
+     "z": 0,
+     "y": 20,
+     "pose": "point",
+     "mood": "tired"
+    },
+    "a10": {
+     "x": 95,
+     "z": 0,
+     "y": 20,
+     "pose": "shrug",
+     "mood": "love"
+    },
+    "a11": {
+     "x": 5,
+     "z": 0,
+     "y": 0,
+     "pose": "hips",
+     "mood": "neutral"
+    },
+    "a12": {
+     "x": 14,
+     "z": 0,
+     "y": 0,
+     "pose": "think",
+     "mood": "happy"
+    },
+    "a13": {
+     "x": 23,
+     "z": 0,
+     "y": 0,
+     "pose": "facepalm",
+     "mood": "sad"
+    },
+    "a14": {
+     "x": 32,
+     "z": 0,
+     "y": 0,
+     "pose": "cross",
+     "mood": "angry"
+    },
+    "a15": {
+     "x": 41,
+     "z": 0,
+     "y": 0,
+     "pose": "scared",
+     "mood": "scared"
+    },
+    "a16": {
+     "x": 50,
+     "z": 0,
+     "y": 0,
+     "pose": "float",
+     "mood": "surprised"
+    },
+    "a17": {
+     "x": 59,
+     "z": 0,
+     "y": 0,
+     "pose": "jump",
+     "mood": "pray"
+    },
+    "a18": {
+     "x": 68,
+     "z": 0,
+     "y": 0,
+     "pose": "dance",
+     "mood": "sly"
+    },
+    "a19": {
+     "x": 77,
+     "z": 0,
+     "y": 0,
+     "pose": "laugh",
+     "mood": "dizzy"
+    },
+    "a20": {
+     "x": 86,
+     "z": 0,
+     "y": 0,
+     "pose": "slouch",
+     "mood": "tired"
+    },
+    "a21": {
+     "x": 95,
+     "z": 0,
+     "y": 0,
+     "pose": "reach",
+     "mood": "love"
+    }
+   },
+   "beats": [
+    {
+     "dur": 2
+    }
+   ]
+  }
+ ]
+}

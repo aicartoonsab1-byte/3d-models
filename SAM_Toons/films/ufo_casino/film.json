@@ -1,0 +1,534 @@
+{
+  "title": "Знак",
+  "logline": "Гена каждый день молится у казино о знаке. Знак прилетает — но забирает не его.",
+  "fps": 25,
+  "subtitles": true,
+  "cast": {
+    "gena": {
+      "name": "Гена",
+      "type": "person",
+      "h": 11,
+      "hair": "tuft",
+      "voice": "man_young"
+    },
+    "tolik": {
+      "name": "Толик",
+      "type": "person",
+      "h": 11,
+      "hair": "cap",
+      "voice": "man"
+    },
+    "ufo": {
+      "name": "Пришельцы",
+      "type": "prop",
+      "voice": "alien"
+    },
+    "narrator": {
+      "name": "Рассказчик",
+      "type": "voice",
+      "voice": "narrator"
+    },
+    "p1": {
+      "type": "person",
+      "h": 8.8,
+      "hair": "bun",
+      "extra": [
+        "dress"
+      ]
+    },
+    "p2": {
+      "type": "person",
+      "h": 9.1
+    },
+    "p3": {
+      "type": "person",
+      "h": 8.8,
+      "hair": "long"
+    },
+    "p4": {
+      "type": "person",
+      "h": 9.0,
+      "extra": [
+        "tie"
+      ]
+    },
+    "p5": {
+      "type": "person",
+      "h": 8.9,
+      "hair": "bald"
+    },
+    "p6": {
+      "type": "person",
+      "h": 8.5,
+      "hair": "curly"
+    },
+    "p7": {
+      "type": "person",
+      "h": 9.2,
+      "extra": [
+        "glasses"
+      ]
+    }
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "note": "Общий план: пустырь, слева дерево, справа казино. Гена на коленях молится.",
+      "set": {
+        "ground": {
+          "decor": 45
+        },
+        "props": [
+          {
+            "type": "cloud",
+            "x": 18,
+            "y": 40,
+            "s": 1.1
+          },
+          {
+            "type": "cloud",
+            "x": 80,
+            "y": 47,
+            "s": 0.9
+          },
+          {
+            "type": "tree",
+            "x": 5,
+            "s": 1
+          },
+          {
+            "type": "bush",
+            "x": 3,
+            "s": 0.8
+          },
+          {
+            "type": "bush",
+            "x": 11,
+            "s": 0.6
+          },
+          {
+            "type": "bush",
+            "x": 57,
+            "s": 0.7
+          },
+          {
+            "id": "casino",
+            "type": "building",
+            "x": 76.5,
+            "w": 38,
+            "h": 21,
+            "sign": "CASINO",
+            "decor": "casino"
+          },
+          {
+            "id": "ufo",
+            "type": "ufo",
+            "x": -25,
+            "y": 48,
+            "z": 3,
+            "s": 1,
+            "aliens": 3,
+            "beam": 0
+          }
+        ]
+      },
+      "actors": {
+        "gena": {
+          "x": 35,
+          "z": 3,
+          "pose": "pray",
+          "mood": "pray"
+        },
+        "tolik": {
+          "x": -8,
+          "z": 4
+        },
+        "p1": {
+          "x": 63,
+          "z": 2
+        },
+        "p2": {
+          "x": 67,
+          "z": 2.5
+        },
+        "p3": {
+          "x": 73.5,
+          "z": 2
+        },
+        "p4": {
+          "x": 77,
+          "z": 2.2
+        },
+        "p5": {
+          "x": 12,
+          "z": 1
+        },
+        "p6": {
+          "x": 16.5,
+          "z": 1.2
+        },
+        "p7": {
+          "x": 96,
+          "z": 7
+        }
+      },
+      "beats": [
+        {
+          "say": {
+            "who": "narrator",
+            "text": "Каждый день Гена приходил к казино и молился об одном."
+          },
+          "do": [
+            {
+              "who": "gena",
+              "emote": "thought",
+              "dur": 4
+            }
+          ]
+        },
+        {
+          "say": {
+            "who": "gena",
+            "text": "Пошли мне знак! Хоть какой-нибудь!",
+            "mood": "sad"
+          },
+          "do": [
+            {
+              "who": "gena",
+              "pose": "reach"
+            }
+          ]
+        },
+        {
+          "dur": 2.4,
+          "do": [
+            {
+              "sfx": "ufo"
+            },
+            {
+              "prop": "ufo",
+              "move": {
+                "x": 38,
+                "y": 34
+              },
+              "dur": 2.2,
+              "ease": "out"
+            },
+            {
+              "camera": "shake",
+              "dur": 1.2,
+              "amp": 0.5,
+              "at": 0.3
+            },
+            {
+              "who": "gena",
+              "pose": "kneel",
+              "mood": "surprised",
+              "at": 0.6
+            },
+            {
+              "who": "p1",
+              "emote": "!",
+              "at": 0.8
+            },
+            {
+              "who": "p2",
+              "emote": "!",
+              "at": 0.9
+            },
+            {
+              "who": "p3",
+              "mood": "surprised",
+              "at": 0.8
+            },
+            {
+              "who": "p4",
+              "mood": "surprised",
+              "at": 0.8
+            },
+            {
+              "who": "p5",
+              "emote": "?",
+              "at": 1.0
+            },
+            {
+              "who": "p6",
+              "mood": "scared",
+              "at": 1.0
+            },
+            {
+              "who": "p7",
+              "face": "left",
+              "emote": "!",
+              "at": 1.2
+            }
+          ]
+        },
+        {
+          "say": {
+            "who": "gena",
+            "text": "Знак!",
+            "mood": "happy"
+          },
+          "do": [
+            {
+              "who": "gena",
+              "pose": "arms_up"
+            }
+          ]
+        },
+        {
+          "say": {
+            "who": "tolik",
+            "text": "Так, сегодня ставлю всё на красное."
+          },
+          "do": [
+            {
+              "who": "tolik",
+              "move": {
+                "x": 41
+              },
+              "dur": 3.2
+            }
+          ]
+        },
+        {
+          "dur": 1.6,
+          "do": [
+            {
+              "sfx": "beam"
+            },
+            {
+              "prop": "ufo",
+              "set": {
+                "beam": 1
+              },
+              "dur": 0.5
+            },
+            {
+              "who": "tolik",
+              "pose": "float",
+              "mood": "scared",
+              "face": "front",
+              "at": 0.4
+            },
+            {
+              "who": "tolik",
+              "move": {
+                "y": 5
+              },
+              "dur": 1.6,
+              "at": 0.4
+            },
+            {
+              "who": "tolik",
+              "emote": "?!",
+              "at": 0.5,
+              "dur": 2
+            }
+          ]
+        },
+        {
+          "say": {
+            "who": "tolik",
+            "text": "Э-э-э! Я вообще-то в казино шёл!"
+          },
+          "do": [
+            {
+              "who": "tolik",
+              "move": {
+                "y": 8
+              }
+            }
+          ]
+        },
+        {
+          "say": {
+            "who": "ufo",
+            "text": "Землянин! Ты выиграл бесплатную поездку!"
+          },
+          "do": [
+            {
+              "camera": {
+                "on": "ufo",
+                "zoom": 2.0
+              },
+              "dur": 0.5
+            }
+          ]
+        },
+        {
+          "say": {
+            "who": "gena",
+            "text": "А я?! Это же я молился!",
+            "mood": "angry"
+          },
+          "do": [
+            {
+              "camera": {
+                "on": "gena",
+                "zoom": 2.0
+              },
+              "dur": 0.4
+            },
+            {
+              "who": "gena",
+              "pose": "hips"
+            }
+          ]
+        },
+        {
+          "say": {
+            "who": "ufo",
+            "text": "Ваш запрос очень важен для нас. Молитесь дальше."
+          },
+          "do": [
+            {
+              "camera": {
+                "on": "ufo",
+                "zoom": 2.0
+              },
+              "dur": 0.4
+            }
+          ]
+        },
+        {
+          "dur": 2.4,
+          "do": [
+            {
+              "camera": {
+                "x": 50,
+                "y": 17,
+                "zoom": 1
+              },
+              "dur": 0.6
+            },
+            {
+              "who": "tolik",
+              "move": {
+                "y": 31
+              },
+              "dur": 1.2,
+              "at": 0.2
+            },
+            {
+              "who": "tolik",
+              "visible": false,
+              "at": 1.4
+            },
+            {
+              "prop": "ufo",
+              "set": {
+                "beam": 0
+              },
+              "dur": 0.3,
+              "at": 1.4
+            },
+            {
+              "sfx": "whoosh",
+              "at": 1.6
+            },
+            {
+              "prop": "ufo",
+              "move": {
+                "x": 140,
+                "y": 52
+              },
+              "dur": 0.8,
+              "at": 1.6,
+              "ease": "in"
+            }
+          ]
+        },
+        {
+          "dur": 1.2,
+          "do": [
+            {
+              "sfx": "fail"
+            },
+            {
+              "who": "gena",
+              "pose": "slouch",
+              "mood": "sad"
+            },
+            {
+              "who": "gena",
+              "emote": "sweat",
+              "dur": 2
+            }
+          ]
+        },
+        {
+          "say": {
+            "who": "narrator",
+            "text": "Так Гена понял: знаки приходят. Просто не ему."
+          }
+        },
+        {
+          "say": {
+            "who": "gena",
+            "text": "Ну и ладно. Поставлю на красное сам.",
+            "mood": "sly"
+          },
+          "do": [
+            {
+              "who": "gena",
+              "pose": "stand",
+              "at": 0.2
+            }
+          ]
+        },
+        {
+          "dur": 3.4,
+          "do": [
+            {
+              "who": "gena",
+              "move": {
+                "x": 85,
+                "z": 0.5
+              },
+              "dur": 3,
+              "ease": "linear"
+            },
+            {
+              "who": "gena",
+              "visible": false,
+              "at": 3.1
+            },
+            {
+              "sfx": "ding",
+              "at": 3.1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s2",
+      "transition": "fade",
+      "set": {
+        "ground": {
+          "line": false,
+          "decor": 0
+        },
+        "props": [
+          {
+            "id": "end",
+            "type": "text",
+            "x": 50,
+            "y": 16,
+            "s": 2.2,
+            "text": "КОНЕЦ",
+            "outline": true
+          }
+        ]
+      },
+      "actors": {},
+      "beats": [
+        {
+          "dur": 2.5
+        }
+      ]
+    }
+  ]
+}

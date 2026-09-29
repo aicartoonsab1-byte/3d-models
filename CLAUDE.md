@@ -15,6 +15,7 @@
 - `Assets/_Project/Resources/Sprites/` — PNG, генерируются `Tools/art/generate_sprites.py`
 - `Design/` — GDD, формат уровней, брифы, превью
 - `Tools/` — валидатор, превью, генератор спрайтов, проверка компиляции
+- `SAM_Toons/` — ОТДЕЛЬНЫЙ проект: студия рисованных кодом мультфильмов (свой `SAM_Toons/CLAUDE.md`)
 
 ## Команды
 ```bash

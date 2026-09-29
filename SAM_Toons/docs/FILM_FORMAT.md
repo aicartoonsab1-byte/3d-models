@@ -1,0 +1,108 @@
+# Формат фильма `film.json`
+
+Это контракт между агентами и движком. Сценарист и режиссёр пишут **только этот JSON**, рисует всегда движок.
+Проверка: `python studio/sam.py check <фильм>`. Словарь (позы, эмоции, предметы, звуки): `python studio/sam.py vocab`.
+Наглядный справочник поз: `films/_poses` (`python studio/sam.py stills _poses`).
+
+## Координаты
+
+- Ширина кадра при `zoom: 1` — **100 единиц**, высота — 56,25.
+- `x` — слева направо, 0…100 в кадре по умолчанию.
+- `y` — высота над землёй (0 = стоит на земле, 20 = висит в воздухе).
+- `z` — «ближе к зрителю»: 0 = на линии горизонта, 3–8 = передний план (ниже по экрану, рисуется поверх).
+- Камера `{x, y, zoom}`: `x` — центр кадра, `y` — высота центра кадра над землёй. По умолчанию `{50, 17, 1}`:
+  земля на 80% высоты кадра.
+- Масштаб: взрослый персонаж `h: 9–11`, фоновые люди `7–8`, дерево ≈ 14, здание 20.
+
+## Структура
+
+```json
+{
+  "title": "Знак",
+  "logline": "одна фраза о сюжете",
+  "fps": 25,
+  "subtitles": true,
+  "music": { "file": "music.mp3", "volume": 0.15 },
+  "cast": { "<id>": { … } },
+  "scenes": [ { … } ]
+}
+```
+
+### `cast` — персонажи
+
+```json
+"gena": { "name": "Гена", "type": "person", "h": 11, "hair": "tuft", "extra": ["tie"], "voice": "man_young", "pitch": 0 }
+```
+
+| поле | значения |
+|---|---|
+| `type` | `person` · `alien` (большая голова, антенны, `eyes: 1`) · `prop` (говорящий предмет, например НЛО) · `voice` (только голос, рассказчик) |
+| `hair` | none, bun, tuft, spiky, curly, long, cap, hat, bald |
+| `extra` | glasses, mustache, bow, tie, dress |
+| `voice` | пресет из `studio/voices.json`: narrator, man, man_young, man_old, woman, girl, kid, alien, robot, giant |
+| `pitch`, `tempo` | подстройка голоса: полутоны и множитель скорости |
+
+Рассказчик — всегда `"narrator"`.
+
+### Сцена
+
+```json
+{
+  "id": "s1",
+  "note": "что происходит — для людей и агентов, движок не читает",
+  "transition": "cut | fade",
+  "camera": { "x": 50, "y": 17, "zoom": 1 },
+  "set": {
+    "ground": { "line": true, "decor": 40, "seed": 3 },
+    "props": [ { "id": "ufo", "type": "ufo", "x": 38, "y": 34, "z": 3, "s": 1 } ]
+  },
+  "actors": { "gena": { "x": 35, "z": 3, "pose": "pray", "mood": "pray", "face": "front" } },
+  "beats": [ … ]
+}
+```
+
+Каждая сцена сама объявляет своих персонажей и декорации: из сцены в сцену ничего не переносится.
+
+### Бит — единица раскадровки
+
+Бит — это одна реплика и/или действия, которые начинаются одновременно. Абсолютных секунд нет:
+**длительность бита = max(`dur`, длина озвученной реплики + `pause`, конец самого долгого действия)**.
+
+```json
+{ "say": { "who": "gena", "text": "Пошли мне знак!", "mood": "sad", "at": 0 },
+  "do": [ { "who": "gena", "pose": "reach" }, { "sfx": "pray", "at": 0.5 } ],
+  "dur": 2, "pause": 0.35, "note": "крупный план" }
+```
+
+- `say.who` — персонаж или говорящий предмет из этой сцены либо `narrator`. Реплика не длиннее 140 символов.
+- `say.mood` сразу меняет настроение персонажа и окраску голоса.
+
+### Действия (`do`)
+
+У каждого действия ровно один «субъект»: `who`, `prop`, `camera` или `sfx`. Общие поля: `at` (сдвиг от начала бита, с), `dur` (с), `ease`.
+
+| действие | пример |
+|---|---|
+| поза | `{ "who": "gena", "pose": "arms_up" }` |
+| настроение | `{ "who": "gena", "mood": "happy" }` |
+| взгляд | `{ "who": "gena", "face": "left" }` |
+| значок над головой | `{ "who": "gena", "emote": "?!", "dur": 2 }` |
+| перемещение | `{ "who": "tolik", "move": { "x": 41, "y": 0, "z": 4 }, "dur": 3 }` — при ходьбе по x включается шаг и поворот |
+| сдвиг | `{ "who": "tolik", "by": { "x": -5 } }` |
+| исчезнуть/появиться | `{ "who": "gena", "visible": false }` |
+| предмет | `{ "prop": "ufo", "move": { "x": 38, "y": 34 }, "dur": 2, "ease": "out" }`, `{ "prop": "ufo", "set": { "beam": 1 }, "dur": 0.5 }` |
+| камера | `{ "camera": { "on": "gena", "zoom": 2 }, "dur": 0.5 }` · `{ "camera": { "x": 50, "y": 17, "zoom": 1 } }` · `{ "camera": "shake", "dur": 1, "amp": 0.5 }` |
+| звук | `{ "sfx": "whoosh" }` |
+
+Если `dur` не указан, перемещения и камера длятся столько же, сколько реплика бита (или 1,2 с без реплики).
+`ease`: linear, inout (по умолчанию), in, out, back, bounce.
+
+## Словарь
+
+- **Позы**: stand, walk, run, pray, kneel, sit, lie, arms_up, wave, point, shrug, hips, think, facepalm, cross, scared, float, jump, dance, laugh, slouch, reach
+- **Настроения**: neutral, happy, sad, angry, scared, surprised, pray, sly, dizzy, tired, love
+- **Значки**: `?` `!` `?!` `...` shock, sweat, heart, anger, idea, thought, zzz, sparkle, music
+- **Предметы**: cloud, tree, bush, grass, rock, sun, house, building (`w`, `h`, `sign`, `decor: casino|none`), ufo (`aliens`, `beam` 0…1), text (`text`, `outline`), sign (`text`)
+- **Звуки**: whoosh, pop, ding, ufo, beam, thud, boing, beep, fail, pray
+
+Новую позу, предмет или звук добавляют в движок (`engine/*.js`, `studio/audio.py`), а валидатор подхватывает их сам.
