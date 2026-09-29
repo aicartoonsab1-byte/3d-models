@@ -4,7 +4,7 @@
 // Линии «кипят»: каждые 1/8 секунды дрожание меняется (3 варианта по кругу), как у рисованных мультов.
 (function () {
   const SAM = (window.SAM = window.SAM || {});
-  const INK = "#161616", PAPER = "#ffffff";
+  const INK = "#161616", PAPER = "#ffffff", RED = "#d8262e";
   const FONT = "'Comic Neue','Comic Sans MS','Segoe Print','Neucha','Marker Felt',sans-serif";
 
   function rng(seed) {
@@ -18,7 +18,9 @@
   }
 
   class Pen {
-    constructor(ctx) { this.c = ctx; this.boil = 0; this.lw = 0.16; this.amp = 0.07; }
+    // ink — текущий цвет линии (чёрный или красный): предметы и значки временно переключают его на красный
+    constructor(ctx) { this.c = ctx; this.boil = 0; this.lw = 0.16; this.amp = 0.07; this.ink = INK; }
+    red(fn) { const k = this.ink; this.ink = RED; try { fn(); } finally { this.ink = k; } }
     // генератор дрожания для объекта: одинаков в пределах кадра «кипения»
     r(seed) { return rng(seed * 31 + this.boil * 7919 + 1); }
     width(k = 1) { this.c.lineWidth = this.lw * k; return this; }
@@ -55,7 +57,7 @@
       const c = this.c;
       this.trace(pts, closed, seed, amp, step);
       if (fill) { c.fillStyle = fill === true ? PAPER : fill; c.fill(); }
-      c.strokeStyle = INK; c.lineWidth = this.lw * lw; c.stroke();
+      c.strokeStyle = this.ink; c.lineWidth = this.lw * lw; c.stroke();
     }
     line(x0, y0, x1, y1, seed = 1, lw = 1) { this.shape([[x0, y0], [x1, y1]], { closed: false, seed, fill: false, lw }); }
     poly(pts, seed = 1, lw = 1) { this.shape(pts, { closed: false, seed, fill: false, lw }); }
@@ -69,7 +71,7 @@
     ellipse(cx, cy, rx, ry, seed = 1, opt = {}) { this.shape(this.ellipsePts(cx, cy, rx, ry, 0, seed), { seed, step: 99, ...opt }); }
     rect(x, y, w, h, seed = 1, opt = {}) { this.shape([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], { seed, ...opt }); }
     // сплошная точка/пятно (глаза, заклёпки)
-    dot(x, y, rx, ry = rx) { const c = this.c; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); c.fillStyle = INK; c.fill(); }
+    dot(x, y, rx, ry = rx, col = this.ink) { const c = this.c; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); c.fillStyle = col; c.fill(); }
     // «кудрявый» контур: цепочка выпуклых дуг вдоль ломаной (облака, кроны, кусты)
     bumps(pts, { seed = 1, bulge = 0.9, fill = true, closed = true, lw = 1 } = {}) {
       const c = this.c, r = this.r(seed), n = pts.length, m = closed ? n : n - 1;
@@ -82,28 +84,45 @@
       }
       if (closed) c.closePath();
       if (fill) { c.fillStyle = fill === true ? PAPER : fill; c.fill(); }
-      c.strokeStyle = INK; c.lineWidth = this.lw * lw; c.stroke();
+      c.strokeStyle = this.ink; c.lineWidth = this.lw * lw; c.stroke();
     }
-    // «трубки» с контуром — из них собраны тела человечков: сначала все чёрные, потом все белые,
-    // поэтому контуры соседних трубок сливаются в один силуэт. items: [{p: [[x,y],...], w}]
+    // Силуэт из «трубок» (p — ломаная, w — толщина), овалов (e — [cx, cy, rx, ry]) и фигур (poly — точки): сначала все чёрные с запасом
+    // на толщину линии, потом все заливки (fill — белый или красный) — контуры соседних частей сливаются в один.
     tubes(items) {
       const c = this.c; c.lineCap = "round"; c.lineJoin = "round";
       for (const pass of [0, 1]) for (const s of items) {
-        c.strokeStyle = pass ? PAPER : INK; c.lineWidth = s.w + (pass ? 0 : this.lw * 2);
+        // белый слой чуть шире (на 15% толщины линии), чтобы на стыках частей не просвечивали бледные швы
+        const col = pass ? (s.fill || PAPER) : this.ink, pad = pass ? this.lw * 0.08 : this.lw;
+        if (s.poly) { c.beginPath(); s.poly.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fillStyle = col; c.fill(); if (!pass) { c.strokeStyle = col; c.lineWidth = pad * 2; c.stroke(); } continue; }
+        if (s.e) { const [x, y, rx, ry] = s.e; c.beginPath(); c.ellipse(x, y, rx + pad, ry + pad, s.rot || 0, 0, Math.PI * 2); c.fillStyle = col; c.fill(); continue; }
+        c.strokeStyle = col; c.lineWidth = s.w + pad * 2;
         c.beginPath(); c.moveTo(s.p[0][0], s.p[0][1]); for (let i = 1; i < s.p.length; i++) c.lineTo(s.p[i][0], s.p[i][1]); c.stroke();
       }
     }
+    // контур «трубки» без концов: две боковые линии и скруглённый кончик (кисть руки)
+    tubeEdges(pts, w) {
+      const c = this.c, off = w / 2 + this.lw / 2, n = pts.length, nrm = [];
+      for (let i = 0; i < n; i++) {
+        const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+        const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; nrm.push([-dy / l, dx / l]);
+      }
+      c.beginPath();
+      for (const sgn of [1, -1]) pts.forEach(([x, y], i) => (i ? c.lineTo : c.moveTo).call(c, x + nrm[i][0] * off * sgn, y + nrm[i][1] * off * sgn));
+      const [hx, hy] = pts[n - 1], ang = Math.atan2(nrm[n - 1][1], nrm[n - 1][0]);
+      c.moveTo(hx + Math.cos(ang) * off, hy + Math.sin(ang) * off); c.arc(hx, hy, off, ang, ang + Math.PI, true);
+      c.strokeStyle = this.ink; c.lineWidth = this.lw; c.stroke();
+    }
     // текст: size — высота в мировых единицах; outline — буквы контуром (вывески)
-    text(str, x, y, size, { align = "center", outline = false, lw = 1, font = FONT, weight = "" } = {}) {
+    text(str, x, y, size, { align = "center", outline = false, lw = 1, font = FONT, weight = "", fill = PAPER } = {}) {
       const c = this.c; c.save(); c.translate(x, y); c.scale(size / 100, size / 100);
       c.font = `${weight} 100px ${font}`; c.textAlign = align; c.textBaseline = "middle";
-      if (outline) { c.lineJoin = "round"; c.lineWidth = this.lw * 100 / size * lw * 1.1; c.strokeStyle = INK; c.fillStyle = PAPER; c.strokeText(str, 0, 0); c.fillText(str, 0, 0); }
-      else { c.fillStyle = INK; c.fillText(str, 0, 0); }
+      if (outline) { c.lineJoin = "round"; c.lineWidth = this.lw * 100 / size * lw * 1.1; c.strokeStyle = this.ink; c.fillStyle = fill; c.strokeText(str, 0, 0); c.fillText(str, 0, 0); }
+      else { c.fillStyle = this.ink; c.fillText(str, 0, 0); }
       c.restore();
     }
   }
 
-  SAM.INK = INK; SAM.PAPER = PAPER; SAM.FONT = FONT;
+  SAM.INK = INK; SAM.PAPER = PAPER; SAM.RED = RED; SAM.FONT = FONT;
   SAM.rng = rng; SAM.hash = hash; SAM.Pen = Pen;
   SAM.lerp = (a, b, k) => a + (b - a) * k;
   SAM.clamp = (v, a, b) => Math.max(a, Math.min(b, v));

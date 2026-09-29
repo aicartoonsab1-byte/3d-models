@@ -23,10 +23,18 @@
   "fps": 25,
   "subtitles": true,
   "music": { "file": "music.mp3", "volume": 0.15 },
+  "style": { "twos": true, "boil": false },
   "cast": { "<id>": { … } },
   "scenes": [ { … } ]
 }
 ```
+
+### `style` — манера анимации
+
+- `twos: true` (по умолчанию) — персонажи и предметы меняют рисунок через кадр (12,5 раза в секунду), как в рисованной
+  анимации; камера при этом едет плавно, каждый кадр.
+- `boil: false` (по умолчанию) — в паузах линии стоят неподвижно. `true` — линии «кипят» (дрожат) всё время.
+- Цвета только два: чёрная линия и красный акцент (`cast.red`, значки эмоций, вывески, огни, флажки) на белом.
 
 ### `cast` — персонажи
 
@@ -39,6 +47,7 @@
 | `type` | `person` · `alien` (большая голова, антенны, `eyes: 1`) · `prop` (говорящий предмет, например НЛО) · `voice` (только голос, рассказчик) |
 | `hair` | none, bun, tuft, spiky, curly, long, cap, hat, bald |
 | `extra` | glasses, mustache, bow, tie, dress |
+| `red` | что у персонажа красное: shirt, pants, scarf, cheeks, hair, hat, bow, tie, dress (у пришельца ещё eye, antennae) |
 | `voice` | пресет из `studio/voices.json`: narrator, man, man_young, man_old, woman, girl, kid, alien, robot, giant. С CosyVoice голос клонируется из `voices/<пресет>.wav` |
 | `pitch`, `tempo` | подстройка голоса: полутоны и множитель скорости |
 
@@ -100,10 +109,10 @@
 
 ## Словарь
 
-- **Позы**: stand, walk, run, pray, kneel, sit, lie, arms_up, wave, point, shrug, hips, think, facepalm, cross, scared, float, jump, dance, laugh, slouch, reach
+- **Позы**: stand, walk, run, pray, kneel, sit, lie, arms_up, wave, point, shrug, hips, think, facepalm, cross, scared, float, jump, dance, laugh, slouch, reach, give (протянуть руку), hug (обнять), hug_knees (сидеть, обняв колени), hold (держать у груди)
 - **Настроения**: neutral, happy, sad, angry, scared, surprised, pray, sly, dizzy, tired, love
 - **Значки**: `?` `!` `?!` `...` shock, sweat, heart, anger, idea, thought, zzz, sparkle, music
-- **Предметы**: cloud, tree, bush, grass, rock, sun, house, building (`w`, `h`, `sign`, `decor: casino|none`), ufo (`aliens`, `beam` 0…1), text (`text`, `outline`), sign (`text`)
+- **Предметы**: cloud, tree, bush, grass, rock, sun, house, building (`w`, `h`, `sign`, `decor: casino|none`), ufo (`aliens`, `beam` 0…1), flag (`tilt`, красные полосы), text (`text`, `outline`, `red`), sign (`text`)
 - **Звуки**: whoosh, pop, ding, ufo, beam, thud, boing, beep, fail, pray
 
 Новую позу, предмет или звук добавляют в движок (`engine/*.js`, `studio/audio.py`), а валидатор подхватывает их сам.

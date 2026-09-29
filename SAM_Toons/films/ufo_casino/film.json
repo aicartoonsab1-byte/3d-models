@@ -9,14 +9,20 @@
       "type": "person",
       "h": 11,
       "hair": "tuft",
-      "voice": "man_young"
+      "voice": "man_young",
+      "red": [
+        "scarf"
+      ]
     },
     "tolik": {
       "name": "Толик",
       "type": "person",
       "h": 11,
       "hair": "cap",
-      "voice": "man"
+      "voice": "man",
+      "red": [
+        "hat"
+      ]
     },
     "ufo": {
       "name": "Пришельцы",
@@ -34,6 +40,9 @@
       "hair": "bun",
       "extra": [
         "dress"
+      ],
+      "red": [
+        "dress"
       ]
     },
     "p2": {
@@ -43,12 +52,18 @@
     "p3": {
       "type": "person",
       "h": 8.8,
-      "hair": "long"
+      "hair": "long",
+      "red": [
+        "bow"
+      ]
     },
     "p4": {
       "type": "person",
       "h": 9.0,
       "extra": [
+        "tie"
+      ],
+      "red": [
         "tie"
       ]
     },
@@ -60,13 +75,19 @@
     "p6": {
       "type": "person",
       "h": 8.5,
-      "hair": "curly"
+      "hair": "curly",
+      "red": [
+        "cheeks"
+      ]
     },
     "p7": {
       "type": "person",
       "h": 9.2,
       "extra": [
         "glasses"
+      ],
+      "red": [
+        "shirt"
       ]
     }
   },
@@ -509,7 +530,8 @@
       "set": {
         "ground": {
           "line": false,
-          "decor": 0
+          "decor": 0,
+          "grain": 0
         },
         "props": [
           {
@@ -519,7 +541,8 @@
             "y": 16,
             "s": 2.2,
             "text": "КОНЕЦ",
-            "outline": true
+            "outline": true,
+            "red": true
           }
         ]
       },
@@ -530,5 +553,9 @@
         }
       ]
     }
-  ]
+  ],
+  "style": {
+    "twos": true,
+    "boil": false
+  }
 }

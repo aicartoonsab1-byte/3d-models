@@ -20,7 +20,7 @@ def vocab() -> dict:
     poses_block = ch[ch.index("const POSES = {"): ch.index("function poseAt")]
     return {
         "poses": re.findall(r"^\s{4}(\w+): \(", poses_block, re.M),
-        "moods": arr("MOODS"), "emotes": arr("EMOTES"), "hair": arr("HAIR"), "extra": arr("EXTRA"),
+        "moods": arr("MOODS"), "emotes": arr("EMOTES"), "hair": arr("HAIR"), "extra": arr("EXTRA"), "red": arr("RED_PARTS"),
         "props": re.findall(r'def\("(\w+)"', pr), "sfx": sorted(SFX), "faces": ["front", "left", "right"],
         "ease": ["linear", "inout", "in", "out", "back", "bounce"],
     }
@@ -34,6 +34,9 @@ def check(film: dict) -> tuple[list[str], list[str]]:
     for cid, c in cast.items():
         if c.get("hair") and c["hair"] not in V["hair"]:
             err.append(f"cast.{cid}: причёска «{c['hair']}» — есть только {V['hair']}")
+        for e in c.get("red", []):
+            if e not in V["red"]:
+                err.append(f"cast.{cid}: красной может быть только часть из {V['red']}, а не «{e}»")
         for e in c.get("extra", []):
             if e not in V["extra"]:
                 err.append(f"cast.{cid}: аксессуар «{e}» — есть только {V['extra']}")

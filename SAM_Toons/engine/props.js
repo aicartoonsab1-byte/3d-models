@@ -60,7 +60,7 @@
     // карты и кубики за вывеской
     if (decor === "casino") {
       const die = (x, y, a, n, sd) => { c.save(); c.translate(x, y); c.rotate(a); const d = 2.2 * p.s; P.rect(-d / 2, -d / 2, d, d, sd); const pip = [[0, 0], [-0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [0.5, -0.5], [-0.5, 0], [0.5, 0]]; const sets = { 1: [0], 3: [0, 1, 2], 4: [1, 2, 3, 4], 5: [0, 1, 2, 3, 4], 6: [1, 2, 3, 4, 5, 6] }; for (const i of sets[n]) P.dot(pip[i][0] * d * 0.5, pip[i][1] * d * 0.5, d * 0.08); c.restore(); };
-      const card = (x, y, a, suit, sd) => { c.save(); c.translate(x, y); c.rotate(a); const cw = 2.2 * p.s, ch = 3 * p.s; P.rect(-cw / 2, -ch / 2, cw, ch, sd); P.text(suit, 0, 0.1 * p.s, 1.6 * p.s); P.text("A", -cw * 0.3, -ch * 0.33, 0.7 * p.s); c.restore(); };
+      const card = (x, y, a, suit, sd) => { c.save(); c.translate(x, y); c.rotate(a); const cw = 2.2 * p.s, ch = 3 * p.s; P.rect(-cw / 2, -ch / 2, cw, ch, sd); (suit === "♦" || suit === "♥" ? (f) => P.red(f) : (f) => f())(() => P.text(suit, 0, 0.1 * p.s, 1.6 * p.s)); P.text("A", -cw * 0.3, -ch * 0.33, 0.7 * p.s); c.restore(); };
       die(-w * 0.34, -h * 1.26, -0.25, 5, seed + 20); card(-w * 0.24, -h * 1.34, 0.12, "♠", seed + 21);
       card(w * 0.27, -h * 1.3, -0.1, "♣", seed + 22); card(w * 0.35, -h * 1.26, 0.3, "♦", seed + 23); die(w * 0.46, -h * 1.1, 0.12, 4, seed + 24);
     }
@@ -69,7 +69,7 @@
     // вывеска
     const sw = w * 0.62, sh = h * 0.38, sy = -h * 1.22;
     P.rect(-sw / 2 - 0.35, sy - 0.35, sw + 0.7, sh + 0.7, seed + 2); P.rect(-sw / 2, sy, sw, sh, seed + 3);
-    if (p.sign) P.text(p.sign, 0, sy + sh * 0.52, sh * 0.72, { outline: true, lw: 1.1 });
+    if (p.sign) P.text(p.sign, 0, sy + sh * 0.52, sh * 0.72, { outline: true, lw: 1.1, fill: p.signRed === false ? SAM.PAPER : SAM.RED });
     // боковые панели с волнами
     for (const sx of [-1, 1]) {
       const px = sx < 0 ? -w / 2 : w / 2 - w * 0.12;
@@ -82,7 +82,7 @@
     if (decor === "casino") for (let i = 0; i < 3; i++) {
       const mx = wx + ww * (0.2 + i * 0.3), mw = ww * 0.2, top = wy + wh * 0.28;
       P.rect(mx - mw / 2, top, mw, wh * 0.72 - 0.4, seed + 40 + i); P.rect(mx - mw * 0.35, top + wh * 0.12, mw * 0.7, wh * 0.18, seed + 50 + i, { lw: 0.7 });
-      const k = Math.floor(t * 6 + i) % 3; for (let j = 0; j < 3; j++) P.dot(mx - mw * 0.22 + j * mw * 0.22, top + wh * 0.21 + (j === k ? -0.1 : 0), 0.13);
+      const k = Math.floor(t * 6 + i) % 3; for (let j = 0; j < 3; j++) P.dot(mx - mw * 0.22 + j * mw * 0.22, top + wh * 0.21 + (j === k ? -0.1 : 0), 0.13, 0.13, j === 1 ? SAM.RED : SAM.INK);
       P.c.beginPath(); P.c.arc(mx, top - wh * 0.02, mw * 0.3, Math.PI, 0); P.c.lineWidth = P.lw * 0.8; P.c.stroke();
     }
     const dx = w * 0.12, dw = w * 0.22, dh = h * 0.5;
@@ -100,7 +100,7 @@
     const r = SAM.rng(p.seed + 7);
     for (let i = 0; i < 14; i++) {
       const u = r() - 0.5, v = ((r() + t * 0.35) % 1), yy = top + (H - top) * (1 - v), half = (w0 + (w1 - w0) * (yy - top) / (H - top)) / 2;
-      P.line(u * half * 1.6, yy, u * half * 1.6, yy + 0.7, p.seed + 70 + i, 0.6);
+      P.red(() => P.line(u * half * 1.6, yy, u * half * 1.6, yy + 0.7, p.seed + 70 + i, 0.6));
     }
     c.restore();
   };
@@ -128,12 +128,23 @@
     P.shape(P.ellipsePts(0, 0.2 * s, 5 * s, 1.1 * s, 26, seed + 51), { seed: seed + 51, step: 99 });
     P.shape(P.ellipsePts(0, -0.4 * s, 7.2 * s, 1.25 * s, 30, seed + 52), { seed: seed + 52, step: 99 });
     P.poly(Array.from({ length: 13 }, (_, i) => { const a = Math.PI * i / 12; return [Math.cos(a) * 7.2 * s * 0.98, -0.4 * s + Math.sin(a) * 1.25 * s * 0.25]; }), seed + 53, 0.8);
-    for (let i = 0; i < 7; i++) { const a = Math.PI * (0.15 + i * 0.7 / 6), on = (Math.floor(t * 4) + i) % 3 === 0; const lx = Math.cos(a) * 6 * s, ly = -0.4 * s + Math.sin(a) * 0.95 * s; if (on) P.dot(lx, ly, 0.22 * s); else { c.beginPath(); c.arc(lx, ly, 0.22 * s, 0, 7); c.lineWidth = P.lw * 0.8; c.stroke(); } }
+    for (let i = 0; i < 7; i++) { const a = Math.PI * (0.15 + i * 0.7 / 6), on = (Math.floor(t * 4) + i) % 3 === 0; const lx = Math.cos(a) * 6 * s, ly = -0.4 * s + Math.sin(a) * 0.95 * s; if (on) P.dot(lx, ly, 0.22 * s, 0.22 * s, SAM.RED); else { c.beginPath(); c.arc(lx, ly, 0.22 * s, 0, 7); c.lineWidth = P.lw * 0.8; c.stroke(); } }
     c.restore();
   }, ufoBeam);
 
+  // флажок на древке (как в референсе), полосы красные; hold — держит персонаж: древко наклонено
+  def("flag", "front", (P, p, t) => {
+    const s = p.s, a = (p.tilt ?? 12) * Math.PI / 180, L = 6 * s, top = [Math.sin(a) * L, -Math.cos(a) * L];
+    P.line(0, 0, top[0], top[1], p.seed);
+    const w = 3 * s, h = 1.5 * s, wave = Math.sin(t * 5) * 0.15 * s, x0 = top[0], y0 = top[1];
+    const pts = [[x0, y0], [x0 - w, y0 + wave], [x0 - w + 0.6 * s, y0 + h / 2 + wave], [x0 - w, y0 + h + wave], [x0, y0 + h]];
+    P.shape(pts, { seed: p.seed + 1 });
+    for (const k of [0.3, 0.6]) P.red(() => P.shape([[x0 - w * k, y0 + wave * k], [x0 - w * (k + 0.15), y0 + wave * (k + 0.15)], [x0 - w * (k + 0.15), y0 + h + wave * (k + 0.15)], [x0 - w * k, y0 + h + wave * k]], { seed: p.seed + 2 + k * 10, fill: SAM.RED, lw: 0.01 }));
+    P.shape(pts, { seed: p.seed + 1, fill: false });
+  });
+
   // надпись в кадре (титры, таблички)
-  def("text", "front", (P, p) => { P.text(p.text || "", 0, 0, 3 * p.s, { outline: !!p.outline }); });
+  def("text", "front", (P, p) => { const f = () => P.text(p.text || "", 0, 0, 3 * p.s, { outline: !!p.outline, fill: p.red && p.outline ? SAM.RED : SAM.PAPER }); p.red && !p.outline ? P.red(f) : f(); });
   // табличка на столбе
   def("sign", "back", (P, p) => {
     const s = p.s; P.line(0, 0, 0, -4 * s, p.seed); P.rect(-3 * s, -6.5 * s, 6 * s, 2.6 * s, p.seed + 1);

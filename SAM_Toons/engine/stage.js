@@ -30,26 +30,32 @@
     ground(S) {
       if (this._ground[S.id]) return this._ground[S.id];
       const g = S.set.ground || {}, r = SAM.rng(g.seed ?? SAM.hash(S.id)), items = [];
-      const n = g.decor ?? 40;
+      const n = g.decor ?? 12, grain = [];
+      for (let i = 0; i < (g.grain ?? 420); i++) { const a = r() * Math.PI, l = 0.1 + r() * 0.22; grain.push([-60 + r() * 220, 0.4 + Math.pow(r(), 0.8) * 30, Math.cos(a) * l, Math.sin(a) * l]); }
       for (let i = 0; i < n; i++) {
         const x = -40 + r() * 180, z = 0.3 + Math.pow(r(), 1.3) * 16, k = r();
         items.push({ x, z, kind: k < 0.45 ? "grass" : k < 0.8 ? "dash" : "pebble", s: 0.7 + r() * 0.6, seed: Math.floor(r() * 1e6) });
       }
-      return (this._ground[S.id] = { line: g.line !== false, items });
+      return (this._ground[S.id] = { line: g.line !== false, items, grain });
     }
 
-    draw(t) {
-      const c = this.c, W = this.cv.width, H = this.cv.height, P = this.P;
-      const S = this.sceneAt(t); if (!S) return;
-      P.boil = Math.floor(t * 8) % 3;
+    // tc — «настоящее» время (камера движется плавно, каждый кадр); t — время рисунков:
+    // как в рисованной анимации, персонажи и предметы меняются через кадр («на двойках», 12,5 рисунка в секунду),
+    // а в паузах линии стоят неподвижно (дрожание линий включается film.style.boil).
+    draw(tc) {
+      const c = this.c, W = this.cv.width, H = this.cv.height, P = this.P, style = this.film.style || {};
+      const S = this.sceneAt(tc); if (!S) return;
+      const fps = this.tl.fps, step = style.twos === false ? 1 : 2;
+      const t = Math.max(S.t0, Math.floor(tc * fps / step + 1e-6) * step / fps);
+      P.boil = style.boil ? Math.floor(t * 8) % 3 : 0;
       c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = SAM.PAPER; c.fillRect(0, 0, W, H);
 
       // камера (+ тряска)
-      let cx = numAt(S.cam.x, t), cy = numAt(S.cam.y, t); const zoom = numAt(S.cam.zoom, t);
+      let cx = numAt(S.cam.x, tc), cy = numAt(S.cam.y, tc); const zoom = numAt(S.cam.zoom, tc);
       for (const sh of S.shakes) if (t >= sh.t0 && t < sh.t1) { const k = 1 - (t - sh.t0) / (sh.t1 - sh.t0); cx += Math.sin(t * 61) * sh.amp * k; cy += Math.cos(t * 47) * sh.amp * k; }
       const k = W / 100 * zoom;
       c.setTransform(k, 0, 0, k, W / 2 - cx * k, H / 2 + cy * k);
-      P.lw = (this.film.line || 0.16) * Math.pow(zoom, -0.35);   // при наезде линия толстеет не так сильно, как всё остальное
+      P.lw = (this.film.line || 0.13) * Math.pow(zoom, -0.35);   // при наезде линия толстеет не так сильно, как всё остальное
       c.lineCap = "round"; c.lineJoin = "round";
 
       // земля
@@ -62,6 +68,10 @@
         else { const r = SAM.rng(it.seed); P.line(0, 0, 0.6 + r() * 0.5, (r() - 0.5) * 0.1, it.seed, 0.8); }
         c.restore();
       }
+      // «зерно» бумаги: неподвижные крошечные штрихи по земле, как в референсе
+      c.beginPath();
+      for (const [x, z, dx, dy] of g.grain) { c.moveTo(x, z); c.lineTo(x + dx, z + dy); }
+      c.strokeStyle = SAM.INK; c.lineWidth = P.lw * 0.75; c.stroke();
 
       // предметы и персонажи в порядке глубины
       const props = Object.values(S.props).filter((pr) => discAt(pr.visible, t).v !== false).map((pr) => {
