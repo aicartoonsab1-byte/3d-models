@@ -42,12 +42,16 @@
     hug: () => ({ armL: [62, -70], armR: [70, -40], tilt: 7, headTilt: 6 }),
     hug_knees: () => ({ armL: [30, -95], armR: [30, -95], legL: [45, -110], legR: [45, -110], hip: 0.2, legK: 0.9, headTilt: 10 }),
     hold: () => ({ armR: [28, -55], armL: [8, 0] }),
+    vlog: (t) => ({ armL: [118 + osc(t, 0.4, 3), -62], armR: [14, 0], headTilt: -4 }),
+    examine: (t) => ({ armR: [48, -35], armL: [16, -20], tilt: 12, headTilt: 10 + osc(t, 0.5, 3) }),
+    recoil: (t) => ({ armL: [70, -40], armR: [70, -40], tilt: -9, headTilt: -8, legL: [10, 0], legR: [2, 0] }),
+    look_arm: (t) => ({ armR: [45, -150], armL: [10, 0], headTilt: 12 }),
   };
 
   function poseAt(name, t, ph, face) {
     const f = POSES[name] || POSES.stand, p = { ...BASE, ...f(t, ph) };
     // «показать» и «помахать» — той рукой, куда смотрит персонаж
-    if (face < 0 && ["point", "wave", "give", "hug", "hold"].includes(name)) { const a = p.armL; p.armL = p.armR; p.armR = a; }
+    if (face < 0 && ["point", "wave", "give", "hug", "hold", "examine"].includes(name)) { const a = p.armL; p.armL = p.armR; p.armR = a; }
     return p;
   }
   function mix(a, b, k) {
@@ -217,6 +221,8 @@
   SAM.EXTRA = ["glasses", "mustache", "bow", "tie", "dress"];
   SAM.RED_PARTS = ["shirt", "pants", "scarf", "cheeks", "hair", "hat", "bow", "tie", "dress", "eye", "antennae"];
   SAM.POSES = POSES;
+  // поза с плавным переходом — её берут и другие рисовальщики (человек в стиле dusk)
+  SAM.poseState = (st) => { const pa = poseAt(st.pose, st.t, st.walkPh, st.face); if (!st.posePrev || st.poseK >= 1) return pa; return mix(poseAt(st.posePrev, st.t, st.walkPh, st.face), pa, SAM.ease.inout(st.poseK)); };
   SAM.drawPerson = drawPerson;
   SAM.drawEmote = emote;
 })();

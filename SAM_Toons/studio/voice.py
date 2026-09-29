@@ -37,6 +37,43 @@ COSY_MOOD = {  # настроение → инструкция CosyVoice3 (из 
 }
 
 
+def applio_cfg() -> dict | None:
+    """Applio (RVC, замена голоса) на этом ПК: studio/engines.local.json → {"applio": {"dir": "C:/Applio"}}."""
+    if not ENGINES_CFG.exists():
+        return None
+    a = json.loads(ENGINES_CFG.read_text(encoding="utf-8")).get("applio")
+    if not a:
+        return None
+    d = Path(a["dir"])
+    a.setdefault("python", str(next((p for p in (d / "env/python.exe", d / "env/bin/python") if p.exists()), d / "env/python.exe")))
+    return a if a.get("mock") or (Path(a["python"]).exists() and (d / "core.py").exists()) else None
+
+
+def rvc_model(name: str) -> tuple[Path, Path | None]:
+    pth = MODELS / "rvc" / f"{name}.pth"
+    idx = MODELS / "rvc" / f"{name}.index"
+    return pth, (idx if idx.exists() else None)
+
+
+def rvc_batch(model: str, opts: dict, files: list[Path], out_dir: Path) -> None:
+    """Перекрасить пачку wav в голос RVC-модели через Applio (модель грузится один раз на пачку)."""
+    a = applio_cfg(); pth, idx = rvc_model(model)
+    inp = out_dir / "in"; outp = out_dir / "out"; inp.mkdir(parents=True, exist_ok=True); outp.mkdir(exist_ok=True)
+    for f in files:
+        shutil.copy(f, inp / f.name)
+    say(f"  Applio: {len(files)} реплик → голос «{model}»…")
+    if a.get("mock"):
+        for f in files:
+            shutil.copy(f, outp / f"{f.stem}_output.wav")
+        return
+    cmd = [a["python"], "core.py", "batch-infer", "--input-folder", str(inp), "--output-folder", str(outp),
+           "--pth-path", str(pth), "--index-path", str(idx or ""), "--pitch", str(int(opts.get("pitch", 0))),
+           "--index-rate", str(opts.get("index_rate", 0.5)), "--protect", str(opts.get("protect", 0.33)),
+           "--f0-method", opts.get("f0", "rmvpe"), "--export-format", "WAV"]
+    if subprocess.run(cmd, cwd=a["dir"]).returncode:
+        raise SystemExit("Applio завершился с ошибкой (см. вывод выше)")
+
+
 def cosy_cfg() -> dict | None:
     if not ENGINES_CFG.exists():
         return None
@@ -221,8 +258,13 @@ def voice_film(d: Path, film: dict, force: bool = False) -> dict:
             tempo *= liv.get("tempo", 1.0)
             if not can_liven:
                 pitch += liv.get("pitch", 0)
-        key = hashlib.sha1(json.dumps([text, eng, pitch, tempo, fx, instruct, liv if can_liven else None], ensure_ascii=False).encode()).hexdigest()[:14]
-        plan.append({"l": l, "eng": eng, "pitch": pitch, "tempo": tempo, "fx": fx, "text": text, "instruct": instruct, "liv": liv if can_liven else None, "wav": ldir / f"{key}.wav"})
+        # замена голоса через Applio (RVC): cast.<id>.rvc или пресет.rvc = {"model": "<имя .pth в models/rvc>", "pitch": 0, ...}
+        rvc = c.get("rvc", pr.get("rvc"))
+        if rvc and not (applio_cfg() and (applio_cfg().get("mock") or rvc_model(rvc["model"])[0].exists())):
+            say(f"⚠ {l['id']}: голос RVC «{rvc['model']}» недоступен (нет Applio или models/rvc/{rvc['model']}.pth) — без замены голоса")
+            rvc = None
+        key = hashlib.sha1(json.dumps([text, eng, pitch, tempo, fx, instruct, liv if can_liven else None, rvc], ensure_ascii=False).encode()).hexdigest()[:14]
+        plan.append({"l": l, "eng": eng, "pitch": pitch, "tempo": tempo, "fx": fx, "text": text, "instruct": instruct, "liv": liv if can_liven else None, "rvc": rvc, "wav": ldir / f"{key}.wav"})
 
     todo = [p for p in plan if force or not p["wav"].exists()]
     with tempfile.TemporaryDirectory() as tmp:
@@ -246,9 +288,24 @@ def voice_film(d: Path, film: dict, force: bool = False) -> dict:
                 if lv.liven(p["raw"], alive, p["text"], p["liv"].get("range", 1.0), p["liv"].get("pitch", 0) + pitch):
                     p["raw"], pitch = alive, 0          # высоту уже сдвинул Praat (чище, чем asetrate)
             post(p["raw"], cooked, pitch, 1.0 if p["eng"]["engine"] == "cosyvoice" else p["tempo"], p["fx"])
-            write_wav(p["wav"], trim_and_level(read_wav(cooked)))
+            p["cooked"] = cooked
             e = p["eng"]
             say(f"  [{i + 1}/{len(todo)}] {p['l']['id']} {p['l']['who']} ({e['engine']}:{e.get('ref') or e.get('model') or e.get('voice')}): {p['text']}")
+        # замена голоса RVC пачками — по одной на модель
+        by_model: dict[str, list[dict]] = {}
+        for p in todo:
+            if p["rvc"]:
+                by_model.setdefault(json.dumps(p["rvc"], sort_keys=True), []).append(p)
+        for j, (mk, group) in enumerate(by_model.items()):
+            opts = json.loads(mk); work = tmp / f"rvc{j}"
+            files = []
+            for k, p in enumerate(group):
+                f = tmp / f"line{j}_{k}.wav"; shutil.copy(p["cooked"], f); files.append(f)
+            rvc_batch(opts["model"], opts, files, work)
+            for f, p in zip(files, group):
+                p["cooked"] = work / "out" / f"{f.stem}_output.wav"
+        for p in todo:
+            write_wav(p["wav"], trim_and_level(read_wav(p["cooked"])))
 
     used = set()
     for p in plan:

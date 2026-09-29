@@ -11,5 +11,6 @@
 - Перед коммитом: `python studio/sam.py check <фильм>` и `python studio/sam.py stills <фильм>`, посмотреть `build/storyboard.png`.
 - Озвучка: CosyVoice3 (главный движок, своё окружение, `docs/COSYVOICE.md`) → Piper → RHVoice → eSpeak. Движки подключаются в `studio/voice.py`, пресеты — `studio/voices.json`.
 - В облачной сессии Chromium берётся из /opt/pw-browsers сам. HuggingFace и ModelScope недоступны, но GitHub открыт: `python studio/setup_voices.py` берёт голоса Piper из релизов sherpa-onnx; там же есть русская модель распознавания речи (sherpa-onnx-small-zipformer-ru) — ею удобно проверять разборчивость озвучки, раз слушать нельзя. CosyVoice здесь только в режиме `"mock": true`.
+- Замена голоса — Applio/RVC (`docs/APPLIO.md`, `studio/voice.py: rvc_batch`), `cast.<id>.rvc`. Стиль «dusk» (сумеречная иллюстрация, человек, болотные существа) — `engine/dusk.js`.
 - «Живость» TTS — `studio/lively.py` (Praat/parselmouth): темп, высота, размах интонации; настройки в `style.voice`/`style.narrator`.
 - Тексты на русском, реплики до 140 символов.

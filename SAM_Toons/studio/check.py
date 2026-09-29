@@ -15,7 +15,7 @@ MAX_LINE = 140
 
 def vocab() -> dict:
     ch = (ROOT / "engine/character.js").read_text(encoding="utf-8")
-    pr = (ROOT / "engine/props.js").read_text(encoding="utf-8")
+    pr = (ROOT / "engine/props.js").read_text(encoding="utf-8") + (ROOT / "engine/dusk.js").read_text(encoding="utf-8")
     arr = lambda name: json.loads(re.search(rf"SAM\.{name} = (\[.*?\]);", ch).group(1))  # noqa: E731
     poses_block = ch[ch.index("const POSES = {"): ch.index("function poseAt")]
     return {

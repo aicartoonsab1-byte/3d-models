@@ -41,7 +41,7 @@
         if (!cast[id]) warnings.push(`${S.id}: персонаж «${id}» не описан в cast`);
         S.actors[id] = { id, cast: cast[id] || {}, x: num(a.x ?? 50), y: num(a.y ?? 0), z: num(a.z ?? 0), s: a.s || 1,
           pose: disc(a.pose || "stand"), mood: disc(a.mood || "neutral"), face: disc(a.face || "front"),
-          visible: disc(a.visible !== false), emotes: [], seed: SAM.hash(id) % 1000 };
+          visible: disc(a.visible !== false), emotes: [], num: {}, seed: SAM.hash(id) % 1000 };
       }
       (S.set.props || []).forEach((p, i) => {
         const id = p.id || `${p.type}${i + 1}`, base = { x: 50, y: 0, z: 0, s: 1, ...p, seed: p.seed ?? (SAM.hash(id + S.id) % 997) };
@@ -85,6 +85,8 @@
             if (a.face) setAt(ac.face, t0, a.face);
             if (a.visible != null) setAt(ac.visible, t0, a.visible);
             if (a.emote) ac.emotes.push({ kind: a.emote, t0, t1: t0 + (a.dur || 1.6) });
+            // set: {swell: 1, claw: 1} — плавное превращение частей тела (у человека в стиле dusk)
+            if (a.set) for (const [k, val] of Object.entries(a.set)) tween(ac.num[k] || (ac.num[k] = num(0)), t0, a.dur ? t1 : t0 + 0.3, val, a.ease);
             const mv = a.move || (a.by && Object.fromEntries(Object.entries(a.by).map(([k, d]) => [k, numAt(ac[k], t0) + d])));
             if (mv) {
               if (mv.x != null && !a.face && !a.keepFace) { const dx = mv.x - numAt(ac.x, t0); if (Math.abs(dx) > 0.5) setAt(ac.face, t0, dx < 0 ? "left" : "right"); }

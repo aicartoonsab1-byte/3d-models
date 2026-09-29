@@ -32,6 +32,11 @@
 
 ### `style` — манера анимации
 
+- `look`: `"ink"` (по умолчанию) — чёрная линия на белом с красным акцентом, персонажи-«фасолины»;
+  `"dusk"` — сумеречная иллюстрация: бирюзовое небо с лунами, туман, болото, чернильный контур, штриховка, зерно,
+  тёплый свет (`set.light: {x, y, r}` — доли кадра), персонаж `type: "human"` (пальто, рюкзак, камера `hold: "camera"`).
+  Небо сцены: `set.sky: {top, bottom, moons: [{x, y, r}], birds}`.
+
 - `twos: true` (по умолчанию) — персонажи и предметы меняют рисунок через кадр (12,5 раза в секунду), как в рисованной
   анимации; камера при этом едет плавно, каждый кадр.
 - `boil: false` (по умолчанию) — в паузах линии стоят неподвижно. `true` — линии «кипят» (дрожат) всё время.
@@ -49,7 +54,7 @@
 
 | поле | значения |
 |---|---|
-| `type` | `person` · `alien` (большая голова, антенны, `eyes: 1`) · `prop` (говорящий предмет, например НЛО) · `voice` (только голос, рассказчик) |
+| `type` | `person` · `human` (стиль dusk: реалистичнее, пальто; `hold: "camera"`) · `alien` (большая голова, антенны, `eyes: 1`) · `prop` (говорящий предмет, например НЛО) · `voice` (только голос, рассказчик) |
 | `hair` | none, bun, tuft, spiky, curly, long, cap, hat, bald |
 | `extra` | glasses, mustache, bow, tie, dress |
 | `red` | что у персонажа красное: shirt, pants, scarf, cheeks, hair, hat, bow, tie, dress (у пришельца ещё eye, antennae) |
@@ -107,6 +112,7 @@
 | перемещение | `{ "who": "tolik", "move": { "x": 41, "y": 0, "z": 4 }, "dur": 3 }` — при ходьбе по x включается шаг и поворот |
 | сдвиг | `{ "who": "tolik", "by": { "x": -5 } }` |
 | исчезнуть/появиться | `{ "who": "gena", "visible": false }` |
+| превращение (human) | `{ "who": "boris", "set": { "swell": 1 }, "dur": 2 }` — рука распухает; `{ "set": { "claw": 1 } }` — становится клешнёй богомола |
 | предмет | `{ "prop": "ufo", "move": { "x": 38, "y": 34 }, "dur": 2, "ease": "out" }`, `{ "prop": "ufo", "set": { "beam": 1 }, "dur": 0.5 }` |
 | камера | `{ "camera": { "on": "gena", "zoom": 2 }, "dur": 0.5 }` · `{ "camera": { "x": 50, "y": 17, "zoom": 1 } }` · `{ "camera": "shake", "dur": 1, "amp": 0.5 }` |
 | звук | `{ "sfx": "whoosh" }` |
@@ -116,9 +122,11 @@
 
 ## Словарь
 
-- **Позы**: stand, walk, run, pray, kneel, sit, lie, arms_up, wave, point, shrug, hips, think, facepalm, cross, scared, float, jump, dance, laugh, slouch, reach, give (протянуть руку), hug (обнять), hug_knees (сидеть, обняв колени), hold (держать у груди)
+- **Позы**: stand, walk, run, pray, kneel, sit, lie, arms_up, wave, point, shrug, hips, think, facepalm, cross, scared, float, jump, dance, laugh, slouch, reach, give (протянуть руку), hug (обнять), hug_knees (сидеть, обняв колени), hold (держать у груди), vlog (снимает себя на камеру), examine (наклонился рассмотреть), recoil (отпрянул), look_arm (смотрит на свою руку)
 - **Настроения**: neutral, happy, sad, angry, scared, surprised, pray, sly, dizzy, tired, love
 - **Значки**: `?` `!` `?!` `...` shock, sweat, heart, anger, idea, thought, zzz, sparkle, music
+- **Стиль dusk — растения**: swamp_tree (`glow`), glow_plant (`n`), reeds (`n`), shroom (`h`), pool (`w`, `d`), fern
+- **Стиль dusk — существа** (`flip: -1` — смотрит влево, `run: 0/1` — бежит): capykanga (капибара-кенгуру; `turn: 1` — поворачивает морду, вторая половина — богомол), mantis_trunk (богомол с хоботом), mantis_deer (богомолы с оленьими рогами, `n` — стадо), mantis_small (`fly: 0/1`)
 - **Предметы**: cloud, tree, bush, grass, rock, sun, house, building (`w`, `h`, `sign`, `decor: casino|none`), ufo (`aliens`, `beam` 0…1), flag (`tilt`, красные полосы), text (`text`, `outline`, `red`), sign (`text`)
 - **Звуки**: whoosh, pop, ding, ufo, beam, thud, boing, beep, fail, pray
 

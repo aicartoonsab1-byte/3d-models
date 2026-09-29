@@ -48,6 +48,7 @@
       const fps = this.tl.fps, step = style.twos === false ? 1 : 2;
       const t = Math.max(S.t0, Math.floor(tc * fps / step + 1e-6) * step / fps);
       P.boil = style.boil ? Math.floor(t * 8) % 3 : 0;
+      const dusk = style.look === "dusk" && SAM.DUSK;
       c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = SAM.PAPER; c.fillRect(0, 0, W, H);
 
       // камера (+ тряска)
@@ -58,21 +59,24 @@
       P.lw = (this.film.line || 0.13) * Math.pow(zoom, -0.35);   // при наезде линия толстеет не так сильно, как всё остальное
       c.lineCap = "round"; c.lineJoin = "round";
 
+      if (dusk) SAM.DUSK.background(P, S, { x: cx, y: cy, zoom }, W, H, t);
+      else {
       // земля
-      const g = this.ground(S);
-      if (g.line) P.line(cx - 100 / zoom, 0, cx + 100 / zoom, 0, 5, 1);
-      for (const it of g.items) {
-        c.save(); c.translate(it.x, it.z);
-        if (it.kind === "grass") SAM.PROPS.grass.draw(P, { s: it.s, seed: it.seed }, t);
-        else if (it.kind === "pebble") SAM.PROPS.rock.draw(P, { s: it.s * 0.35, seed: it.seed });
-        else { const r = SAM.rng(it.seed); P.line(0, 0, 0.6 + r() * 0.5, (r() - 0.5) * 0.1, it.seed, 0.8); }
-        c.restore();
-      }
-      // «зерно» бумаги: неподвижные крошечные штрихи по земле, как в референсе
-      c.beginPath();
-      for (const [x, z, dx, dy] of g.grain) { c.moveTo(x, z); c.lineTo(x + dx, z + dy); }
-      c.strokeStyle = SAM.INK; c.lineWidth = P.lw * 0.75; c.stroke();
+        const g = this.ground(S);
+        if (g.line) P.line(cx - 100 / zoom, 0, cx + 100 / zoom, 0, 5, 1);
+        for (const it of g.items) {
+          c.save(); c.translate(it.x, it.z);
+          if (it.kind === "grass") SAM.PROPS.grass.draw(P, { s: it.s, seed: it.seed }, t);
+          else if (it.kind === "pebble") SAM.PROPS.rock.draw(P, { s: it.s * 0.35, seed: it.seed });
+          else { const r = SAM.rng(it.seed); P.line(0, 0, 0.6 + r() * 0.5, (r() - 0.5) * 0.1, it.seed, 0.8); }
+          c.restore();
+        }
+        // «зерно» бумаги: неподвижные крошечные штрихи по земле, как в референсе
+        c.beginPath();
+        for (const [x, z, dx, dy] of g.grain) { c.moveTo(x, z); c.lineTo(x + dx, z + dy); }
+        c.strokeStyle = SAM.INK; c.lineWidth = P.lw * 0.75; c.stroke();
 
+      }
       // предметы и персонажи в порядке глубины
       const props = Object.values(S.props).filter((pr) => discAt(pr.visible, t).v !== false).map((pr) => {
         const p = { ...pr.base }; for (const [key, tr] of Object.entries(pr.num)) p[key] = numAt(tr, t); for (const [key, tr] of Object.entries(pr.disc)) p[key] = discAt(tr, t).v;
@@ -93,7 +97,8 @@
 
       props.filter((it) => it.layer !== "back").sort((a, b) => a.p.z - b.p.z).forEach((it) => drawProp(it));
 
-      // экранный слой: субтитры, переходы
+      // экранный слой: зерно и свет (dusk), субтитры, переходы
+      if (dusk) SAM.DUSK.overlay(P, S, W, H, t);
       c.setTransform(1, 0, 0, 1, 0, 0);
       if (this.subtitles) this.drawSubtitle(S, t, W, H);
       const fadeIn = S.transition === "fade" ? 0.45 : 0, last = S === this.tl.scenes[this.tl.scenes.length - 1];
@@ -101,7 +106,7 @@
       if (fadeIn && t - S.t0 < fadeIn) alpha = 1 - (t - S.t0) / fadeIn;
       if (t < 0.4 && S.index === 0) alpha = Math.max(alpha, 1 - t / 0.4);
       if (last && S.t1 - t < 0.8) alpha = Math.max(alpha, 1 - (S.t1 - t) / 0.8);
-      if (alpha > 0) { c.fillStyle = `rgba(255,255,255,${Math.min(1, alpha)})`; c.fillRect(0, 0, W, H); }
+      if (alpha > 0) { c.fillStyle = dusk ? `rgba(12,18,26,${Math.min(1, alpha)})` : `rgba(255,255,255,${Math.min(1, alpha)})`; c.fillRect(0, 0, W, H); }
     }
 
     drawActor(S, a, t, z) {
@@ -123,7 +128,8 @@
         talk: this.talkLevel(S, a.id, t), blink: blinkPh < 0.12,
         emotes: a.emotes.filter((e) => t >= e.t0 && t < e.t1),
       };
-      SAM.drawPerson(this.P, st, cast);
+      st.morph = Object.fromEntries(Object.entries(a.num || {}).map(([k, tr]) => [k, numAt(tr, t)]));
+      (cast.type === "human" && SAM.drawHuman ? SAM.drawHuman : SAM.drawPerson)(this.P, st, cast);
     }
 
     drawSubtitle(S, t, W, H) {
@@ -135,8 +141,9 @@
       rows.push(row);
       rows.forEach((r, i) => {
         const y = H * 0.93 - (rows.length - 1 - i) * size * 1.2;
-        c.lineWidth = size * 0.22; c.strokeStyle = SAM.PAPER; c.lineJoin = "round"; c.strokeText(r, W / 2, y);
-        c.fillStyle = l.who === "narrator" ? "#444" : SAM.INK; c.fillText(r, W / 2, y);
+        const dk = (this.film.style || {}).look === "dusk";
+        c.lineWidth = size * 0.22; c.strokeStyle = dk ? "#101620" : SAM.PAPER; c.lineJoin = "round"; c.strokeText(r, W / 2, y);
+        c.fillStyle = dk ? (l.who === "narrator" ? "#f0d9a8" : "#f4f1e6") : l.who === "narrator" ? "#444" : SAM.INK; c.fillText(r, W / 2, y);
       });
     }
   }

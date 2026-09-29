@@ -1,0 +1,941 @@
+{
+ "title": "Болотная планета. Серия 1",
+ "logline": "Экзобиолог Борис ведёт видеоблог с болотной планеты, где всё живое превращается в богомолов. Скоро и он сам.",
+ "fps": 25,
+ "subtitles": true,
+ "style": {
+  "look": "dusk",
+  "twos": true,
+  "boil": false,
+  "pause": 0.15
+ },
+ "cast": {
+  "boris": {
+   "name": "Борис",
+   "type": "human",
+   "h": 14,
+   "hold": "camera",
+   "voice": "man_young"
+  },
+  "narrator": {
+   "name": "Рассказчик",
+   "type": "voice",
+   "voice": "narrator"
+  }
+ },
+ "scenes": [
+  {
+   "id": "s1",
+   "note": "Прибытие. Общий план болота, камера опускается с неба.",
+   "transition": "fade",
+   "camera": {
+    "x": 50,
+    "y": 32,
+    "zoom": 1
+   },
+   "set": {
+    "light": {
+     "x": 0.56,
+     "y": 0.62,
+     "r": 0.35
+    },
+    "props": [
+     {
+      "type": "swamp_tree",
+      "x": 8,
+      "s": 1.1
+     },
+     {
+      "type": "swamp_tree",
+      "x": 88,
+      "s": 0.95,
+      "glow": true
+     },
+     {
+      "type": "pool",
+      "x": 62,
+      "z": 4,
+      "w": 22,
+      "d": 3.2
+     },
+     {
+      "type": "reeds",
+      "x": 74,
+      "z": 3.5
+     },
+     {
+      "type": "reeds",
+      "x": 20,
+      "z": 5,
+      "s": 0.8
+     },
+     {
+      "id": "plant",
+      "type": "glow_plant",
+      "x": 56,
+      "z": 2.5,
+      "n": 5,
+      "s": 1.1
+     },
+     {
+      "type": "shroom",
+      "x": 28,
+      "z": 1,
+      "s": 0.8,
+      "h": 8
+     },
+     {
+      "type": "fern",
+      "x": 94,
+      "z": 6,
+      "s": 1.2
+     },
+     {
+      "type": "fern",
+      "x": 3,
+      "z": 7,
+      "s": 1.4
+     },
+     {
+      "type": "glow_plant",
+      "x": 84,
+      "z": 6,
+      "n": 3,
+      "s": 0.8
+     }
+    ]
+   },
+   "actors": {
+    "boris": {
+     "x": -8,
+     "z": 4,
+     "pose": "vlog",
+     "mood": "happy",
+     "face": "right"
+    }
+   },
+   "beats": [
+    {
+     "say": {
+      "who": "narrator",
+      "text": "Планета Тина-семь. Сплошное болото. И экзобиолог Борис, который очень хотел сюда попасть."
+     },
+     "do": [
+      {
+       "camera": {
+        "x": 50,
+        "y": 17,
+        "zoom": 1
+       },
+       "dur": 4,
+       "ease": "inout"
+      }
+     ]
+    },
+    {
+     "say": {
+      "who": "boris",
+      "text": "Всем привет, с вами Борис! Мы на болотной планете. Прикиньте, я тут первый человек!",
+      "mood": "happy"
+     },
+     "do": [
+      {
+       "who": "boris",
+       "move": {
+        "x": 40
+       },
+       "dur": 3.2
+      }
+     ]
+    },
+    {
+     "say": {
+      "who": "boris",
+      "text": "Так, что у нас тут. Светится. Пахнет... носками. Записываем.",
+      "mood": "sly"
+     },
+     "do": [
+      {
+       "who": "boris",
+       "move": {
+        "x": 50
+       },
+       "dur": 1.2
+      },
+      {
+       "who": "boris",
+       "pose": "examine",
+       "at": 1.2
+      },
+      {
+       "camera": {
+        "on": "boris",
+        "zoom": 1.7
+       },
+       "dur": 1.4,
+       "at": 0.8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s2",
+   "note": "Мимо проскакивает капибара-кенгуру и поворачивает морду: вторая половина — богомол.",
+   "camera": {
+    "x": 50,
+    "y": 17,
+    "zoom": 1
+   },
+   "set": {
+    "light": {
+     "x": 0.3,
+     "y": 0.6,
+     "r": 0.4
+    },
+    "props": [
+     {
+      "type": "swamp_tree",
+      "x": 92,
+      "s": 1.2
+     },
+     {
+      "type": "shroom",
+      "x": 12,
+      "z": 0.5,
+      "s": 1.1,
+      "h": 9
+     },
+     {
+      "type": "shroom",
+      "x": 18,
+      "z": 1.5,
+      "s": 0.6,
+      "h": 5
+     },
+     {
+      "type": "glow_plant",
+      "x": 30,
+      "z": 2,
+      "n": 4
+     },
+     {
+      "type": "reeds",
+      "x": 64,
+      "z": 1.2,
+      "n": 12
+     },
+     {
+      "type": "pool",
+      "x": 45,
+      "z": 6.5,
+      "w": 30,
+      "d": 3
+     },
+     {
+      "type": "fern",
+      "x": 80,
+      "z": 7,
+      "s": 1.3
+     },
+     {
+      "id": "capy",
+      "type": "capykanga",
+      "x": -20,
+      "z": 2,
+      "s": 1.2,
+      "run": 1,
+      "turn": 0
+     }
+    ]
+   },
+   "actors": {
+    "boris": {
+     "x": 34,
+     "z": 5,
+     "pose": "stand",
+     "mood": "neutral",
+     "face": "right"
+    }
+   },
+   "beats": [
+    {
+     "dur": 2.6,
+     "do": [
+      {
+       "sfx": "boing",
+       "at": 0.2
+      },
+      {
+       "sfx": "boing",
+       "at": 0.9
+      },
+      {
+       "sfx": "boing",
+       "at": 1.6
+      },
+      {
+       "prop": "capy",
+       "move": {
+        "x": 72
+       },
+       "dur": 2.4,
+       "ease": "linear"
+      },
+      {
+       "who": "boris",
+       "face": "left",
+       "at": 0
+      },
+      {
+       "who": "boris",
+       "face": "right",
+       "at": 1.2
+      },
+      {
+       "who": "boris",
+       "emote": "!",
+       "at": 0.6,
+       "dur": 1.6
+      },
+      {
+       "who": "boris",
+       "mood": "surprised",
+       "at": 0.5
+      }
+     ]
+    },
+    {
+     "say": {
+      "who": "boris",
+      "text": "О! Видели?! Капибара! Только... с ногами кенгуру?",
+      "mood": "surprised"
+     },
+     "do": [
+      {
+       "prop": "capy",
+       "set": {
+        "run": 0
+       },
+       "at": 0
+      },
+      {
+       "who": "boris",
+       "pose": "point"
+      }
+     ]
+    },
+    {
+     "dur": 1.6,
+     "do": [
+      {
+       "camera": {
+        "x": 76,
+        "y": 10,
+        "zoom": 2.4
+       },
+       "dur": 0.6
+      },
+      {
+       "prop": "capy",
+       "set": {
+        "turn": 1
+       },
+       "dur": 0.5,
+       "at": 0.7
+      },
+      {
+       "sfx": "pop",
+       "at": 0.9
+      }
+     ]
+    },
+    {
+     "say": {
+      "who": "boris",
+      "text": "А... а вторая половина — богомол.",
+      "mood": "scared"
+     },
+     "do": [
+      {
+       "camera": {
+        "on": "boris",
+        "zoom": 2
+       },
+       "dur": 0.4
+      },
+      {
+       "who": "boris",
+       "pose": "recoil"
+      },
+      {
+       "who": "boris",
+       "emote": "?!",
+       "dur": 2
+      }
+     ]
+    },
+    {
+     "dur": 1.6,
+     "do": [
+      {
+       "camera": {
+        "x": 50,
+        "y": 17,
+        "zoom": 1
+       },
+       "dur": 0.5
+      },
+      {
+       "prop": "capy",
+       "set": {
+        "turn": 0,
+        "run": 1
+       },
+       "at": 0.2
+      },
+      {
+       "prop": "capy",
+       "move": {
+        "x": 135
+       },
+       "dur": 1.3,
+       "at": 0.3,
+       "ease": "in"
+      },
+      {
+       "sfx": "boing",
+       "at": 0.4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s3",
+   "note": "Влог к зрителям; мимо бегут богомол с хоботом и стадо богомолов-оленей. Борис догадывается.",
+   "camera": {
+    "x": 45,
+    "y": 15,
+    "zoom": 1.5
+   },
+   "set": {
+    "light": {
+     "x": 0.7,
+     "y": 0.55,
+     "r": 0.4
+    },
+    "sky": {
+     "moons": [
+      {
+       "x": 20,
+       "y": 46,
+       "r": 3
+      },
+      {
+       "x": 30,
+       "y": 40,
+       "r": 1.2
+      }
+     ]
+    },
+    "props": [
+     {
+      "type": "swamp_tree",
+      "x": 10,
+      "s": 1.3
+     },
+     {
+      "type": "swamp_tree",
+      "x": 78,
+      "s": 1,
+      "glow": true
+     },
+     {
+      "type": "reeds",
+      "x": 30,
+      "z": 1
+     },
+     {
+      "type": "glow_plant",
+      "x": 60,
+      "z": 1.5,
+      "n": 5
+     },
+     {
+      "type": "fern",
+      "x": 90,
+      "z": 6,
+      "s": 1.3
+     },
+     {
+      "type": "shroom",
+      "x": 96,
+      "z": 1,
+      "s": 0.9
+     },
+     {
+      "id": "trunk",
+      "type": "mantis_trunk",
+      "x": 135,
+      "z": 2.5,
+      "s": 1.4,
+      "flip": -1,
+      "run": 1
+     },
+     {
+      "id": "herd",
+      "type": "mantis_deer",
+      "x": 150,
+      "z": 1.5,
+      "s": 1.25,
+      "flip": -1,
+      "n": 5,
+      "run": 1
+     }
+    ]
+   },
+   "actors": {
+    "boris": {
+     "x": 45,
+     "z": 5,
+     "pose": "vlog",
+     "mood": "sly",
+     "face": "front"
+    }
+   },
+   "beats": [
+    {
+     "say": {
+      "who": "boris",
+      "text": "Друзья, спокойно. Капибара. Кенгуру. Богомол. Всё нормально, я учёный.",
+      "mood": "sly"
+     }
+    },
+    {
+     "dur": 2.4,
+     "do": [
+      {
+       "camera": {
+        "x": 50,
+        "y": 17,
+        "zoom": 1
+       },
+       "dur": 0.4
+      },
+      {
+       "sfx": "whoosh",
+       "at": 0.3
+      },
+      {
+       "prop": "trunk",
+       "move": {
+        "x": -30
+       },
+       "dur": 2.2,
+       "ease": "linear"
+      },
+      {
+       "who": "boris",
+       "pose": "recoil",
+       "at": 0.6
+      },
+      {
+       "who": "boris",
+       "face": "right",
+       "at": 0.3
+      },
+      {
+       "who": "boris",
+       "face": "left",
+       "at": 1.3
+      },
+      {
+       "who": "boris",
+       "emote": "!",
+       "at": 0.6,
+       "dur": 1.4
+      },
+      {
+       "who": "boris",
+       "mood": "surprised",
+       "at": 0.6
+      }
+     ]
+    },
+    {
+     "say": {
+      "who": "boris",
+      "text": "Богомол... с хоботом?! Это уже перебор!",
+      "mood": "angry"
+     },
+     "do": [
+      {
+       "who": "boris",
+       "pose": "hips",
+       "face": "front"
+      }
+     ]
+    },
+    {
+     "dur": 3.8,
+     "do": [
+      {
+       "sfx": "thud",
+       "at": 0.1
+      },
+      {
+       "sfx": "thud",
+       "at": 0.7
+      },
+      {
+       "sfx": "thud",
+       "at": 1.3
+      },
+      {
+       "sfx": "thud",
+       "at": 1.9
+      },
+      {
+       "camera": "shake",
+       "dur": 3,
+       "amp": 0.35,
+       "at": 0.3
+      },
+      {
+       "prop": "herd",
+       "move": {
+        "x": -20
+       },
+       "dur": 3.6,
+       "ease": "linear"
+      },
+      {
+       "who": "boris",
+       "pose": "scared",
+       "mood": "scared",
+       "at": 0.3
+      },
+      {
+       "who": "boris",
+       "emote": "sweat",
+       "at": 1,
+       "dur": 2.5
+      }
+     ]
+    },
+    {
+     "say": {
+      "who": "boris",
+      "text": "Это... олени? Это же были олени! С рогами!",
+      "mood": "surprised"
+     },
+     "do": [
+      {
+       "who": "boris",
+       "pose": "point",
+       "face": "left"
+      }
+     ]
+    },
+    {
+     "say": {
+      "who": "boris",
+      "text": "Погодите-ка... Они все превращаются в богомолов! Все! Это же эпидемия!",
+      "mood": "scared"
+     },
+     "do": [
+      {
+       "who": "boris",
+       "pose": "think",
+       "face": "front"
+      },
+      {
+       "who": "boris",
+       "emote": "idea",
+       "at": 0.5,
+       "dur": 2
+      },
+      {
+       "camera": {
+        "on": "boris",
+        "zoom": 1.9
+       },
+       "dur": 1.5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "s4",
+   "note": "Укус. Рука распухает и становится клешнёй богомола. Концовка.",
+   "camera": {
+    "x": 45,
+    "y": 13,
+    "zoom": 1.8
+   },
+   "set": {
+    "light": {
+     "x": 0.5,
+     "y": 0.5,
+     "r": 0.45
+    },
+    "props": [
+     {
+      "type": "swamp_tree",
+      "x": 20,
+      "s": 1.2
+     },
+     {
+      "type": "glow_plant",
+      "x": 62,
+      "z": 1,
+      "n": 6,
+      "s": 1.2
+     },
+     {
+      "type": "reeds",
+      "x": 30,
+      "z": 2
+     },
+     {
+      "type": "fern",
+      "x": 70,
+      "z": 6,
+      "s": 1.2
+     },
+     {
+      "id": "bug",
+      "type": "mantis_small",
+      "x": 85,
+      "y": 18,
+      "z": 6,
+      "s": 0.35,
+      "flip": -1,
+      "fly": 1,
+      "run": 0
+     }
+    ]
+   },
+   "actors": {
+    "boris": {
+     "x": 45,
+     "z": 5,
+     "pose": "vlog",
+     "mood": "neutral",
+     "face": "front"
+    }
+   },
+   "beats": [
+    {
+     "say": {
+      "who": "boris",
+      "text": "Так, срочно выходим в эфир с выводами...",
+      "mood": "neutral"
+     },
+     "do": [
+      {
+       "prop": "bug",
+       "move": {
+        "x": 48.5,
+        "y": 8.2
+       },
+       "dur": 2.2,
+       "ease": "out"
+      },
+      {
+       "sfx": "beep",
+       "at": 1.8
+      }
+     ]
+    },
+    {
+     "say": {
+      "who": "boris",
+      "text": "Ай!",
+      "mood": "angry"
+     },
+     "dur": 1.4,
+     "do": [
+      {
+       "sfx": "pop"
+      },
+      {
+       "camera": "shake",
+       "dur": 0.4,
+       "amp": 0.3
+      },
+      {
+       "who": "boris",
+       "pose": "look_arm"
+      },
+      {
+       "who": "boris",
+       "emote": "anger",
+       "dur": 1.2
+      },
+      {
+       "prop": "bug",
+       "set": {
+        "fly": 0
+       },
+       "at": 0
+      }
+     ]
+    },
+    {
+     "dur": 1.2,
+     "do": [
+      {
+       "prop": "bug",
+       "set": {
+        "fly": 1
+       },
+       "at": 0
+      },
+      {
+       "prop": "bug",
+       "move": {
+        "x": 110,
+        "y": 30
+       },
+       "dur": 1.1,
+       "ease": "in"
+      },
+      {
+       "sfx": "whoosh",
+       "at": 0.1
+      }
+     ]
+    },
+    {
+     "say": {
+      "who": "boris",
+      "text": "Ой. Чешется. И... растёт.",
+      "mood": "scared"
+     },
+     "do": [
+      {
+       "who": "boris",
+       "set": {
+        "swell": 1
+       },
+       "dur": 2.2
+      },
+      {
+       "camera": {
+        "on": "boris",
+        "zoom": 2.3
+       },
+       "dur": 2
+      },
+      {
+       "sfx": "boing",
+       "at": 0.8
+      }
+     ]
+    },
+    {
+     "dur": 2.6,
+     "do": [
+      {
+       "who": "boris",
+       "set": {
+        "claw": 1
+       },
+       "dur": 2
+      },
+      {
+       "sfx": "beam",
+       "at": 0.2
+      },
+      {
+       "who": "boris",
+       "mood": "surprised",
+       "at": 0.3
+      },
+      {
+       "who": "boris",
+       "emote": "shock",
+       "at": 1.6,
+       "dur": 1.2
+      },
+      {
+       "camera": "shake",
+       "dur": 0.6,
+       "amp": 0.25,
+       "at": 1.8
+      }
+     ]
+    },
+    {
+     "say": {
+      "who": "boris",
+      "text": "Друзья... ставьте лайк. Пока у меня ещё есть пальцы.",
+      "mood": "sad"
+     },
+     "do": [
+      {
+       "who": "boris",
+       "pose": "vlog",
+       "at": 0.2
+      },
+      {
+       "camera": {
+        "x": 45,
+        "y": 13,
+        "zoom": 1.6
+       },
+       "dur": 1
+      }
+     ]
+    },
+    {
+     "say": {
+      "who": "narrator",
+      "text": "Продолжение следует."
+     },
+     "do": [
+      {
+       "sfx": "fail",
+       "at": 0.2
+      }
+     ],
+     "dur": 3
+    }
+   ]
+  },
+  {
+   "id": "end",
+   "transition": "fade",
+   "set": {
+    "props": [
+     {
+      "type": "text",
+      "x": 50,
+      "y": 24,
+      "s": 2,
+      "text": "БОЛОТНАЯ ПЛАНЕТА",
+      "outline": true,
+      "red": true
+     },
+     {
+      "type": "text",
+      "x": 50,
+      "y": 17,
+      "s": 1,
+      "text": "серия 1",
+      "outline": true
+     }
+    ]
+   },
+   "actors": {},
+   "beats": [
+    {
+     "dur": 3
+    }
+   ]
+  }
+ ]
+}
