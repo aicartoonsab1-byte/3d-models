@@ -27,6 +27,10 @@ from common import MODELS, ROOT, build_dir, ffmpeg, say
 PRESETS = json.loads((ROOT / "studio/voices.json").read_text(encoding="utf-8"))
 VOICES = ROOT / "voices"                          # образцы голосов для клонирования
 ENGINES_CFG = ROOT / "studio/engines.local.json"   # пути к окружению CosyVoice на этом ПК (не в git)
+# «живая» манера по умолчанию (замерено по референсу разговорного мульта, см. lively.py).
+# Переопределяется в film.json: style.voice = {"tempo", "range", "pitch"} и style.narrator = {...}; у персонажа — cast.<id>.lively (или false).
+LIVELY_CHAR = {"tempo": 1.45, "range": 1.4, "pitch": 4.0}
+LIVELY_NARR = {"tempo": 1.22, "range": 1.25, "pitch": 1.0}
 COSY_MOOD = {  # настроение → инструкция CosyVoice3 (из списка, на котором модель обучена)
     "happy": "请非常开心地说一句话。", "sad": "请非常伤心地说一句话。", "angry": "请非常生气地说一句话。",
     "pray": "Please say a sentence in a very soft voice.", "tired": "Please say a sentence in a very soft voice.",
@@ -189,6 +193,11 @@ def voice_film(d: Path, film: dict, force: bool = False) -> dict:
     manifest = {"fps": fps, "lines": {}}
     lines = film_lines(film)
     plan = []
+    style = film.get("style", {})
+    import lively as lv
+    can_liven = lv.available()
+    if not can_liven:
+        say("⚠ нет parselmouth (pip install praat-parselmouth) — интонация не оживляется, только темп")
     for l in lines:
         who = l["who"]; c = cast.get(who, {})
         preset_name = c.get("voice") or ("narrator" if who == "narrator" else "man")
@@ -205,8 +214,15 @@ def voice_film(d: Path, film: dict, force: bool = False) -> dict:
             tempo *= mt                                   # темп CosyVoice меняет сам, без искажения голоса
         fx = pr.get("fx", []) + c.get("fx", [])
         text = l["text"].replace("+", "")
-        key = hashlib.sha1(json.dumps([text, eng, pitch, tempo, fx, instruct], ensure_ascii=False).encode()).hexdigest()[:14]
-        plan.append({"l": l, "eng": eng, "pitch": pitch, "tempo": tempo, "fx": fx, "text": text, "instruct": instruct, "wav": ldir / f"{key}.wav"})
+        # оживление: у клона CosyVoice манеру даёт сам образец, у остальных движков — lively.py
+        base = LIVELY_NARR if who == "narrator" else LIVELY_CHAR
+        liv = None if cosy or c.get("lively") is False else {**base, **style.get("narrator" if who == "narrator" else "voice", {}), **(c.get("lively") or {})}
+        if liv:
+            tempo *= liv.get("tempo", 1.0)
+            if not can_liven:
+                pitch += liv.get("pitch", 0)
+        key = hashlib.sha1(json.dumps([text, eng, pitch, tempo, fx, instruct, liv if can_liven else None], ensure_ascii=False).encode()).hexdigest()[:14]
+        plan.append({"l": l, "eng": eng, "pitch": pitch, "tempo": tempo, "fx": fx, "text": text, "instruct": instruct, "liv": liv if can_liven else None, "wav": ldir / f"{key}.wav"})
 
     todo = [p for p in plan if force or not p["wav"].exists()]
     with tempfile.TemporaryDirectory() as tmp:
@@ -224,7 +240,12 @@ def voice_film(d: Path, film: dict, force: bool = False) -> dict:
             if "raw" not in p:
                 p["raw"] = tmp / f"raw{i}.wav"; synth_raw(p["eng"], p["text"], p["raw"])
             cooked = tmp / f"cooked{i}.wav"
-            post(p["raw"], cooked, p["pitch"], 1.0 if p["eng"]["engine"] == "cosyvoice" else p["tempo"], p["fx"])
+            pitch = p["pitch"]
+            if p["liv"]:
+                alive = tmp / f"alive{i}.wav"
+                if lv.liven(p["raw"], alive, p["text"], p["liv"].get("range", 1.0), p["liv"].get("pitch", 0) + pitch):
+                    p["raw"], pitch = alive, 0          # высоту уже сдвинул Praat (чище, чем asetrate)
+            post(p["raw"], cooked, pitch, 1.0 if p["eng"]["engine"] == "cosyvoice" else p["tempo"], p["fx"])
             write_wav(p["wav"], trim_and_level(read_wav(cooked)))
             e = p["eng"]
             say(f"  [{i + 1}/{len(todo)}] {p['l']['id']} {p['l']['who']} ({e['engine']}:{e.get('ref') or e.get('model') or e.get('voice')}): {p['text']}")

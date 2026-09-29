@@ -3,3 +3,4 @@ pillow>=10
 playwright>=1.40
 imageio-ffmpeg>=0.4.9
 piper-tts>=1.2
+praat-parselmouth>=0.4

@@ -26,7 +26,7 @@
   }
   const setAt = (tr, t, v) => tr.keys.push({ t, v });
 
-  const estimate = (text) => 0.4 + [...String(text)].length / 13.5;
+  const estimate = (text) => 0.3 + [...String(text)].length / 17;
 
   function resolve(film, manifest) {
     const cast = film.cast || {}, voiced = (manifest && manifest.lines) || {};
@@ -58,7 +58,8 @@
         const defDur = b.say ? Math.max(1, speech) : 1.2;
         const acts = (b.do || []).map((a) => ({ ...a, at: a.at || 0, dur: a.dur ?? ((a.move || a.by || a.camera || a.set) ? defDur : 0) }));
         const actEnd = acts.reduce((m, a) => Math.max(m, a.at + (a.emote ? 0 : a.dur)), 0);
-        const pause = b.pause ?? (b.say ? 0.35 : 0);
+        // пауза после реплики: в живом диалоге реплики идут почти встык (style.pause, по умолчанию 0.15 с)
+        const pause = b.pause ?? (b.say ? ((film.style || {}).pause ?? 0.15) : 0);
         const dur = Math.max(b.dur || 0, b.say ? sayAt + speech + pause : 0, actEnd, 0.4);
 
         if (b.say) {

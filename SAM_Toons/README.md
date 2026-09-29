@@ -17,7 +17,8 @@
    playwright install chromium
    python studio\setup_voices.py
    ```
-   `setup_voices.py` скачивает русские голоса Piper (~250 МБ) в `models/piper/`.
+   `setup_voices.py` скачивает русские голоса Piper (~250 МБ) в `models/piper/` (с HuggingFace, а если он недоступен — с GitHub).
+   Синтезированные голоса автоматически «оживляются» (`studio/lively.py`, Praat): быстрее, выше, с размашистой интонацией.
    ffmpeg ставится сам вместе с пакетом `imageio-ffmpeg`.
 3. Лучшая озвучка — **Fun-CosyVoice3-0.5B**: клон голоса по образцу и эмоции. Ставится отдельно, инструкция — [docs/COSYVOICE.md](docs/COSYVOICE.md).
    Пока она не установлена, озвучивает Piper.
