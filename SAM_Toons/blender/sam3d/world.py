@@ -13,13 +13,13 @@ from .character import _obj, _sphere, skin_mesh
 from .look import PAL, toon
 
 
-def ground(size=60, seed=1):
+def ground(size=60, seed=1, flat=False):
     me = bpy.data.meshes.new("ground"); bm = bmesh.new()
     bmesh.ops.create_grid(bm, x_segments=90, y_segments=90, size=size / 2)
     r = random.Random(seed)
     for v in bm.verts:
         x, y = v.co.x, v.co.y
-        v.co.z = 0.06 * math.sin(x * 1.3 + r.random()) * math.cos(y * 1.1) + (0.25 * max(0, (y - 6) / 20) ** 2)
+        v.co.z = 0.0 if flat else 0.06 * math.sin(x * 1.3 + r.random()) * math.cos(y * 1.1) + (0.25 * max(0, (y - 6) / 20) ** 2)
     bm.to_mesh(me); bm.free()
     g = _obj("ground", me); g.data.materials.append(toon("ground", PAL["ground"], PAL["ground_dk"]))
     for p in g.data.polygons:
@@ -126,3 +126,17 @@ def lights():
     sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN")); bpy.context.collection.objects.link(sun)
     sun.rotation_euler = (math.radians(55), math.radians(10), math.radians(40)); sun.data.energy = 3.5
     sun.data.color = (1.0, 0.86, 0.66)
+
+
+def speckles(n=1800, x=(-25, 25), y=(-6, 30), seed=11):
+    """«Зерно» бумаги как в референсе: тысячи крошечных чёрточек и точек прямо на земле (двигаются вместе с миром)."""
+    r = random.Random(seed); me = bpy.data.meshes.new("speckles"); bm = bmesh.new()
+    for _ in range(n):
+        cx, cy = r.uniform(*x), r.uniform(*y); a = r.uniform(0, math.pi); L = r.uniform(0.01, 0.045); w = 0.005
+        dx, dy = math.cos(a) * L, math.sin(a) * L; nx, ny = -math.sin(a) * w, math.cos(a) * w
+        vs = [bm.verts.new((cx - dx + nx, cy - dy + ny, 0.012)), bm.verts.new((cx + dx + nx, cy + dy + ny, 0.012)),
+              bm.verts.new((cx + dx - nx, cy + dy - ny, 0.012)), bm.verts.new((cx - dx - nx, cy - dy - ny, 0.012))]
+        bm.faces.new(vs)
+    bm.to_mesh(me); bm.free()
+    o = _obj("speckles", me); o.data.materials.append(toon("speck_tuft", PAL["ink"]))
+    return o

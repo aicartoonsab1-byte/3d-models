@@ -42,6 +42,13 @@ def run_shot(d: Path, frames: str | None = None) -> Path:
         say(r.stdout[-3000:] + r.stderr[-3000:]); raise SystemExit("Blender не отрендерил сцену")
     if frames:
         say(f"Кадры {frames} → {fdir}"); return fdir
+    # «через кадр»: отрендерены нечётные кадры — чётные повторяют предыдущий
+    if shot.get("style", {}).get("twos"):
+        n = int(shot["duration"] * fps)
+        for i in range(2, n + 1, 2):
+            src, dst = fdir / f"f_{i - 1:04d}.jpg", fdir / f"f_{i:04d}.jpg"
+            if src.exists():
+                shutil.copy(src, dst)
     # 3) звук: реплики в свои моменты + звуки
     info = {"duration": shot["duration"], "sfx": shot.get("sfx", []),
             "lines": [{"t0": ln["t"], "file": m["file"]} for ln, m in zip(shot.get("lines", []), manifest["lines"].values())]}
@@ -49,7 +56,7 @@ def run_shot(d: Path, frames: str | None = None) -> Path:
     # 4) видео: кадры + звук, зерно печати и виньетка
     out = d / "build/shot.mp4"
     subprocess.run([ffmpeg(), "-y", "-loglevel", "error", "-framerate", str(fps), "-i", str(fdir / "f_%04d.jpg"), "-i", str(audio),
-                    "-vf", "noise=alls=9:allf=u,vignette=PI/4.2", "-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p",
+                    "-vf", "noise=alls=4:allf=u" if shot.get("style", {}).get("look") == "mult" else "noise=alls=9:allf=u,vignette=PI/4.2", "-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p",
                     "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", str(out)], check=True)
     say(f"Готово: {out}")
     return out

@@ -15,10 +15,34 @@ PAL = {
 }
 
 
+# Режим рисовки. "dusk" — цветные мультяшные заливки; "mult" — как в референсе-мульте: всё белое,
+# форму рисует только тонкий чёрный контур, красный — акцент (шарф, светящиеся плоды, глаз богомола).
+MODE = "dusk"
+INK_PARTS = ("pupil", "mouth", "hair", "brow", "cattail", "mand", "tuft")
+ACCENT_PARTS = ("bulb", "fruit", "compound", "scarf", "accent", "mantis")
+RED = (0.85, 0.12, 0.13)
+
+
+def flat(name, color):
+    m = bpy.data.materials.new(name); m.use_nodes = True
+    nt = m.node_tree; nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial"); e = nt.nodes.new("ShaderNodeEmission")
+    e.inputs[0].default_value = (*color, 1); e.inputs[1].default_value = 1.0
+    nt.links.new(e.outputs[0], out.inputs[0])
+    return m
+
+
 def toon(name: str, color, shadow=None, emit: float = 0.0, steps: int = 2):
     """Материал «как нарисовано»: свет/тень — ровными заливками (Shader to RGB → ColorRamp constant)."""
     if name in bpy.data.materials:
         return bpy.data.materials[name]
+    if MODE == "mult":
+        low = name.lower()
+        if any(k in low for k in ACCENT_PARTS):
+            return flat(name, RED)
+        if any(k in low for k in INK_PARTS):
+            return flat(name, PAL["ink"])
+        return flat(name, (1.0, 1.0, 1.0))
     m = bpy.data.materials.new(name); m.use_nodes = True
     nt = m.node_tree; nt.nodes.clear()
     out = nt.nodes.new("ShaderNodeOutputMaterial")
@@ -42,6 +66,8 @@ def toon(name: str, color, shadow=None, emit: float = 0.0, steps: int = 2):
 
 
 def world_sky(top=None, low=None):
+    if MODE == "mult":
+        top = low = (1.0, 1.0, 1.0)
     w = bpy.context.scene.world or bpy.data.worlds.new("World"); bpy.context.scene.world = w
     w.use_nodes = True; nt = w.node_tree; nt.nodes.clear()
     out = nt.nodes.new("ShaderNodeOutputWorld"); bg = nt.nodes.new("ShaderNodeBackground")
@@ -63,6 +89,8 @@ def freestyle(thickness: float = 2.4, wobble: float = 1.6):
     ls.select_by_visibility = True; ls.select_by_edge_types = True
     ls.select_silhouette = True; ls.select_border = True; ls.select_crease = True; ls.select_contour = True
     fs.crease_angle = 2.3
+    if MODE == "mult":
+        ls.select_crease = False; ls.select_border = True
     st = ls.linestyle or bpy.data.linestyles.new("ink")
     ls.linestyle = st
     st.color = PAL["ink"]; st.thickness = thickness

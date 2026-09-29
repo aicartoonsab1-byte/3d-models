@@ -224,3 +224,115 @@ def blinks(eyes, frames: int, fps: int, seed: int = 3):
             e.scale = (b.x, b.y, b.z * 0.08); e.keyframe_insert("scale", frame=f + 2)
             e.scale = b; e.keyframe_insert("scale", frame=f + 4)
         f += int(fps * (2.2 + r.random() * 2.5))
+
+
+# ---------------------------------------------------------------- «фасолина» (стиль mult, как в референсе-мульте)
+BEAN_K = {"UpLeg": 0.55, "Leg": 0.55, "Foot": 0.7, "ToeBase": 0.6, "Arm": 0.8, "ForeArm": 0.8, "Hand": 0.8,
+          "LowerBack": 0.75, "Spine": 0.75, "Spine1": 0.75, "Neck": 0.5, "Neck1": 0.5, "Head": 0.5, "Shoulder": 0.8}
+
+
+def _bean_k(name: str) -> float:
+    for suffix in sorted(BEAN_K, key=len, reverse=True):
+        if name.endswith(suffix) or name == suffix:
+            return BEAN_K[suffix]
+    return 1.0
+
+
+def stylize_skeleton(rig, kfun=_bean_k):
+    """Укоротить кости (ноги, руки, спину), не меняя их направлений: движения мокапа остаются верными,
+    а пропорции становятся мультяшными — короткие ножки, большая голова."""
+    _active(rig); bpy.ops.object.mode_set(mode="EDIT")
+    eb = rig.data.edit_bones
+    orig = {b.name: (b.head.copy(), b.tail.copy()) for b in eb}
+    new_head = {}
+    def place(b):
+        oh, ot = orig[b.name]
+        if b.parent is None:
+            nh = oh.copy()
+        else:
+            ph = orig[b.parent.name][0]
+            nh = new_head[b.parent.name] + (oh - ph) * kfun(b.parent.name)
+        new_head[b.name] = nh
+        for ch in b.children:
+            place(ch)
+    for b in eb:
+        if b.parent is None:
+            place(b)
+    for b in eb:
+        oh, ot = orig[b.name]
+        b.head = new_head[b.name]; b.tail = new_head[b.name] + (ot - oh) * kfun(b.name)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
+def build_bean(name: str, mocap_dir: Path, fps: int, spec: dict) -> dict:
+    base = spec.get("base_clip", "93_07")
+    bpy.ops.import_anim.bvh(filepath=str(mocap_dir / f"{base}.bvh"), global_scale=mocap.UNIT, use_fps_scale=True,
+                            update_scene_fps=False, update_scene_duration=False, rotate_mode="QUATERNION")
+    rig = bpy.context.object; rig.name = name
+    rig.animation_data.action = None
+    stylize_skeleton(rig)
+    for pb in rig.pose.bones:
+        pb.rotation_quaternion = (1, 0, 0, 0); pb.location = (0, 0, 0)
+    B = rig.data.bones
+    h = lambda b: B[b].head_local.copy(); t = lambda b: B[b].tail_local.copy()
+    up = Vector((0, 0, 1))
+    right = (h("RightUpLeg") - h("LeftUpLeg")); right.z = 0; right.normalize()
+    fwd = up.cross(right).normalized()
+    s = spec.get("size", 1.0)
+    V, E, RR = [], [], []
+    def add(p, r):
+        V.append(p); RR.append(r * s); return len(V) - 1
+    hips = add(h("Hips") + up * 0.03, 0.2); belly = add(h("Spine"), 0.2); chest = add(t("Spine1") - up * 0.04, 0.16); neck = add(h("Neck1"), 0.1)
+    E += [(hips, belly), (belly, chest), (chest, neck)]
+    for sd in ("Left", "Right"):
+        th = add(h(f"{sd}UpLeg"), 0.105); kn = add(h(f"{sd}Leg"), 0.095); an = add(h(f"{sd}Foot"), 0.09)
+        toe = add(h(f"{sd}ToeBase") + fwd * 0.02, 0.09)
+        E += [(hips, th), (th, kn), (kn, an), (an, toe)]
+        sh = add(h(f"{sd}Arm"), 0.075); el = add(h(f"{sd}ForeArm"), 0.068); wr = add(h(f"{sd}Hand"), 0.064)
+        hd = add(t(f"{sd}Hand"), 0.07)
+        E += [(chest, sh), (sh, el), (el, wr), (wr, hd)]
+    body = skin_mesh(f"{name}_body", V, E, RR, hips)
+    red = spec.get("red", [])
+    body.data.materials.append(toon(f"{name}_body{'_accent' if 'shirt' in red else ''}", PAL["white"]))
+    _active(body); rig.select_set(True); bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+    # голова: большая, почти шар; лицо — точки и чёрточка
+    foot_z = min(h("LeftToeBase").z, h("LeftFoot").z) - 0.09 * s
+    body_h = h("Neck1").z - foot_z
+    r = 0.44 * body_h * spec.get("head", 1.0)
+    hc = h("Neck1") + up * r * 0.82
+    head = _sphere(f"{name}_head", hc, r, toon(f"{name}_skin", PAL["white"]), (1, 1, 1.02), 32)
+    parts = [head]
+    on = lambda d: hc + d.normalized() * r * 0.985          # точка на поверхности головы в направлении d
+    ink = toon(f"{name}_pupil", PAL["ink"])
+    eyes = []
+    for sgn in (-1, 1):
+        e = _sphere(f"{name}_eye{sgn}", on(fwd + right * 0.3 * sgn + up * 0.06), r * 0.045, ink, (1, 0.5, 1.25), 10)
+        parts.append(e); eyes.append(e)
+    mouth = _sphere(f"{name}_mouth", on(fwd - up * 0.3), r * 0.1, toon(f"{name}_mouth", PAL["ink"]), (1, 0.3, 0.18), 12)
+    parts.append(mouth)
+    if spec.get("hair", "tuft") == "tuft":
+        tm = toon(f"{name}_tuft", PAL["ink"])
+        for dx in (-0.12, 0.0, 0.12):
+            base_ = on(up + fwd * 0.1 + right * dx); tip = base_ + (up + right * dx * 1.5 - fwd * 0.1).normalized() * r * 0.22
+            o = skin_mesh(f"{name}_tuft", [tuple(base_), tuple(tip)], [(0, 1)], [r * 0.018, r * 0.01]); o.data.materials.append(tm); parts.append(o)
+    for p in parts:
+        _parent_bone(p, rig, "Head")
+    if "scarf" in red:   # красный шарф — акцент
+        import bmesh as _bm
+        me = bpy.data.meshes.new(f"{name}_scarf"); bm = _bm.new()
+        _bm.ops.create_circle(bm, cap_ends=False, segments=24, radius=0.14 * s); bm.to_mesh(me); bm.free()
+        sc = _obj(f"{name}_scarf", me); sc.location = h("Neck1") - up * 0.02
+        sk = sc.modifiers.new("sk", "SKIN")
+        for v in sc.data.skin_vertices[0].data:
+            v.radius = (0.035 * s, 0.035 * s)
+        sc.data.materials.append(toon(f"{name}_scarf", PAL["white"]))
+        tail = skin_mesh(f"{name}_scarftail", [tuple(h("Neck1") + fwd * 0.12 + right * 0.06), tuple(h("Neck1") + fwd * 0.16 + right * 0.1 - up * 0.2)], [(0, 1)], [0.035 * s, 0.03 * s])
+        tail.data.materials.append(toon(f"{name}_scarf", PAL["white"]))
+        _parent_bone(sc, rig, "Neck"); _parent_bone(tail, rig, "Neck")
+    if spec.get("hold") == "camera":
+        me = bpy.data.meshes.new(f"{name}_vcam"); bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0); bm.to_mesh(me); bm.free()
+        vc = _obj(f"{name}_vcam", me); vc.scale = (0.11, 0.06, 0.08); vc.location = t("LeftHand"); vc.data.materials.append(toon(f"{name}_vcamm", PAL["white"]))
+        lens = _sphere(f"{name}_lens_accent", t("LeftHand") + fwd * 0.035, 0.018, toon(f"{name}_lens_accent", PAL["white"]), (1, 1, 1), 10)
+        _parent_bone(vc, rig, "LeftHand"); _parent_bone(lens, rig, "LeftHand")
+    return {"rig": rig, "mouth": mouth, "eyes": eyes, "forward": fwd, "head": head}
