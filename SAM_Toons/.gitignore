@@ -5,3 +5,4 @@ __pycache__/
 studio/engines.local.json
 models/CosyVoice/
 models/mocap/
+sounds/

@@ -110,6 +110,27 @@ def _decode(path: Path) -> np.ndarray:
         return read_wav(w)
 
 
+SOUNDS = Path(__file__).resolve().parents[1] / "sounds"
+_AUDIO_EXT = (".wav", ".mp3", ".ogg", ".flac")
+
+
+def library(name: str) -> list[Path]:
+    """Настоящие записи звука: sounds/<name>/*.wav|mp3|ogg (скачивает studio/get_sounds.py)."""
+    d = SOUNDS / name
+    return sorted(p for p in d.glob("*") if p.suffix.lower() in _AUDIO_EXT) if d.is_dir() else []
+
+
+def sound(name: str, variant: int = 0) -> np.ndarray | None:
+    """Звук по имени: сначала запись из библиотеки (варианты по очереди — чтобы шаги не звучали одинаково),
+    а если записи нет — синтез кодом (запасной вариант)."""
+    files = library(name)
+    if files:
+        x = _decode(files[variant % len(files)])
+        return x / (np.abs(x).max() or 1) * 0.8
+    fn = SFX.get(name)
+    return fn().astype(np.float32) if fn else None
+
+
 def mix(d: Path, film: dict, info: dict) -> Path:
     """Собрать звуковую дорожку по разложенному времени (info — из движка)."""
     render_sfx(d)
@@ -122,12 +143,23 @@ def mix(d: Path, film: dict, info: dict) -> Path:
             missing += 1; continue
         x = read_wav(vdir / l["file"]); i = int(l["t0"] * SR)
         seg = x[: max(0, n - i)]; voice[i:i + len(seg)] += seg
+    count: dict[str, int] = {}
     for s in info["sfx"]:
-        fn = SFX.get(s["name"])
-        if fn is None:
-            say(f"⚠ неизвестный звук: {s['name']}"); continue
-        x = fn().astype(np.float32) * float(s.get("vol", 1)) * 0.7; i = int(s["t"] * SR)
+        k = count[s["name"]] = count.get(s["name"], -1) + 1
+        x = sound(s["name"], k)
+        if x is None:
+            say(f"⚠ неизвестный звук: {s['name']} (нет ни sounds/{s['name']}/, ни синтеза)"); continue
+        x = x * float(s.get("vol", 1)) * 0.7; i = int(s["t"] * SR)
         seg = x[: max(0, n - i)]; fx[i:i + len(seg)] += seg
+    # фон (атмосфера места) — петлёй подо всей сценой, тише под речью
+    amb = film.get("ambience") or info.get("ambience")
+    if amb:
+        files = library(f"amb_{amb}")
+        if files:
+            bed = np.concatenate([_decode(f) for f in files]); bed = np.tile(bed, n // len(bed) + 1)[:n]
+            fx += bed / (np.abs(bed).max() or 1) * float(film.get("ambience_volume", 0.18))
+        else:
+            say(f"⚠ нет фона sounds/amb_{amb}/ — скачайте: python studio/get_sounds.py")
     out = voice + fx
     m = film.get("music")
     if m and (d / m["file"]).exists():

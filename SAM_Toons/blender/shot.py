@@ -25,11 +25,13 @@ lineset = look.freestyle(*( (style.get("line", 1.75), style.get("wobble", 0.6)) 
 if mult:
     lineset.linestyle.color = (0.02, 0.02, 0.025)
 st = shot.get("set", {})
-world.ground(flat=mult); world.hills(28, look.PAL["far"], 4, 5); world.hills(18, look.PAL["mid"], 2.2, 9); world.moons()
+world.ground(flat=mult); world.hills(28, look.PAL["far"], 4, 5); world.hills(18, look.PAL["mid"], 2.2, 9)
+if not mult:
+    world.moons()
 if mult:
     # крапинки бумаги — без контура (иначе каждую обведёт Freestyle)
     nol = bpy.data.collections.new("noline"); bpy.context.scene.collection.children.link(nol)
-    sp = world.speckles(style.get("speckles", 2200))
+    sp = world.speckles(style.get("speckles", 2200), y=(-6, 14))     # вдали крапинки сливаются в серую дымку — там их нет
     for c in sp.users_collection:
         c.objects.unlink(sp)
     nol.objects.link(sp)
@@ -37,7 +39,9 @@ if mult:
 for p in st.get("pools", []): world.pool(*p)
 for i, p in enumerate(st.get("reeds", [])): world.reeds(*p, seed=i + 2)
 for i, p in enumerate(st.get("glow", [])): world.glow_plant(*p, seed=i + 3)
-for i, p in enumerate(st.get("trees", [])): world.swamp_tree(*p, seed=i + 4)
+for i, p in enumerate(st.get("trees", [])):
+    (world.puff_tree(*p, seed=i + 4) if mult else world.swamp_tree(*p, seed=i + 4))
+for i, p in enumerate(st.get("bushes", [])): world.bush(*p, seed=i + 6)
 
 frames = int(shot["duration"] * FPS)
 bd = shot["boris"]

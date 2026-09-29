@@ -140,3 +140,21 @@ def speckles(n=1800, x=(-25, 25), y=(-6, 30), seed=11):
     bm.to_mesh(me); bm.free()
     o = _obj("speckles", me); o.data.materials.append(toon("speck_tuft", PAL["ink"]))
     return o
+
+
+def puff_tree(x, y, h=4.5, seed=4):
+    """Дерево как в референсе: тонкий ствол и кудрявая крона из пересекающихся шаров (контур — «облачком»)."""
+    r = random.Random(seed); white = toon("tree_white", PAL["white"])
+    t = skin_mesh("trunk", [(x, y, 0), (x + 0.05, y, h * 0.45), (x, y, h * 0.75)], [(0, 1), (1, 2)], [0.065, 0.05, 0.04])
+    t.data.materials.append(white)
+    cz = h * 0.72; R = h * 0.26
+    for i in range(14):
+        a = r.uniform(0, math.tau); k = r.uniform(0.3, 1.0)
+        px = x + math.cos(a) * R * 0.6 * k; pz = cz + math.sin(a) * R * 1.0 * k; py = y + r.uniform(-0.3, 0.3)
+        _sphere("crown", (px, py, pz), R * r.uniform(0.35, 0.55), white, (1, 0.8, 1), 16)
+
+
+def bush(x, y, w=1.2, seed=6):
+    r = random.Random(seed); white = toon("bush_white", PAL["white"])
+    for i in range(6):
+        _sphere("bush", (x + r.uniform(-w / 2, w / 2), y + r.uniform(-0.2, 0.2), 0.05), w * r.uniform(0.18, 0.3), white, (1, 0.8, 0.8), 14)

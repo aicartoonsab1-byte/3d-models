@@ -18,7 +18,8 @@ PAL = {
 # Режим рисовки. "dusk" — цветные мультяшные заливки; "mult" — как в референсе-мульте: всё белое,
 # форму рисует только тонкий чёрный контур, красный — акцент (шарф, светящиеся плоды, глаз богомола).
 MODE = "dusk"
-INK_PARTS = ("pupil", "mouth", "hair", "brow", "cattail", "mand", "tuft")
+INK_PARTS = ("pupil", "mouth", "hair", "brow", "tuft")
+MULT_ACCENT = False      # красный акцент в стиле mult выключен: строго чёрная линия на белом, как в референсе
 ACCENT_PARTS = ("bulb", "fruit", "compound", "scarf", "accent", "mantis")
 RED = (0.85, 0.12, 0.13)
 
@@ -38,7 +39,7 @@ def toon(name: str, color, shadow=None, emit: float = 0.0, steps: int = 2):
         return bpy.data.materials[name]
     if MODE == "mult":
         low = name.lower()
-        if any(k in low for k in ACCENT_PARTS):
+        if MULT_ACCENT and any(k in low for k in ACCENT_PARTS):
             return flat(name, RED)
         if any(k in low for k in INK_PARTS):
             return flat(name, PAL["ink"])
@@ -91,6 +92,7 @@ def freestyle(thickness: float = 2.4, wobble: float = 1.6):
     fs.crease_angle = 2.3
     if MODE == "mult":
         ls.select_crease = False; ls.select_border = True
+        ls.select_material_boundary = True     # шов между частями (половина морды-богомола) — линией
     st = ls.linestyle or bpy.data.linestyles.new("ink")
     ls.linestyle = st
     st.color = PAL["ink"]; st.thickness = thickness
