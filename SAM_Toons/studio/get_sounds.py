@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -66,9 +67,20 @@ def fetch(token: str, name: str, query: str, n: int, max_dur: float) -> None:
 
 
 def main() -> None:
-    token = os.environ.get("FREESOUND_TOKEN")
+    token = (os.environ.get("FREESOUND_TOKEN") or "").strip().strip('"')
     if not token:
         sys.exit(__doc__)
+    if " " in token or not token.isalnum():
+        sys.exit("Ключ FREESOUND_TOKEN выглядит неправильно: в нём пробелы или лишние символы.\n"
+                 "Задайте его отдельной строкой, только сам ключ (буквы и цифры):\n"
+                 "  set FREESOUND_TOKEN=ваш_ключ\n  python studio\\get_sounds.py")
+    try:
+        search(token, "test", 5, 1)
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            sys.exit("Freesound не принял ключ (ошибка %d). Возьмите значение из колонки «Client secret/Api key»\n"
+                     "на https://freesound.org/home/app_permissions/ (не «Client id») и задайте заново." % e.code)
+        raise
     a = sys.argv[1:]
     if a:
         fetch(token, a[0], a[1], int(a[2]) if len(a) > 2 else 3, float(a[3]) if len(a) > 3 else 10); return
