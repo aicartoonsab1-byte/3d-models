@@ -10,6 +10,7 @@
   python studio/sam.py voices                  # какие голоса доступны на этом ПК
   python studio/sam.py ref <голос> <файл> [--text "что сказано"]  # образец голоса для клонирования (CosyVoice)
   python studio/sam.py vocab                   # словарь движка: позы, эмоции, предметы, звуки
+  python studio/sam.py shot <папка> [--frames 1-50]  # сцена в Blender (shot.json): мокап, 3D «под рисунок» → build/shot.mp4
 
 <фильм> — имя папки в films/ (например ufo_casino) или путь к папке с film.json.
 """
@@ -41,13 +42,14 @@ def cmd_check(d: Path, film: dict) -> bool:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["check", "voice", "stills", "render", "make", "serve", "voices", "vocab", "ref"])
+    ap.add_argument("cmd", choices=["check", "voice", "stills", "render", "make", "serve", "voices", "vocab", "ref", "shot"])
     ap.add_argument("film", nargs="?")
     ap.add_argument("src", nargs="?", help="для ref: аудиофайл с образцом голоса")
     ap.add_argument("--text", help="для ref: текст, произнесённый в образце")
     ap.add_argument("--force", action="store_true", help="переозвучить всё заново")
     ap.add_argument("--half", action="store_true", help="рендер 960×540 (быстрый черновик)")
     ap.add_argument("--port", type=int, default=8000)
+    ap.add_argument("--frames", help="для shot: диапазон кадров (проба)")
     a = ap.parse_args()
 
     if a.cmd == "voices":
@@ -58,6 +60,10 @@ def main() -> None:
         if not (a.film and a.src):
             ap.error("ref <имя голоса> <аудиофайл> [--text ...]")
         return import_ref(a.film, Path(a.src), a.text) and None
+    if a.cmd == "shot":
+        from blender_shot import run_shot
+        d = Path(a.film) if Path(a.film).exists() else ROOT / "films" / a.film
+        return run_shot(d, a.frames) and None
     if a.cmd == "vocab":
         from check import vocab
         return say(json.dumps(vocab(), ensure_ascii=False, indent=1))
