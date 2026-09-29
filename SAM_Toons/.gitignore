@@ -2,3 +2,5 @@ films/*/build/
 models/piper/
 .venv/
 __pycache__/
+studio/engines.local.json
+models/CosyVoice/

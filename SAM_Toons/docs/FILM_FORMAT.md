@@ -39,7 +39,7 @@
 | `type` | `person` · `alien` (большая голова, антенны, `eyes: 1`) · `prop` (говорящий предмет, например НЛО) · `voice` (только голос, рассказчик) |
 | `hair` | none, bun, tuft, spiky, curly, long, cap, hat, bald |
 | `extra` | glasses, mustache, bow, tie, dress |
-| `voice` | пресет из `studio/voices.json`: narrator, man, man_young, man_old, woman, girl, kid, alien, robot, giant |
+| `voice` | пресет из `studio/voices.json`: narrator, man, man_young, man_old, woman, girl, kid, alien, robot, giant. С CosyVoice голос клонируется из `voices/<пресет>.wav` |
 | `pitch`, `tempo` | подстройка голоса: полутоны и множитель скорости |
 
 Рассказчик — всегда `"narrator"`.
@@ -75,7 +75,8 @@
 ```
 
 - `say.who` — персонаж или говорящий предмет из этой сцены либо `narrator`. Реплика не длиннее 140 символов.
-- `say.mood` сразу меняет настроение персонажа и окраску голоса.
+- `say.mood` сразу меняет настроение персонажа и окраску голоса (в CosyVoice: happy, sad, angry, pray/tired → инструкция модели).
+- Числа в репликах — словами.
 
 ### Действия (`do`)
 

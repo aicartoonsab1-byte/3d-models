@@ -1,13 +1,252 @@
 {
-  "_comment": "Голоса-пресеты. В cast персонажа: \"voice\": \"<имя пресета>\". engines — варианты по порядку: берётся первый, чей движок установлен. pitch — полутоны, tempo — множитель, fx — эффекты (alien, radio, reverb, robot, giant, chipmunk).",
-  "narrator":  { "engines": [ { "engine": "piper", "model": "ru_RU-dmitri-medium" }, { "engine": "rhvoice", "voice": "aleksandr-hq" }, { "engine": "espeak", "voice": "ru+m3" } ], "pitch": -1, "tempo": 0.95 },
-  "man":       { "engines": [ { "engine": "piper", "model": "ru_RU-denis-medium" },  { "engine": "rhvoice", "voice": "mikhail" },      { "engine": "espeak", "voice": "ru+m1" } ], "pitch": 0,  "tempo": 1.0 },
-  "man_young": { "engines": [ { "engine": "piper", "model": "ru_RU-ruslan-medium" }, { "engine": "rhvoice", "voice": "artemiy" },      { "engine": "espeak", "voice": "ru+m4" } ], "pitch": 1,  "tempo": 1.03 },
-  "man_old":   { "engines": [ { "engine": "piper", "model": "ru_RU-denis-medium" },  { "engine": "rhvoice", "voice": "yuriy" },        { "engine": "espeak", "voice": "ru+m7" } ], "pitch": -2, "tempo": 0.9 },
-  "woman":     { "engines": [ { "engine": "piper", "model": "ru_RU-irina-medium" },  { "engine": "rhvoice", "voice": "anna" },         { "engine": "espeak", "voice": "ru+f2" } ], "pitch": 0,  "tempo": 1.0 },
-  "girl":      { "engines": [ { "engine": "piper", "model": "ru_RU-irina-medium" },  { "engine": "rhvoice", "voice": "victoria" },     { "engine": "espeak", "voice": "ru+f4" } ], "pitch": 3,  "tempo": 1.06 },
-  "kid":       { "engines": [ { "engine": "piper", "model": "ru_RU-irina-medium" },  { "engine": "rhvoice", "voice": "arina" },        { "engine": "espeak", "voice": "ru+f5" } ], "pitch": 5,  "tempo": 1.08 },
-  "alien":     { "engines": [ { "engine": "piper", "model": "ru_RU-irina-medium" },  { "engine": "rhvoice", "voice": "elena" },        { "engine": "espeak", "voice": "ru+f3" } ], "pitch": 4,  "tempo": 1.02, "fx": ["alien"] },
-  "robot":     { "engines": [ { "engine": "piper", "model": "ru_RU-denis-medium" },  { "engine": "rhvoice", "voice": "pavel" },        { "engine": "espeak", "voice": "ru" } ],    "pitch": -2, "tempo": 0.95, "fx": ["robot"] },
-  "giant":     { "engines": [ { "engine": "piper", "model": "ru_RU-dmitri-medium" }, { "engine": "rhvoice", "voice": "vitaliy" },      { "engine": "espeak", "voice": "ru+m2" } ], "pitch": -6, "tempo": 0.88, "fx": ["reverb"] }
+ "_comment": "Голоса-пресеты. В cast персонажа: \"voice\": \"<имя пресета>\". engines — варианты по порядку: берётся первый установленный. cosyvoice берёт образец voices/<ref>.wav (+ .txt с текстом образца); у варианта движка могут быть свои pitch/tempo. pitch — полутоны, tempo — множитель, fx — эффекты (alien, radio, reverb, robot, giant, chipmunk).",
+ "narrator": {
+  "engines": [
+   {
+    "engine": "cosyvoice",
+    "ref": "narrator",
+    "pitch": 0,
+    "tempo": 1.0
+   },
+   {
+    "engine": "piper",
+    "model": "ru_RU-dmitri-medium"
+   },
+   {
+    "engine": "rhvoice",
+    "voice": "aleksandr-hq"
+   },
+   {
+    "engine": "espeak",
+    "voice": "ru+m3"
+   }
+  ],
+  "pitch": -1,
+  "tempo": 0.95
+ },
+ "man": {
+  "engines": [
+   {
+    "engine": "cosyvoice",
+    "ref": "man",
+    "pitch": 0,
+    "tempo": 1.0
+   },
+   {
+    "engine": "piper",
+    "model": "ru_RU-denis-medium"
+   },
+   {
+    "engine": "rhvoice",
+    "voice": "mikhail"
+   },
+   {
+    "engine": "espeak",
+    "voice": "ru+m1"
+   }
+  ],
+  "pitch": 0,
+  "tempo": 1.0
+ },
+ "man_young": {
+  "engines": [
+   {
+    "engine": "cosyvoice",
+    "ref": "man_young",
+    "pitch": 0,
+    "tempo": 1.0
+   },
+   {
+    "engine": "piper",
+    "model": "ru_RU-ruslan-medium"
+   },
+   {
+    "engine": "rhvoice",
+    "voice": "artemiy"
+   },
+   {
+    "engine": "espeak",
+    "voice": "ru+m4"
+   }
+  ],
+  "pitch": 1,
+  "tempo": 1.03
+ },
+ "man_old": {
+  "engines": [
+   {
+    "engine": "cosyvoice",
+    "ref": "man_old",
+    "pitch": 0,
+    "tempo": 1.0
+   },
+   {
+    "engine": "piper",
+    "model": "ru_RU-denis-medium"
+   },
+   {
+    "engine": "rhvoice",
+    "voice": "yuriy"
+   },
+   {
+    "engine": "espeak",
+    "voice": "ru+m7"
+   }
+  ],
+  "pitch": -2,
+  "tempo": 0.9
+ },
+ "woman": {
+  "engines": [
+   {
+    "engine": "cosyvoice",
+    "ref": "woman",
+    "pitch": 0,
+    "tempo": 1.0
+   },
+   {
+    "engine": "piper",
+    "model": "ru_RU-irina-medium"
+   },
+   {
+    "engine": "rhvoice",
+    "voice": "anna"
+   },
+   {
+    "engine": "espeak",
+    "voice": "ru+f2"
+   }
+  ],
+  "pitch": 0,
+  "tempo": 1.0
+ },
+ "girl": {
+  "engines": [
+   {
+    "engine": "cosyvoice",
+    "ref": "girl",
+    "pitch": 0,
+    "tempo": 1.0
+   },
+   {
+    "engine": "piper",
+    "model": "ru_RU-irina-medium"
+   },
+   {
+    "engine": "rhvoice",
+    "voice": "victoria"
+   },
+   {
+    "engine": "espeak",
+    "voice": "ru+f4"
+   }
+  ],
+  "pitch": 3,
+  "tempo": 1.06
+ },
+ "kid": {
+  "engines": [
+   {
+    "engine": "cosyvoice",
+    "ref": "kid",
+    "pitch": 0,
+    "tempo": 1.0
+   },
+   {
+    "engine": "piper",
+    "model": "ru_RU-irina-medium"
+   },
+   {
+    "engine": "rhvoice",
+    "voice": "arina"
+   },
+   {
+    "engine": "espeak",
+    "voice": "ru+f5"
+   }
+  ],
+  "pitch": 5,
+  "tempo": 1.08
+ },
+ "alien": {
+  "engines": [
+   {
+    "engine": "cosyvoice",
+    "ref": "alien",
+    "pitch": 3,
+    "tempo": 1.0
+   },
+   {
+    "engine": "piper",
+    "model": "ru_RU-irina-medium"
+   },
+   {
+    "engine": "rhvoice",
+    "voice": "elena"
+   },
+   {
+    "engine": "espeak",
+    "voice": "ru+f3"
+   }
+  ],
+  "pitch": 4,
+  "tempo": 1.02,
+  "fx": [
+   "alien"
+  ]
+ },
+ "robot": {
+  "engines": [
+   {
+    "engine": "cosyvoice",
+    "ref": "robot",
+    "pitch": 0,
+    "tempo": 1.0
+   },
+   {
+    "engine": "piper",
+    "model": "ru_RU-denis-medium"
+   },
+   {
+    "engine": "rhvoice",
+    "voice": "pavel"
+   },
+   {
+    "engine": "espeak",
+    "voice": "ru"
+   }
+  ],
+  "pitch": -2,
+  "tempo": 0.95,
+  "fx": [
+   "robot"
+  ]
+ },
+ "giant": {
+  "engines": [
+   {
+    "engine": "cosyvoice",
+    "ref": "giant",
+    "pitch": 0,
+    "tempo": 1.0
+   },
+   {
+    "engine": "piper",
+    "model": "ru_RU-dmitri-medium"
+   },
+   {
+    "engine": "rhvoice",
+    "voice": "vitaliy"
+   },
+   {
+    "engine": "espeak",
+    "voice": "ru+m2"
+   }
+  ],
+  "pitch": -6,
+  "tempo": 0.88,
+  "fx": [
+   "reverb"
+  ]
+ }
 }

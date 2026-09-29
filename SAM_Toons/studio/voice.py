@@ -1,6 +1,8 @@
 """SAM_Toons · озвучка реплик локальными TTS-движками + данные для движения губ.
 
 Движки (все офлайн и бесплатные), берётся первый установленный из пресета голоса:
+  cosyvoice — Fun-CosyVoice3-0.5B: клон голоса по образцу voices/<имя>.wav (+ .txt с текстом образца),
+            эмоции через инструкцию; работает в своём окружении (см. docs/COSYVOICE.md)
   piper   — нейросетевые голоса, лучший вариант для Windows/Linux (pip install piper-tts, модели в models/piper/)
   rhvoice — 13 русских дикторов (Linux: apt install rhvoice rhvoice-russian)
   espeak  — роботизированный запасной вариант (espeak-ng)
@@ -23,6 +25,23 @@ import numpy as np
 from common import MODELS, ROOT, build_dir, ffmpeg, say
 
 PRESETS = json.loads((ROOT / "studio/voices.json").read_text(encoding="utf-8"))
+VOICES = ROOT / "voices"                          # образцы голосов для клонирования
+ENGINES_CFG = ROOT / "studio/engines.local.json"   # пути к окружению CosyVoice на этом ПК (не в git)
+COSY_MOOD = {  # настроение → инструкция CosyVoice3 (из списка, на котором модель обучена)
+    "happy": "请非常开心地说一句话。", "sad": "请非常伤心地说一句话。", "angry": "请非常生气地说一句话。",
+    "pray": "Please say a sentence in a very soft voice.", "tired": "Please say a sentence in a very soft voice.",
+}
+
+
+def cosy_cfg() -> dict | None:
+    if not ENGINES_CFG.exists():
+        return None
+    c = json.loads(ENGINES_CFG.read_text(encoding="utf-8")).get("cosyvoice")
+    if not c:
+        return None
+    c.setdefault("repo", str(MODELS / "CosyVoice"))
+    c.setdefault("model", str(MODELS / "CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B"))
+    return c if Path(c["python"]).exists() and (c.get("mock") or Path(c["model"]).exists()) else None
 SR = 48000
 MOOD = {  # настроение → (полутоны, темп)
     "happy": (1.0, 1.05), "sad": (-1.0, 0.92), "angry": (-0.5, 1.08), "scared": (2.0, 1.12), "surprised": (1.5, 1.0),
@@ -47,6 +66,8 @@ def _piper_voice(model: str):
 
 def available(e: dict) -> bool:
     kind = e["engine"]
+    if kind == "cosyvoice":
+        return cosy_cfg() is not None and (VOICES / f"{e['ref']}.wav").exists()
     if kind == "piper":
         try:
             import piper  # noqa: F401  # type: ignore
@@ -146,33 +167,73 @@ def film_lines(film: dict) -> list[dict]:
     return out
 
 
+def cosy_batch(items: list[dict]) -> None:
+    """Озвучить пакет реплик CosyVoice одним запуском модели."""
+    c = cosy_cfg()
+    with tempfile.TemporaryDirectory() as tmp:
+        job = Path(tmp) / "job.json"
+        job.write_text(json.dumps(items, ensure_ascii=False), encoding="utf-8")
+        cmd = [c["python"], str(ROOT / "studio/cosy_worker.py"), "--repo", c["repo"], "--model", c["model"], "--job", str(job)]
+        cmd += ["--fp16"] if c.get("fp16", True) else []
+        cmd += ["--mock"] if c.get("mock") else []
+        say(f"  CosyVoice: {len(items)} реплик (модель грузится один раз)…")
+        r = subprocess.run(cmd, cwd=c["repo"] if Path(c["repo"]).exists() else None)
+        if r.returncode:
+            raise SystemExit("CosyVoice завершился с ошибкой (см. вывод выше)")
+
+
 def voice_film(d: Path, film: dict, force: bool = False) -> dict:
     fps = int(film.get("fps", 25))
     vdir = build_dir(d, "voice"); ldir = build_dir(d, "voice", "lines")
     cast = film.get("cast", {})
     manifest = {"fps": fps, "lines": {}}
-    used = set()
     lines = film_lines(film)
-    for i, l in enumerate(lines):
+    plan = []
+    for l in lines:
         who = l["who"]; c = cast.get(who, {})
         preset_name = c.get("voice") or ("narrator" if who == "narrator" else "man")
         pr, eng = pick(preset_name)
-        mp, mt = MOOD.get(l.get("mood") or "", (0.0, 1.0))
-        pitch, tempo = pr.get("pitch", 0) + c.get("pitch", 0) + mp, pr.get("tempo", 1.0) * c.get("tempo", 1.0) * mt
+        mood = l.get("mood") or ""
+        cosy = eng["engine"] == "cosyvoice"
+        # у движка в пресете могут быть свои pitch/tempo (клон голоса обычно не сдвигаем)
+        pitch, tempo = eng.get("pitch", pr.get("pitch", 0)) + c.get("pitch", 0), eng.get("tempo", pr.get("tempo", 1.0)) * c.get("tempo", 1.0)
+        instruct = COSY_MOOD.get(mood) if cosy else None
+        mp, mt = MOOD.get(mood, (0.0, 1.0))
+        if not cosy:
+            pitch, tempo = pitch + mp, tempo * mt
+        else:
+            tempo *= mt                                   # темп CosyVoice меняет сам, без искажения голоса
         fx = pr.get("fx", []) + c.get("fx", [])
         text = l["text"].replace("+", "")
-        key = hashlib.sha1(json.dumps([text, eng, pitch, tempo, fx], ensure_ascii=False).encode()).hexdigest()[:14]
-        wav = ldir / f"{key}.wav"
-        if force or not wav.exists():
-            with tempfile.TemporaryDirectory() as tmp:
-                raw, cooked = Path(tmp) / "raw.wav", Path(tmp) / "cooked.wav"
-                synth_raw(eng, text, raw)
-                post(raw, cooked, pitch, tempo, fx)
-                write_wav(wav, trim_and_level(read_wav(cooked)))
-            say(f"  [{i + 1}/{len(lines)}] {l['id']} {who} ({eng['engine']}:{eng.get('model') or eng.get('voice')}): {text}")
-        x = read_wav(wav)
-        manifest["lines"][l["id"]] = {"file": f"lines/{wav.name}", "dur": round(len(x) / SR, 3), "text": l["text"], "who": who, "env": mouth_env(x, fps)}
-        used.add(wav.name)
+        key = hashlib.sha1(json.dumps([text, eng, pitch, tempo, fx, instruct], ensure_ascii=False).encode()).hexdigest()[:14]
+        plan.append({"l": l, "eng": eng, "pitch": pitch, "tempo": tempo, "fx": fx, "text": text, "instruct": instruct, "wav": ldir / f"{key}.wav"})
+
+    todo = [p for p in plan if force or not p["wav"].exists()]
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        cosy = [p for p in todo if p["eng"]["engine"] == "cosyvoice"]
+        if cosy:
+            items = []
+            for i, p in enumerate(cosy):
+                ref = VOICES / f"{p['eng']['ref']}.wav"; txt = ref.with_suffix(".txt")
+                p["raw"] = tmp / f"cosy{i}.wav"
+                items.append({"text": p["text"], "out": str(p["raw"]), "ref": str(ref), "speed": round(p["tempo"], 3),
+                              "ref_text": txt.read_text(encoding="utf-8").strip() if txt.exists() else "", "instruct": p["instruct"]})
+            cosy_batch(items)
+        for i, p in enumerate(todo):
+            if "raw" not in p:
+                p["raw"] = tmp / f"raw{i}.wav"; synth_raw(p["eng"], p["text"], p["raw"])
+            cooked = tmp / f"cooked{i}.wav"
+            post(p["raw"], cooked, p["pitch"], 1.0 if p["eng"]["engine"] == "cosyvoice" else p["tempo"], p["fx"])
+            write_wav(p["wav"], trim_and_level(read_wav(cooked)))
+            e = p["eng"]
+            say(f"  [{i + 1}/{len(todo)}] {p['l']['id']} {p['l']['who']} ({e['engine']}:{e.get('ref') or e.get('model') or e.get('voice')}): {p['text']}")
+
+    used = set()
+    for p in plan:
+        x = read_wav(p["wav"]); l = p["l"]
+        manifest["lines"][l["id"]] = {"file": f"lines/{p['wav'].name}", "dur": round(len(x) / SR, 3), "text": l["text"], "who": l["who"], "env": mouth_env(x, fps)}
+        used.add(p["wav"].name)
     for old in ldir.glob("*.wav"):
         if old.name not in used:
             old.unlink()
@@ -182,10 +243,28 @@ def voice_film(d: Path, film: dict, force: bool = False) -> dict:
     return manifest
 
 
+def import_ref(name: str, src: Path, text: str | None = None) -> Path:
+    """Образец голоса для клонирования: моно 24 кГц, тишина по краям срезана, не длиннее 15 с."""
+    VOICES.mkdir(exist_ok=True)
+    out = VOICES / f"{name}.wav"
+    subprocess.run([ffmpeg(), "-y", "-loglevel", "error", "-i", str(src), "-ac", "1", "-ar", "24000", "-t", "15",
+                    "-af", "silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse",
+                    "-sample_fmt", "s16", str(out)], check=True)
+    if text:
+        out.with_suffix(".txt").write_text(text.strip(), encoding="utf-8")
+    with wave.open(str(out)) as wf:
+        dur = wf.getnframes() / wf.getframerate()
+    say(f"Образец «{name}»: {dur:.1f} с → {out}" + ("" if text else "  (без текста — режим cross-lingual; с текстом тембр точнее: --text)"))
+    if dur < 3:
+        say("⚠ образец короче 3 с — клон будет неточным, лучше 5–15 с чистой речи")
+    return out
+
+
 def list_engines() -> None:
     for name, pr in PRESETS.items():
         if name.startswith("_"):
             continue
         ok = [e for e in pr["engines"] if available(e)]
         e = ok[0] if ok else None
-        say(f"  {name:10s} → " + (f"{e['engine']}:{e.get('model') or e.get('voice')}" if e else "НЕТ ДВИЖКА"))
+        say(f"  {name:10s} → " + (f"{e['engine']}:{e.get('ref') or e.get('model') or e.get('voice')}" if e else "НЕТ ДВИЖКА"))
+    say("CosyVoice: " + ("подключён" if cosy_cfg() else "не настроен (docs/COSYVOICE.md)") + f"; образцы голосов: {sorted(p.stem for p in VOICES.glob('*.wav')) or 'нет'}")

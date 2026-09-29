@@ -17,6 +17,8 @@
    ```
    `setup_voices.py` скачивает русские голоса Piper (~250 МБ) в `models/piper/`.
    ffmpeg ставится сам вместе с пакетом `imageio-ffmpeg`.
+3. Лучшая озвучка — **Fun-CosyVoice3-0.5B**: клон голоса по образцу и эмоции. Ставится отдельно, инструкция — [docs/COSYVOICE.md](docs/COSYVOICE.md).
+   Пока она не установлена, озвучивает Piper.
 
 На Linux то же самое; дополнительно можно поставить `rhvoice rhvoice-russian espeak-ng`, и тогда они будут запасными голосами.
 
@@ -31,6 +33,7 @@ python studio/sam.py render ufo_casino --half # быстрый черновик 
 python studio/sam.py render ufo_casino        # 1920×1080 → films/ufo_casino/build/film.mp4
 python studio/sam.py serve                    # живой плеер: http://127.0.0.1:8000/engine/player.html?film=ufo_casino
 python studio/sam.py voices                   # какие голоса нашлись на этом ПК
+python studio/sam.py ref narrator запись.wav --text "что сказано"   # образец голоса для CosyVoice
 python studio/sam.py vocab                    # позы, эмоции, предметы, звуки
 ```
 
@@ -47,11 +50,13 @@ engine/            движок (JS, работает и в плеере, и п�
 studio/            Python-студия
   sam.py           командная строка
   check.py         валидатор film.json (словарь берёт из движка)
-  voice.py         озвучка: Piper / RHVoice / eSpeak → wav + «громкость рта» по кадрам
+  voice.py         озвучка: CosyVoice3 / Piper / RHVoice / eSpeak → wav + «громкость рта» по кадрам
+  cosy_worker.py   запуск CosyVoice3 в её собственном окружении (пакетом, модель грузится один раз)
   voices.json      пресеты голосов
   audio.py         процедурные звуки и сведение
   storyboard.py    кадры раскадровки + листы HTML/PNG
   render.py        кадры из браузера → ffmpeg → MP4
+voices/            образцы голосов для клонирования (<пресет>.wav + .txt)
 films/<фильм>/     film.json + build/ (озвучка, раскадровка, видео — не в git)
 docs/              FILM_FORMAT.md — формат фильма для агентов, PLAN.md — план
 ```
