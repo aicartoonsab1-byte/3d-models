@@ -1,0 +1,184 @@
+<!doctype html><meta charset="utf-8"><title>Стиль: плоская иллюстрация с зерном</title>
+<script src="lab.js"></script>
+<script>
+// Стиль A — плоская книжная иллюстрация: слои округлых холмов с узором из дужек, бирюза/тёмно-синий/мята,
+// коралловый акцент, зернистая печать. Сцена: гора-богомол с огромными глазами, крошечный Борис идёт по спирали тропы.
+const P = { sky0: "#dcefec", sky1: "#b9dcd6", navy: "#1c4150", navy2: "#16323f", deep: "#12293a", teal: "#236070", teal2: "#2c7a80",
+  mint: "#3fa98c", mint2: "#63c7a6", arc: "#5ec2ad", arcL: "#a5e6cf", sand: "#e4d38c", sandD: "#bba760", water: "#a8cdc6",
+  coral: "#df6a50", coralD: "#a9442f", skin: "#f1d7b1", shirt: "#efe6d2", ink: "#223138", white: "#f7fbf8" };
+const R = rng(7);
+
+// гора: силуэт
+function mountainPath(ctx) {
+  ctx.beginPath(); ctx.moveTo(520, 760);
+  ctx.bezierCurveTo(545, 430, 540, 130, 790, 92);
+  ctx.bezierCurveTo(1045, 128, 1060, 430, 1100, 760); ctx.closePath();
+}
+// округлый холм с узором из дужек
+function dome(ctx, x, y, w, h, fill, arcCol, seed, t) {
+  const r = rng(seed);
+  ctx.save(); ctx.beginPath(); ctx.moveTo(x - w / 2, y);
+  ctx.bezierCurveTo(x - w / 2, y - h * 1.05, x + w / 2, y - h * 1.05, x + w / 2, y); ctx.closePath();
+  ctx.fillStyle = fill; ctx.fill();
+  ctx.clip();
+  const g = ctx.createLinearGradient(x - w / 2, y - h, x + w / 3, y); g.addColorStop(0, "rgba(255,255,255,0.16)"); g.addColorStop(0.6, "rgba(255,255,255,0)");
+  ctx.fillStyle = g; ctx.fillRect(x - w / 2, y - h, w, h);
+  ctx.strokeStyle = arcCol; ctx.lineWidth = 2.2; ctx.lineCap = "round";
+  const step = 15;
+  for (let yy = y - h * 0.72; yy < y - 4; yy += step * 0.9) {
+    const off = (Math.round((yy - y) / step) % 2) * step / 2;
+    for (let xx = x - w / 2 + off + 6; xx < x + w / 2; xx += step) {
+      if (r() < 0.3) continue;
+      ctx.beginPath(); ctx.arc(xx + (r() - 0.5) * 2, yy + 6, 4.2, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+// тонкий «кипарис»-шпиль, покачивается
+function spire(ctx, x, y, h, w, col, t, ph) {
+  const sway = Math.sin(twos(t) * 1.6 + ph) * 3;
+  ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.quadraticCurveTo(x - w * 0.2, y - h * 0.6, x + sway, y - h);
+  ctx.quadraticCurveTo(x + w * 0.2, y - h * 0.6, x + w / 2, y); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.quadraticCurveTo(x - w * 0.2, y - h * 0.6, x + sway, y - h);
+  ctx.lineTo(x - w * 0.05, y); ctx.closePath(); ctx.fill();
+}
+// лента тропы от (x0,y0) к (x1,y1)
+function band(ctx, x0, y0, x1, y1, th) {
+  ctx.fillStyle = P.sand; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1, y1 + th); ctx.lineTo(x0, y0 + th); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = P.sandD; ctx.lineWidth = 2; ctx.setLineDash([9, 8]);
+  ctx.beginPath(); ctx.moveTo(x0, y0 + th * 0.55); ctx.lineTo(x1, y1 + th * 0.55); ctx.stroke(); ctx.setLineDash([]);
+}
+const BANDS = [[520, 690, 1100, 560, 20], [520, 520, 1100, 395, 22], [520, 350, 1100, 225, 20]];
+function bandY(b, x) { const [x0, y0, x1, y1] = b; return y0 + (y1 - y0) * (x - x0) / (x1 - x0); }
+
+// Борис: крошечный путешественник с рюкзаком
+function boris(ctx, x, y, t, walking, point) {
+  const ph = walking ? frameNo(t) * 0.9 : 0, s = 1.0;
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.strokeStyle = P.ink; ctx.lineWidth = 3; ctx.lineCap = "round";
+  const a = Math.sin(ph) * 0.5;
+  ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(Math.sin(a) * 9, 0); ctx.moveTo(0, -14); ctx.lineTo(-Math.sin(a) * 9, 0); ctx.stroke();
+  ctx.fillStyle = P.coral; ctx.fillRect(-10, -30, 8, 13);                  // рюкзак
+  ctx.fillStyle = P.shirt; ctx.beginPath(); ctx.ellipse(1, -22, 5.5, 9, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = P.shirt; ctx.lineWidth = 2.6;
+  ctx.beginPath(); ctx.moveTo(2, -26);
+  if (point) ctx.lineTo(13, -38); else ctx.lineTo(2 + Math.sin(ph + 3) * 6, -15); ctx.stroke();
+  ctx.fillStyle = P.skin; ctx.beginPath(); ctx.arc(2, -36, 6, 0, 7); ctx.fill();
+  ctx.fillStyle = P.ink; ctx.fillRect(3.5, -37.5, 1.6, 1.6);               // глаз-точка
+  ctx.restore();
+}
+
+// гигантская голова-богомол на вершине: глаза как у совы, усики, жвалы; моргает и следит за Борисом
+function head(ctx, t, bx, by) {
+  const cx = 790, cy = 208;
+  ctx.fillStyle = P.deep; ctx.beginPath(); ctx.ellipse(cx, cy, 158, 74, 0, 0, 7); ctx.fill();
+  const blink = 1 - smooth(3.0, 3.12, t) + smooth(3.2, 3.32, t);          // закрыл-открыл
+  for (const ex of [cx - 68, cx + 68]) {
+    ctx.fillStyle = "#cdeeea"; ctx.beginPath(); ctx.arc(ex, cy, 46, 0, 7); ctx.fill();
+    ctx.fillStyle = P.navy2; ctx.beginPath(); ctx.arc(ex, cy, 35, 0, 7); ctx.fill();
+    const dx = clamp((bx - ex) / 300, -1, 1) * 11, dy = clamp((by - cy) / 300, -1, 1) * 11;
+    ctx.fillStyle = "#cdeeea"; ctx.beginPath(); ctx.arc(ex + dx, cy + dy, 7, 0, 7); ctx.fill();
+    if (blink < 1) { ctx.fillStyle = P.navy; ctx.beginPath(); ctx.rect(ex - 48, cy - 48, 96, 96 * (1 - blink)); ctx.fill(); }
+  }
+  ctx.fillStyle = P.coral; ctx.beginPath(); ctx.moveTo(cx - 5, cy - 30); ctx.lineTo(cx + 5, cy - 30); ctx.lineTo(cx, cy + 22); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#8fb8b8"; ctx.lineWidth = 3; ctx.lineCap = "round";          // жвалы
+  for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.moveTo(cx + sgn * 22, cy + 66); ctx.quadraticCurveTo(cx + sgn * 34, cy + 92, cx + sgn * 10, cy + 100); ctx.stroke(); }
+}
+function antennae(ctx, t) {                                  // усики богомола над вершиной, покачиваются
+  const cx = 790; ctx.strokeStyle = P.navy; ctx.lineWidth = 6; ctx.lineCap = "round";
+  for (const sgn of [-1, 1]) {
+    const w = Math.sin(twos(t) * 1.3 + sgn) * 12;
+    ctx.beginPath(); ctx.moveTo(cx + sgn * 30, 120); ctx.bezierCurveTo(cx + sgn * 50, 10, cx + sgn * 150 + w, -40, cx + sgn * 230 + w, 0); ctx.stroke();
+    ctx.fillStyle = P.navy; ctx.beginPath(); ctx.arc(cx + sgn * 230 + w, 0, 7, 0, 7); ctx.fill();
+  }
+}
+
+function waterDashes(ctx, t, y0, y1, seed) {
+  const r = rng(seed + frameNo(t) % 3); ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineCap = "round";
+  for (let i = 0; i < 70; i++) {
+    const x = r() * W, y = y0 + r() * (y1 - y0), l = 6 + r() * 16; ctx.lineWidth = 2 + (y - y0) / 60;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + l, y); ctx.stroke();
+  }
+}
+function cloud(ctx, x, y, w, h) {
+  ctx.fillStyle = P.white; ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill();
+}
+function ship(ctx, t) {                                      // красный кораблик Бориса на поплавках, покачивается
+  const bob = Math.sin(twos(t) * 2) * 2.5, x = 1010, y = 640 + bob;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(twos(t) * 2 + 1) * 0.015);
+  ctx.strokeStyle = P.coralD; ctx.lineWidth = 3;
+  for (const px of [-70, 50]) { ctx.beginPath(); ctx.moveTo(px, 10); ctx.lineTo(px - 6, 30); ctx.stroke(); }
+  ctx.fillStyle = P.coralD; ctx.beginPath(); ctx.roundRect(-115, 28, 220, 10, 5); ctx.fill();          // поплавок
+  ctx.fillStyle = "#cfe9e6"; ctx.beginPath(); ctx.ellipse(-25, -16, 34, 22, 0, Math.PI, 0); ctx.fill(); // стеклянный купол
+  ctx.strokeStyle = P.coralD; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(-25, -16, 34, 22, 0, Math.PI, 0); ctx.stroke();
+  ctx.fillStyle = P.coral; ctx.beginPath(); ctx.ellipse(-5, 0, 100, 20, 0, 0, 7); ctx.fill();            // корпус
+  ctx.beginPath(); ctx.moveTo(70, -6); ctx.lineTo(118, -44); ctx.lineTo(126, -40); ctx.lineTo(108, 6); ctx.closePath(); ctx.fill(); // киль
+  ctx.fillStyle = "#f4b39f"; ctx.beginPath(); ctx.ellipse(-5, -6, 80, 5, 0, 0, 7); ctx.fill();          // блик
+  for (const px of [-75, 35]) { ctx.fillStyle = P.ink; ctx.beginPath(); ctx.arc(px, 2, 6, 0, 7); ctx.fill(); ctx.fillStyle = "#f4b39f"; ctx.beginPath(); ctx.arc(px, 2, 3, 0, 7); ctx.fill(); }
+  ctx.fillStyle = P.coralD; ctx.beginPath(); ctx.moveTo(-105, 0); ctx.lineTo(-128, -8); ctx.lineTo(-128, 8); ctx.closePath(); ctx.fill(); // сопло
+  ctx.restore();
+}
+
+let GRAIN_D, GRAIN_L;
+window.DRAW = function (ctx, t) {
+  const T = 8, k = ease(clamp(t / T));
+  // камера: медленный наезд и подъём к глазам
+  const sc = lerp(1.0, 1.1, k); ctx.translate(W / 2, H / 2); ctx.scale(sc, sc); ctx.translate(-W / 2 - lerp(0, 60, k), -H / 2 + lerp(0, 30, k));
+  const sky = ctx.createLinearGradient(0, -100, 0, 600); sky.addColorStop(0, P.sky0); sky.addColorStop(1, P.sky1);
+  ctx.fillStyle = sky; ctx.fillRect(-200, -200, W + 400, H + 400);
+  ctx.fillStyle = "rgba(255,255,255,0.10)";                 // косые лучи света
+  for (const [x, w] of [[900, 140], [1150, 90], [700, 60]]) { ctx.beginPath(); ctx.moveTo(x, -200); ctx.lineTo(x + w, -200); ctx.lineTo(x + w - 700, H + 200); ctx.lineTo(x - 700, H + 200); ctx.closePath(); ctx.fill(); }
+  // дальние облака
+  const cl = [[60, 150, 150, 12, 6], [330, 90, 110, 10, 9], [1120, 170, 170, 13, 5], [1180, 330, 120, 11, 7], [150, 330, 90, 10, 8], [60, 470, 140, 12, 6]];
+  for (const [x, y, w, h, v] of cl) cloud(ctx, ((x + twos(t) * v + 200) % (W + 400)) - 200, y, w, h);
+  // вода и дальние островки
+  ctx.fillStyle = P.water; ctx.fillRect(-200, 575, W + 400, 300);
+  waterDashes(ctx, t, 585, 760, 3);
+  for (const [x, w, h] of [[40, 90, 80], [1235, 60, 60], [1300, 70, 90]]) dome(ctx, x, 590, w, h, P.navy2, P.teal, x, t);
+  // гора
+  antennae(ctx, t);
+  ctx.save(); mountainPath(ctx); ctx.fillStyle = P.navy; ctx.fill();
+  ctx.clip();
+  const lg = ctx.createLinearGradient(540, 100, 1000, 700); lg.addColorStop(0, "rgba(120,190,190,0.28)"); lg.addColorStop(0.5, "rgba(120,190,190,0)");
+  ctx.fillStyle = lg; ctx.fillRect(500, 60, 620, 720);
+  // «шерсть» по контуру верха
+  ctx.strokeStyle = "rgba(160,205,205,0.55)"; ctx.lineWidth = 1.6;
+  const rr = rng(11);
+  for (let i = 0; i < 160; i++) {
+    const a = Math.PI * (0.02 + 0.96 * i / 160), px = 790 - Math.cos(a) * 250 * (1 + 0.02 * rr()), py = 300 - Math.sin(a) * 205;
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(a) * 3, py + 12 + rr() * 10); ctx.stroke();
+  }
+  head(ctx, t, BORIS.x, BORIS.y);
+  // ярусы: холмы и шпили под каждой лентой тропы
+  const tiers = [[590, 260], [430, 420], [270, 600]];
+  const cols = [[P.navy2, P.arc], [P.teal, P.arc], [P.mint, P.arcL], [P.deep, P.arc]];
+  for (let ti = 0; ti < BANDS.length; ti++) {
+    const b = BANDS[BANDS.length - 1 - ti];
+    band(ctx, ...b);
+    const r2 = rng(40 + ti);
+    for (let i = 0; i < 9; i++) {
+      const x = 540 + i * 70 + r2() * 30, y = bandY(b, x) + b[4] + 120 + r2() * 40, w = 90 + r2() * 70, h = 90 + r2() * 60;
+      if (r2() < 0.45) spire(ctx, x + 30, y - h * 0.6, 120 + r2() * 60, 16, P.mint2, t, i);
+      const c = cols[Math.floor(r2() * cols.length)];
+      dome(ctx, x, y, w, h, c[0], c[1], 100 + ti * 20 + i, t);
+    }
+  }
+  ctx.restore();
+  // Борис идёт по средней тропе, потом останавливается и показывает на глаза
+  const walkEnd = 5.2, pk = clamp(t / walkEnd), bx = lerp(600, 840, pk), by = bandY(BANDS[1], bx) + 16;
+  BORIS.x = bx; BORIS.y = by;
+  boris(ctx, bx, by, t, t < walkEnd, t > walkEnd + 0.4);
+  // передний план: большие тёмные холмы, лодка, ближние облака
+  dome(ctx, 60, 760, 380, 250, P.deep, P.arc, 901, t);
+  dome(ctx, 300, 780, 300, 170, P.navy2, P.arc, 902, t);
+  ship(ctx, t);
+  for (const [x, y, w, h, v] of [[480, 380, 160, 12, 16], [980, 470, 190, 14, 12]]) cloud(ctx, ((x + twos(t) * v + 200) % (W + 400)) - 200, y, w, h);
+  // зерно печати поверх всего, «кипит» через кадр
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const g = frameNo(t) % 3; ctx.drawImage(GRAIN_D[g], 0, 0); ctx.drawImage(GRAIN_L[g], 0, 0);
+};
+const BORIS = { x: 600, y: 520 };
+GRAIN_D = grainLayers(3, 0.09, [10, 30, 40, 38], [0, 0, 0, 0], 5);
+GRAIN_L = grainLayers(3, 0.07, [0, 0, 0, 0], [255, 255, 240, 30], 9);
+LAB.start();
+</script>

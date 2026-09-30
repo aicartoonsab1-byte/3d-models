@@ -1,0 +1,133 @@
+<!doctype html><meta charset="utf-8"><title>Стиль: линейный комикс</title>
+<script src="lab.js"></script>
+<script>
+// Стиль B — линейный комикс в духе европейской школы: плоское красно-оранжевое небо, тонкий чернильный контур,
+// штриховка, серый камень, песок, красные деревья. Сцена: древняя башня-статуя богомола посреди пустоши,
+// к ней идёт крошечная фигурка в красном плаще. Линии «кипят» через кадр (как нарисованные заново).
+const P = { sky: "#d9431f", skyTop: "#c9361a", sand: "#f2b47c", sandL: "#f7c898", sandD: "#e39a61", stone: "#8f9294", stoneL: "#b4b6b3",
+  stoneD: "#4b5058", rock: "#43474e", rockL: "#7e8286", red: "#d3371c", red2: "#ee5a35", ink: "#1d1b1f", cloak: "#c8281a" };
+
+// «дрожащая» линия от руки: точки чуть смещаются, смещение меняется через кадр
+let JIT = rng(1);
+function jl(ctx, pts, close) {
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => { const jx = x + (JIT() - 0.5) * 1.1, jy = y + (JIT() - 0.5) * 1.1; i ? ctx.lineTo(jx, jy) : ctx.moveTo(jx, jy); });
+  if (close) ctx.closePath();
+}
+function seg(ctx, x0, y0, x1, y1) { jl(ctx, [[x0, y0], [x1, y1]]); ctx.stroke(); }
+function poly(ctx, pts, fill, lw = 1.6) { jl(ctx, pts, true); if (fill) { ctx.fillStyle = fill; ctx.fill(); } ctx.lineWidth = lw; ctx.strokeStyle = P.ink; ctx.stroke(); }
+
+// башня: сужающаяся плита, теневая грань справа, панели, круглые рельефы, арка; на вершине — голова богомола
+function tower(ctx, t) {
+  const L = [[470, 690], [430, 690], [455, 180], [470, 90]], Rt = [[640, 95], [675, 190], [700, 690]];
+  const face = [[430, 690], [455, 180], [480, 95], [600, 90], [610, 200], [615, 690]];
+  const side = [[600, 90], [640, 95], [675, 190], [705, 690], [615, 690], [610, 200]];
+  poly(ctx, face, P.stone, 2); poly(ctx, side, P.stoneD, 2);
+  // трещины и панели на лицевой грани (фиксированный рисунок, дрожит только линия)
+  const r = rng(21); ctx.lineWidth = 1; ctx.strokeStyle = P.ink;
+  for (let i = 0; i < 70; i++) {
+    const y = 140 + r() * 520, x = 450 + r() * 150, horiz = r() < 0.55, l = 12 + r() * 40;
+    if (horiz) seg(ctx, x, y, Math.min(605, x + l), y); else seg(ctx, x, y, x, Math.min(680, y + l));
+  }
+  ctx.globalAlpha = 0.5;                                       // штриховка теневой грани
+  for (let i = 0; i < 60; i++) { const y = 110 + i * 10; seg(ctx, 612 + i * 0.1, y, 640 + i * 0.8, y + 14); }
+  ctx.globalAlpha = 1;
+  // круглые рельефы
+  for (const [cx, cy, rr] of [[528, 330, 42], [540, 170, 20]]) {
+    ctx.lineWidth = 1.6; ctx.fillStyle = P.stoneL; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, rr * 0.7, 0, 7); ctx.fillStyle = P.stone; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, rr * 0.35, 0, 7); ctx.fillStyle = P.stoneD; ctx.fill(); ctx.stroke();
+  }
+  // голова богомола на вершине: треугольник с двумя фасеточными глазами
+  poly(ctx, [[470, 92], [610, 92], [540, 0]], P.stone, 2);
+  for (const ex of [500, 580]) {
+    ctx.fillStyle = P.stoneD; ctx.beginPath(); ctx.ellipse(ex, 60, 22, 17, 0, 0, 7); ctx.fill(); ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.lineWidth = 0.7;
+    for (let a = -2; a <= 2; a++) { seg(ctx, ex + a * 7, 45, ex + a * 7, 75); seg(ctx, ex - 20, 60 + a * 6, ex + 20, 60 + a * 6); }
+  }
+  ctx.lineWidth = 2; for (const s of [-1, 1]) { jl(ctx, [[540 + s * 12, 10], [540 + s * 40, -40], [540 + s * 70, -60]]); ctx.stroke(); }  // каменные усики
+  // арка-вход
+  poly(ctx, [[495, 690], [495, 560], [520, 525], [555, 525], [580, 560], [580, 690]], "#2a2226", 2);
+  for (let i = 0; i < 6; i++) { ctx.strokeStyle = "#55484b"; ctx.lineWidth = 1; seg(ctx, 505 + i * 2, 640 + i * 9, 570 - i * 2, 640 + i * 9); }
+  ctx.strokeStyle = P.ink;
+}
+
+// дерево с красной кроной — облака листвы из мелких пятен; крона покачивается
+function tree(ctx, x, y, s, t, seed) {
+  const r = rng(seed), sway = Math.sin(twos(t) * 1.5 + seed) * 3 * s;
+  ctx.strokeStyle = P.ink; ctx.lineWidth = 2.2 * s;
+  const branches = [];
+  (function br(x0, y0, a, l, d) {
+    const x1 = x0 + Math.cos(a) * l + sway * (4 - d) * 0.15, y1 = y0 + Math.sin(a) * l;
+    seg(ctx, x0, y0, x1, y1); ctx.lineWidth = Math.max(0.8, ctx.lineWidth * 0.75);
+    if (d > 0) { br(x1, y1, a - 0.45 - r() * 0.2, l * 0.72, d - 1); br(x1, y1, a + 0.4 + r() * 0.2, l * 0.7, d - 1); } else branches.push([x1, y1]);
+  })(x, y, -Math.PI / 2 + (r() - 0.5) * 0.2, 55 * s, 3);
+  for (const [bx, by] of branches) {
+    for (let k = 0; k < 16; k++) {
+      const px = bx + (r() - 0.5) * 34 * s + sway, py = by + (r() - 0.6) * 18 * s, rr = (3 + r() * 5) * s;
+      ctx.fillStyle = r() < 0.5 ? P.red : P.red2; ctx.beginPath(); ctx.ellipse(px, py, rr * 1.4, rr, 0, 0, 7); ctx.fill();
+      if (r() < 0.35) { ctx.lineWidth = 0.6; ctx.strokeStyle = "#5a130a"; ctx.stroke(); }
+    }
+  }
+}
+
+function rock(ctx, x, y, s, seed) {
+  const r = rng(seed), n = 5 + Math.floor(r() * 3), pts = [];
+  for (let i = 0; i < n; i++) { const a = Math.PI + i / (n - 1) * Math.PI; pts.push([x + Math.cos(a) * s * (0.8 + r() * 0.5), y + Math.sin(a) * s * (0.55 + r() * 0.4)]); }
+  poly(ctx, pts, P.rock, 1.4);
+  const top = pts.slice(1, -1).map(([px, py]) => [px, py + 3]);
+  jl(ctx, [pts[0], ...top, pts[pts.length - 1], [x + s * 0.3, y - s * 0.1], [x - s * 0.3, y - s * 0.12]], true);
+  ctx.fillStyle = P.rockL; ctx.fill();
+  ctx.lineWidth = 0.8; for (let i = 0; i < 3; i++) seg(ctx, x - s * 0.5 + i * s * 0.35, y - s * 0.05, x - s * 0.3 + i * s * 0.35, y - s * 0.3);
+}
+
+// фигурка в красном плаще идёт к башне (удаляется, уменьшается); плащ треплет ветер
+function walker(ctx, t) {
+  const k = clamp(t / 8), x = lerp(760, 690, k), y = lerp(668, 612, k), s = lerp(1.25, 1.0, k);
+  const step = frameNo(t) % 4 < 2 ? 1 : -1, flap = Math.sin(twos(t) * 7) * 3;
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.strokeStyle = P.ink; ctx.lineWidth = 1.6;
+  seg(ctx, -2, -6, -2 + step * 3, 6); seg(ctx, 3, -6, 3 - step * 3, 6);
+  jl(ctx, [[-9, -8], [-7, -30], [0, -36], [8, -30], [11 + flap, -6], [0, -4]], true); ctx.fillStyle = P.cloak; ctx.fill(); ctx.lineWidth = 1.4; ctx.stroke();
+  ctx.fillStyle = "#7c8086"; ctx.beginPath(); ctx.arc(0, -39, 5, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function plateau(ctx, x0, x1, y, h, seed) {                 // дальнее плато с неровной кромкой
+  const r = rng(seed), pts = [[x0, y]];
+  for (let x = x0; x <= x1; x += 40) pts.push([x, y - h * (0.6 + r() * 0.4) - (x - x0 < 60 || x1 - x < 60 ? -h * 0.4 : 0)]);
+  pts.push([x1, y]); poly(ctx, pts, "#c24a31", 1);
+}
+
+const DUNE = [[-200, 520], [120, 500], [330, 488], [470, 478], [560, 482], [760, 505], [1000, 530], [1500, 548], [1500, 900], [-200, 900]];
+window.DRAW = function (ctx, t) {
+  JIT = rng(1000 + frameNo(t));                                   // линия «кипит» через кадр
+  const k = ease(clamp(t / 8)), sc = lerp(1.0, 1.08, k);
+  ctx.translate(W / 2, H / 2); ctx.scale(sc, sc); ctx.translate(-W / 2 + lerp(0, 40, k), -H / 2 + lerp(0, 20, k));
+  const g = ctx.createLinearGradient(0, -100, 0, 600); g.addColorStop(0, P.skyTop); g.addColorStop(1, P.sky);
+  ctx.fillStyle = g; ctx.fillRect(-200, -200, W + 400, H + 400);
+  plateau(ctx, -200, 260, 520, 34, 1); plateau(ctx, 900, 1500, 548, 40, 2);
+  tree(ctx, 150, 505, 0.55, t, 3); tree(ctx, 215, 500, 0.4, t, 4);
+  // башня на холме (рисуется в своих координатах и уменьшается)
+  ctx.save(); ctx.translate(460, 486); ctx.scale(0.6, 0.6); ctx.translate(-540, -690); tower(ctx, t); ctx.restore();
+  // дюна: песок со штриховкой по склону
+  poly(ctx, DUNE, P.sand, 1.8);
+  ctx.save(); jl(ctx, DUNE, true); ctx.clip();
+  const lr = rng(55); ctx.strokeStyle = "rgba(29,27,31,0.5)"; ctx.lineWidth = 0.8;
+  for (let i = 0; i < 300; i++) { const x = -150 + lr() * 1600, y = 490 + lr() * 260, l = 8 + (y - 480) / 8 + lr() * 18; seg(ctx, x, y, x + l, y + l * 0.07); }
+  ctx.fillStyle = "rgba(255,232,196,0.4)"; jl(ctx, [[445, 486], [480, 486], [900, 900], [620, 900]], true); ctx.fill();   // светлая тропа к входу
+  ctx.restore();
+  tree(ctx, 560, 490, 0.95, t, 7); tree(ctx, 612, 496, 0.62, t, 8); tree(ctx, 655, 500, 0.42, t, 9);
+  // камни: мелкие вдали, крупные на переднем плане
+  for (const [x, y, s, sd] of [[250, 505, 22, 1], [330, 520, 28, 2], [600, 520, 18, 3], [860, 545, 30, 4], [980, 560, 38, 5], [120, 560, 45, 6],
+    [400, 600, 26, 7], [1120, 620, 70, 8], [60, 680, 90, 9], [300, 720, 110, 10], [1230, 720, 130, 11], [900, 690, 34, 12], [560, 650, 20, 13]]) rock(ctx, x, y, s, sd);
+  walker(ctx, t);
+  // пыль, которую несёт ветер
+  const dr = rng(77); ctx.fillStyle = "rgba(255,225,190,0.55)";
+  for (let i = 0; i < 40; i++) { const x = ((dr() * 1700 + twos(t) * (30 + dr() * 50)) % 1700) - 200, y = 440 + dr() * 300; ctx.fillRect(x, y, 2 + dr() * 3, 1.4); }
+  // зерно бумаги
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(GR[frameNo(t) % 3], 0, 0);
+};
+const GR = grainLayers(3, 0.05, [40, 20, 10, 26], [255, 240, 220, 22], 13);
+LAB.start();
+</script>
