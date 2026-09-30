@@ -9,3 +9,4 @@ sounds/
 studio/agents.local.json
 studio/gemini.local.json
 studio/videogen.local.json
+build/
