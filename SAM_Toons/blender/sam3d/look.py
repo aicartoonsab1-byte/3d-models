@@ -18,7 +18,7 @@ PAL = {
 # Режим рисовки. "dusk" — цветные мультяшные заливки; "mult" — как в референсе-мульте: всё белое,
 # форму рисует только тонкий чёрный контур, красный — акцент (шарф, светящиеся плоды, глаз богомола).
 MODE = "dusk"
-INK_PARTS = ("pupil", "mouth", "hair", "brow", "tuft")
+INK_PARTS = ("pupil", "mouth", "hair", "brow", "tuft", "_ink")
 MULT_ACCENT = False      # красный акцент в стиле mult выключен: строго чёрная линия на белом, как в референсе
 ACCENT_PARTS = ("bulb", "fruit", "compound", "scarf", "accent", "mantis")
 RED = (0.85, 0.12, 0.13)

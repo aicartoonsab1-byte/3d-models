@@ -57,15 +57,30 @@ def build_set(st: dict, mult: bool):
     for i, p in enumerate(st.get("bushes", [])): world.bush(*p, seed=i + 6)
 
 
+CARD_FONTS = ("C:/Windows/Fonts/comic.ttf", "C:/Windows/Fonts/segoepr.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+              "C:/Windows/Fonts/arialbd.ttf")
+
+
+def card_font(want: str | None = None):
+    """Шрифт с кириллицей (встроенный шрифт Blender её не знает — буквы пропадают)."""
+    for f in ([want] if want else []) + list(CARD_FONTS):
+        if f and Path(f).exists():
+            return bpy.data.fonts.load(f, check_existing=True)
+    return None
+
+
 def build_card(card: dict, fps: int):
-    """Титровая карточка: крупные буквы контуром на белом, как надписи от руки в референсе."""
+    """Титровая карточка: крупные буквы чёрной заливкой на белом, как надписи от руки в референсе."""
+    font = card_font(card.get("font"))
     for i, line in enumerate(card["lines"]):
-        cu = bpy.data.curves.new(f"card{i}", "FONT"); cu.body = line; cu.align_x = "CENTER"; cu.align_y = "CENTER"
+        cu = bpy.data.curves.new(f"card{i}", "FONT"); cu.body = line
+        if font:
+            cu.font = font; cu.align_x = "CENTER"; cu.align_y = "CENTER"
         cu.size = card.get("size", 0.9) * (1.0 if i == 0 else 0.8); cu.extrude = 0.0
         o = bpy.data.objects.new(f"card{i}", cu); bpy.context.collection.objects.link(o)
         o.location = (0, 0, -i * card.get("size", 0.9) * 1.1 + (len(card["lines"]) - 1) * 0.5)
         o.rotation_euler = (math.radians(90), 0, 0)
-        o.data.materials.append(look.toon(f"card_m{i}", look.PAL["white"]))
+        o.data.materials.append(look.toon(f"card{i}_ink", look.PAL["ink"]))   # буквы — чёрной заливкой
         # лёгкое «дыхание» надписи — чтобы кадр не был мёртвым
         o.keyframe_insert("scale", frame=1); o.scale = (1.03, 1.03, 1.03); o.keyframe_insert("scale", frame=int(card.get("duration", 2) * fps))
     cam, tgt = world.camera((0, -6, 0.3), (0, 0, 0.3), 40)
@@ -102,11 +117,13 @@ def build_shot(spec: dict, contacts_path: Path | None = None) -> dict:
     for name, a in spec.get("actors", {}).items():
         kind = a.get("kind", "bean" if mult else "human")
         b = (character.build_bean if kind == "bean" else character.build_human)(name, MC, fps, {k: v for k, v in a.items() if k not in ("segments", "start")})
+        if a.get("morph"):
+            character.build_claw(b, a.get("morph_side", "Right"))      # до запекания движения: клешня крепится к кости в позе покоя
         mocap.bake(b["rig"], a["segments"], MC, fps, tuple(a.get("start", (0, 0))))
         character.lipsync(b["mouth"], a.get("lines", []), fps)
         character.blinks(b["eyes"], frames, fps, seed=hash(name) % 97)
         if a.get("morph"):
-            character.arm_morph(b, a["morph"], fps)
+            character.arm_morph(b, a["morph"], fps, a.get("morph_side", "Right"))
         for k in a.get("sink", []):
             b["rig"].location.z = k["z"]; b["rig"].keyframe_insert("location", index=2, frame=k["t"] * fps + 1)
         rigs[name] = b["rig"]

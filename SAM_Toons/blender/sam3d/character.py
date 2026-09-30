@@ -338,7 +338,7 @@ def build_bean(name: str, mocap_dir: Path, fps: int, spec: dict) -> dict:
     return {"rig": rig, "mouth": mouth, "eyes": eyes, "forward": fwd, "head": head}
 
 
-def build_claw(b: dict, side: str = "Right", s: float = 1.6):
+def build_claw(b: dict, side: str = "Right", s: float = 2.1):
     """Клешня богомола на месте кисти (сначала невидима, scale=0): толстое бедро с шипами + загнутая голень-крюк."""
     rig = b["rig"]; B = rig.data.bones
     wr = B[f"{side}Hand"].head_local.copy(); d = (B[f"{side}Hand"].tail_local - B[f"{side}ForeArm"].head_local).normalized()
