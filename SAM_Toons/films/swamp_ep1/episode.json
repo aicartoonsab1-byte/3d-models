@@ -10,7 +10,8 @@
  "style": {
   "look": "mult",
   "line": 1.75,
-  "wobble": 0.6
+  "wobble": 0.6,
+  "twos": true
  },
  "voice_style": {},
  "ambience": "swamp",

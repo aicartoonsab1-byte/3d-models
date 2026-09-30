@@ -12,6 +12,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -21,6 +22,7 @@ from audio import SR, mix_timeline
 from common import ROOT, build_dir, ffmpeg, say
 from voice import voice_film
 
+WORKERS = int(os.environ.get("SAM_WORKERS", max(1, min(6, (os.cpu_count() or 2) - 1))))   # параллельных Blender на план
 TIME_KEYS = {"t", "t0", "t1", "at", "turn_at", "land", "leave", "nod"}
 LINE_GAP, LEAD, TAIL = 0.25, 0.45, 0.7
 
@@ -250,10 +252,18 @@ def render_shot(sdir: Path, spec: dict, overlay, fps: int):
     fdir.mkdir(parents=True)
     (sdir / "spec.json").write_text(json.dumps(spec, ensure_ascii=False, indent=1), encoding="utf-8")
     blender = shutil.which("blender") or "blender"
-    r = subprocess.run([blender, "-b", "--factory-startup", "-P", str(ROOT / "blender/shot.py"), "--", str(sdir / "spec.json"), str(fdir),
-                        "--contacts", str(sdir / "contacts.json")], capture_output=True, text=True)
-    if "SHOT_DONE" not in r.stdout:
-        say(r.stdout[-3000:] + r.stderr[-3000:]); raise SystemExit(f"Blender не отрендерил план {sdir.name}")
+    # Freestyle рисует линии на одном ядре — запускаем несколько Blender, каждый берёт свою долю кадров
+    W = max(1, min(WORKERS, int(round(spec["duration"] * fps)) // 20))
+    procs = []
+    for k in range(W):
+        cmd = [blender, "-b", "--factory-startup", "-P", str(ROOT / "blender/shot.py"), "--", str(sdir / "spec.json"), str(fdir), "--part", f"{k}/{W}"]
+        if k == 0:
+            cmd += ["--contacts", str(sdir / "contacts.json")]
+        procs.append(subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
+    for p in procs:
+        out, err = p.communicate()
+        if "SHOT_DONE" not in out:
+            say(out[-3000:] + err[-3000:]); raise SystemExit(f"Blender не отрендерил план {sdir.name}")
     n = int(round(spec["duration"] * fps))
     if spec.get("style", {}).get("twos"):
         for i in range(2, n + 1, 2):

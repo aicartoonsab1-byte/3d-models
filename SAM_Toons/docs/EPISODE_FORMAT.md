@@ -16,7 +16,7 @@ python studio/sam.py episode swamp_ep1 --shots s3a,s4  # перерисоват�
 | поле | что это |
 |---|---|
 | `fps`, `size`, `samples` | 25, `[960, 540]` (1080p — `[1920, 1080]`), сглаживание Eevee |
-| `style` | `{"look": "mult", "line": 1.75, "wobble": 0.6}` — толщина и «дрожь» линии |
+| `style` | `{"look": "mult", "line": 1.75, "wobble": 0.6, "twos": true}` — толщина и «дрожь» линии; `twos` — рисунок меняется через кадр, как в референсе (и рендер вдвое быстрее) |
 | `cast` | персонажи: `voice` (пресет из `studio/voices.json`), `pitch`, `tempo`, `rvc`; для актёров 3D — `hold: "camera"`, `hair`, `size`, `head` |
 | `set` | декорации по умолчанию для всех планов: `trees [[x,y,h]]`, `bushes [[x,y,w]]`, `reeds [[x,y]]`, `pools [[x,y,w,d]]`, `glow [[x,y]]` |
 | `ambience` | фон серии: `sounds/amb_<имя>/` или синтез (`swamp`) |

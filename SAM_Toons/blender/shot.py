@@ -1,5 +1,5 @@
 """SAM_Toons · Blender · рендер одного плана (запускается внутри Blender):
-  blender -b --factory-startup -P blender/shot.py -- <spec.json> <папка кадров> [--frames a-b | --pick 10,40,80] [--contacts contacts.json]
+  blender -b --factory-startup -P blender/shot.py -- <spec.json> <папка кадров> [--frames a-b | --pick 10,40,80] [--part k/W] [--contacts contacts.json]
 spec.json — план с уже расставленными временами (см. sam3d/stage3d.py). Старый формат shot.json
 (boris/capy/lines + manifest) переводится автоматически: blender -P shot.py -- <shot.json> <manifest|-> <папка>."""
 import json
@@ -41,6 +41,9 @@ if "--pick" in args:          # отдельные кадры для раска�
     print("SHOT_DONE pick"); sys.exit(0)
 sc.frame_start, sc.frame_end = (rng if rng else (1, info["frames"]))
 sc.frame_step = 2 if spec.get("style", {}).get("twos") and not rng else 1   # «через кадр»: пропуски дублируются при сборке
+if "--part" in args:          # параллельный рендер: процесс k из W берёт каждый W-й рисуемый кадр
+    k, w = [int(x) for x in args[args.index("--part") + 1].split("/")]
+    sc.frame_start += k * sc.frame_step; sc.frame_step *= w
 sc.render.filepath = str(out / "f_")
 bpy.ops.render.render(animation=True)
 print("SHOT_DONE", sc.frame_start, sc.frame_end)

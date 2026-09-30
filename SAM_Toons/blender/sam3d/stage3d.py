@@ -87,21 +87,24 @@ def build_card(card: dict, fps: int):
 
 
 def foot_contacts(rig, frames: int, fps: int) -> list[dict]:
-    """Моменты, когда стопа встаёт на землю (для звука шагов): стопа опускается ниже порога после подъёма."""
+    """Моменты, когда стопа встаёт на землю (для звука шагов). Уровень «земли» — скользящий минимум за ±0,6 с,
+    поэтому шаги находятся и когда актёр проваливается в трясину или стоит на кочке."""
     out = []
     sc = bpy.context.scene
-    for side in ("Left", "Right"):
-        zs = []
-        for f in range(1, frames + 1, 1):
-            sc.frame_set(f)
-            p = rig.matrix_world @ rig.pose.bones[f"{side}Foot"].head
-            zs.append(p.z)
-        lo = min(zs); up = False
-        for i, z in enumerate(zs):
-            if z > lo + 0.07:
+    zs = {"Left": [], "Right": []}
+    for f in range(1, frames + 1):
+        sc.frame_set(f)
+        for side in zs:
+            zs[side].append((rig.matrix_world @ rig.pose.bones[f"{side}Foot"].head).z)
+    w = int(0.6 * fps)
+    for side, z in zs.items():
+        up = False; last = -99
+        for i in range(len(z)):
+            lo = min(z[max(0, i - w): i + w + 1])
+            if z[i] > lo + 0.045:
                 up = True
-            elif up and z < lo + 0.025:
-                out.append({"t": round(i / fps, 3), "foot": side}); up = False
+            elif up and z[i] < lo + 0.015 and i - last > fps * 0.25:
+                out.append({"t": round(i / fps, 3), "foot": side}); up = False; last = i
     return sorted(out, key=lambda e: e["t"])
 
 
