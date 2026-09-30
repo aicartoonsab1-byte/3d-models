@@ -1,4 +1,5 @@
-"""SAM_Toons · видео через Veo (Gemini) под руководством агента-шоураннера.
+"""SAM_Toons · нейро-видео под руководством агента-шоураннера: локально через ComfyUI (MiniMax H3 и др., бесплатно)
+или через Veo (Gemini). Кто генерирует и кто оценивает — studio/videogen.json.
 
   python studio/sam.py veo swamp_ep1 --plan          # шоураннер выбирает планы и пишет промпты → build/veo/plan.json (видео не тратит)
   python studio/sam.py veo swamp_ep1                 # генерация по плану: кадр-якорь из Blender → Veo → оценка → пересъёмка
@@ -23,6 +24,7 @@ import subprocess
 from pathlib import Path
 
 import gemini
+import videogen
 from common import build_dir, ffmpeg, say
 
 VEO_LENGTHS = (4, 6, 8)
@@ -32,6 +34,10 @@ STYLE_DEFAULT = ("Hand-drawn 2D doodle cartoon. Thin, slightly wobbly black ink 
                  "Characters are bean-shaped little people with a big perfectly round head, two tiny dot eyes, a small mouth, "
                  "three short hair strands on top. Keep exactly the drawing style, characters and layout of the first frame.")
 NEGATIVE_DEFAULT = "color, shading, gray fill, gradient, 3D render, photorealistic, text, subtitles, watermark, logo, extra limbs, morphing faces"
+
+
+def _gen() -> str:
+    return "Veo" if videogen.cfg().get("backend") == "veo" else "ComfyUI"
 
 
 # ---------------------------------------------------------------- подготовка
@@ -87,7 +93,7 @@ def make_plan(d: Path, only: list[str] | None = None) -> dict:
         say("Нет кадров-якорей — рисую раскадровку (episode --stills)…")
         run_episode(d, draft=True, only=[s["id"] for s in shots if s["anchor"] is None], stills=True)
         shots = [s for s in _shots_info(d, ep) if not only or s["id"] in only]
-    budget = gemini.video_seconds_left()
+    budget = videogen.seconds_left()
     ranked = sorted(shots, key=priority, reverse=True)
     user = {"style_bible": veo.get("style", STYLE_DEFAULT), "characters": veo.get("characters", {}),
             "budget_seconds_today": budget, "clip_lengths": list(VEO_LENGTHS),
@@ -95,10 +101,10 @@ def make_plan(d: Path, only: list[str] | None = None) -> dict:
             "script": (d / "script.md").read_text(encoding="utf-8")[:6000] if (d / "script.md").exists() else ""}
     schema_hint = '{"shots":[{"id":"s3a","use_veo":true,"why":"…","segments":[{"seconds":8,"prompt":"…"}]}],"note":"…"}'
     try:
-        plan = gemini.ask(json.dumps(user, ensure_ascii=False) + "\n\nReturn JSON like " + schema_hint, system=SHOWRUNNER_SYS,
-                          model=gemini.cfg()["models"].get("director"), temperature=0.6)
-    except gemini.GeminiError as e:
-        raise SystemExit(f"Шоураннер (Gemini) недоступен: {e}")
+        plan = videogen.ask(json.dumps(user, ensure_ascii=False) + "\n\nReturn JSON like " + schema_hint, system=SHOWRUNNER_SYS,
+                            temperature=0.6, role="director")
+    except videogen.errors() as e:
+        raise SystemExit(f"Шоураннер недоступен: {e}")
     # страховка: сегменты — только допустимой длины, план не длиннее самого плана
     info = {s["id"]: s for s in shots}
     for p in plan.get("shots", []):
@@ -112,7 +118,7 @@ def make_plan(d: Path, only: list[str] | None = None) -> dict:
     out.write_text(json.dumps(plan, ensure_ascii=False, indent=1), encoding="utf-8")
     use = [p for p in plan["shots"] if p.get("use_veo")]
     total = sum(sg["seconds"] for p in use for sg in p["segments"])
-    say(f"План Veo: {len(use)} планов, {total} с видео (сегодня доступно {budget:.0f} с) → {out}")
+    say(f"План ({_gen()}): {len(use)} планов, {total} с видео" + (f" (сегодня доступно {budget:.0f} с)" if budget != float("inf") else "") + f" → {out}")
     for p in plan["shots"]:
         say(f"  {'▶' if p.get('use_veo') else '·'} {p['id']}: {p.get('why', '')}")
     return plan
@@ -132,15 +138,15 @@ def preflight(prompt: str, anchor: Path, note: str, style: str) -> str:
          "Check that the prompt matches what is visible in the frame (characters, their positions, setting) and the style. "
          'Return JSON {"ok": true/false, "prompt": "corrected full prompt"}.')
     try:
-        r = gemini.ask(q, media=[anchor], temperature=0.2)
+        r = videogen.ask(q, media=[anchor], temperature=0.2)
         return r.get("prompt") or prompt
-    except gemini.GeminiError as e:
+    except videogen.errors() as e:
         say(f"  (проверка промпта пропущена: {e})"); return prompt
 
 
 def judge(clip: Path, anchor: Path, prompt: str, note: str, lines: list[str]) -> dict:
     q = f"Shot note: {note}\nDialogue (added later as voice-over): {lines}\nPrompt used:\n{prompt}\nFirst file: storyboard first frame. Second file: generated clip."
-    r = gemini.ask(q, media=[anchor, clip], system=JUDGE_SYS, temperature=0.2)
+    r = videogen.ask(q, media=[anchor, clip], system=JUDGE_SYS, temperature=0.2)
     r["overall"] = float(r.get("overall", 0))
     return r
 
@@ -154,8 +160,7 @@ def _last_frame(clip: Path, out: Path) -> Path:
 def shoot(d: Path, only: list[str] | None = None, fast: bool = False) -> dict:
     ep = json.loads((d / "episode.json").read_text(encoding="utf-8"))
     veo = ep.get("veo", {}); style = veo.get("style", STYLE_DEFAULT); negative = veo.get("negative", NEGATIVE_DEFAULT)
-    c = gemini.cfg(); max_takes = int(c.get("max_takes", 3)); accept = float(c.get("accept_score", 7))
-    model = c["models"]["video_fast" if fast else "video"]
+    c = videogen.cfg(); max_takes = int(c.get("max_takes", 3)); accept = float(c.get("accept_score", 7))
     pdir = build_dir(d, "veo"); ppath = pdir / "plan.json"
     plan = json.loads(ppath.read_text(encoding="utf-8")) if ppath.exists() else make_plan(d, only)
     spath = pdir / "state.json"
@@ -174,15 +179,15 @@ def shoot(d: Path, only: list[str] | None = None, fast: bool = False) -> dict:
                 anchor = _last_frame(Path(ss["best"]), sdir / f"seg{k}_last.jpg"); continue
             prompt = ss.get("next_prompt") or preflight(f"{style}\n\n{seg['prompt']}", anchor, sh["note"], style)
             while len(ss["takes"]) < max_takes:
-                if gemini.video_seconds_left() < seg["seconds"]:
+                if videogen.seconds_left() < seg["seconds"]:
                     spath.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
                     say(f"⏸ Дневной лимит Veo исчерпан — остановились на {sid} (сегмент {k + 1}). Запустите ту же команду завтра.")
                     return state
                 n = len(ss["takes"]) + 1; clip = sdir / f"seg{k}_take{n}.mp4"
-                say(f"▶ {sid} сегмент {k + 1}/{len(p['segments'])}, дубль {n}: Veo {seg['seconds']} с…")
+                say(f"▶ {sid} сегмент {k + 1}/{len(p['segments'])}, дубль {n}: {_gen()} {seg['seconds']} с…")
                 try:
-                    gemini.veo(prompt, clip, first_frame=anchor, seconds=seg["seconds"], negative=negative, model=model)
-                except gemini.GeminiError as e:
+                    videogen.video(prompt, clip, first_frame=anchor, seconds=seg["seconds"], negative=negative, fast=fast)
+                except videogen.errors() as e:
                     say(f"  Veo: {e}")
                     if "лимит" in str(e):
                         spath.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8"); return state
@@ -205,8 +210,8 @@ def shoot(d: Path, only: list[str] | None = None, fast: bool = False) -> dict:
             st["done"] = True; st["clip"] = str(_join(sdir, [Path(st["segments"][str(k)]["best"]) for k in range(len(p["segments"]))], sh["dur"]))
             say(f"✓ {sid}: принят → {st['clip']}")
         spath.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
-    left = gemini.video_seconds_left()
-    say(f"Veo: готово планов {sum(1 for v in state.values() if v.get('done'))}; на сегодня осталось {left:.0f} с видео")
+    left = videogen.seconds_left()
+    say(f"{_gen()}: готово планов {sum(1 for v in state.values() if v.get('done'))}" + (f"; на сегодня осталось {left:.0f} с видео" if left != float("inf") else ""))
     return state
 
 

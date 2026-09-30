@@ -54,6 +54,9 @@ python studio/sam.py critique swamp_ep2      # критик: смотрит ка
 python studio/sam.py episode swamp_ep2       # рендер серии
 ```
 
+Нейро-видео бесплатно на своём ПК: ComfyUI + MiniMax H3 — [docs/LOCAL_VIDEO.md](docs/LOCAL_VIDEO.md)
+(`python studio\setup_h3.py --comfy C:\ComfyUI_windows_portable`).
+
 Gemini (по желанию, нужен ключ в `GEMINI_API_KEY`): озвучка Gemini TTS и видео Veo — шоураннер отдаёт Veo лучшие планы,
 оценщик проверяет каждый дубль, лимит генераций соблюдается — [docs/GEMINI.md](docs/GEMINI.md).
 

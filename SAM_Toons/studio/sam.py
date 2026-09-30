@@ -14,7 +14,7 @@
   python studio/sam.py write <серия> --idea "..."   # агент-сценарист → script.md (Ollama)
   python studio/sam.py direct <серия>               # агент-режиссёр: script.md → episode.json с проверкой
   python studio/sam.py critique <серия> [--rounds 2] # агент-критик: кадры → оценки → правки episode.json
-  python studio/sam.py veo <серия> [--plan] [--shots s3a] [--fast]  # Veo (Gemini): шоураннер → дубли → оценка; ключ GEMINI_API_KEY
+  python studio/sam.py veo <серия> [--plan] [--shots s3a] [--fast]  # нейро-видео (ComfyUI+H3 локально или Veo): шоураннер → дубли → оценка
   python studio/sam.py episode <фильм> [--draft|--stills] [--shots s1,s2]  # серия целиком в Blender (episode.json) → build/episode_*.mp4
 
 <фильм> — имя папки в films/ (например ufo_casino) или путь к папке с film.json.

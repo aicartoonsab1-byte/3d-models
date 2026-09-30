@@ -21,4 +21,9 @@
 - Gemini (облако, по желанию пользователя) — `docs/GEMINI.md`: озвучка Gemini TTS (движок `gemini` первым в пресетах, без ключа — Piper),
   видео Veo через шоураннера и оценщика (`studio/veo_studio.py`, `sam.py veo`). Ключ только в `GEMINI_API_KEY`; генерации Veo
   лимитированы — бюджет `daily_video_seconds`, расход в `build/gemini_usage.json`. Здесь ключа нет — проверять в mock-режиме.
+- Нейро-видео локально и бесплатно — ComfyUI + MiniMax H3 (`docs/LOCAL_VIDEO.md`, `studio/comfy.py`, `studio/setup_h3.py`,
+  узлы H3 Motion Context закреплены на проверенном коммите). Выбор генератора и «мозга» — `studio/videogen.json`
+  (по умолчанию comfyui + ollama). ComfyUI здесь нет — проверять на заглушке сервера.
+- Стили рисовки поверх Blender — `studio/styles.py` (линия + карта категорий + глубина → 10 стилей, лист `docs/styles/`).
+  Пользователю ни один из 10 не подошёл — ждём пример желаемой рисовки.
 - Тексты на русском, реплики до 140 символов.

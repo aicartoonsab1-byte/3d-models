@@ -1,0 +1,9 @@
+{
+ "_comment": "Нейро-видео. backend: comfyui (локально, бесплатно) | veo (Gemini, платно). brain: ollama (локально) | gemini. Свои правки — videogen.local.json (не в git).",
+ "backend": "comfyui",
+ "brain": "ollama",
+ "max_takes": 3,
+ "accept_score": 7,
+ "min_score": 5,
+ "comfyui": {"url": "http://127.0.0.1:8188", "workflow": "studio/comfy_workflows/h3_i2v.json", "fps": 24, "timeout": 7200}
+}
