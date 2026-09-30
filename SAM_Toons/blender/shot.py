@@ -37,7 +37,10 @@ info = stage3d.build_shot(spec, contacts)
 sc = bpy.context.scene
 if "--pick" in args:          # отдельные кадры для раскадровки/проверки: --pick 10,40,80
     for f in [int(x) for x in args[args.index("--pick") + 1].split(",")]:
-        sc.frame_set(f); sc.render.filepath = str(out / f"f_{f:04d}"); bpy.ops.render.render(write_still=True)
+        sc.frame_set(f); sc.render.filepath = str(out / f"f_{f:04d}")
+        if sc.node_tree and "mist_out" in sc.node_tree.nodes:
+            sc.node_tree.nodes["mist_out"].base_path = str(out)
+        bpy.ops.render.render(write_still=True)
     print("SHOT_DONE pick"); sys.exit(0)
 sc.frame_start, sc.frame_end = (rng if rng else (1, info["frames"]))
 sc.frame_step = 2 if spec.get("style", {}).get("twos") and not rng else 1   # «через кадр»: пропуски дублируются при сборке

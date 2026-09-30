@@ -35,17 +35,19 @@ def setup(spec: dict):
     look.MODE = style.get("look", "mult")
     fps = spec.get("fps", 25); w, h = spec.get("size", [960, 540])
     look.render_settings(w, h, fps, spec.get("samples", 1)); look.world_sky(); world.lights()
+    if look.MODE == "ids":
+        return fps          # служебный проход для стилей: без линий
     ls = look.freestyle(*((style.get("line", 1.75), style.get("wobble", 0.6)) if look.MODE == "mult" else (2.4, 1.6)))
     if look.MODE == "mult":
         ls.linestyle.color = (0.02, 0.02, 0.025)
     return fps
 
 
-def build_set(st: dict, mult: bool):
+def build_set(st: dict, mult: bool, speckles: bool = True):
     world.ground(flat=mult)
     if st.get("hills", True):
         world.hills(28, look.PAL["far"], 4, 5); world.hills(18, look.PAL["mid"], 2.2, 9)
-    if mult:
+    if mult and speckles:
         world.speckle_ground(ROOT / "blender/textures/speckle.png")
     else:
         world.moons()
@@ -114,8 +116,8 @@ def build_shot(spec: dict, contacts_path: Path | None = None) -> dict:
     if "card" in spec:
         build_card({**spec["card"], "duration": spec["duration"]}, fps)
         return {"frames": frames}
-    mult = look.MODE == "mult"
-    build_set(spec.get("set", {}), mult)
+    mult = look.MODE in ("mult", "ids")
+    build_set(spec.get("set", {}), mult, speckles=look.MODE == "mult")
     rigs, info = {}, {"frames": frames, "contacts": []}
     for name, a in spec.get("actors", {}).items():
         kind = a.get("kind", "bean" if mult else "human")

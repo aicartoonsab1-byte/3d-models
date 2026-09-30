@@ -33,10 +33,32 @@ def flat(name, color):
     return m
 
 
+# Служебный режим "ids": каждая категория предметов — своим «кодовым» цветом без света и линий.
+# По нему studio/styles.py раскрашивает кадр в любой стиль (акварель, Limbo, комикс…) поверх линии из режима mult.
+ID_COLORS = {"sky": (0, 0, 0), "ink": (1, 0, 0), "char": (0, 1, 0), "prop": (0, 0, 1), "creature": (1, 1, 0), "mantis": (1, 0, 1),
+             "plant": (0, 1, 1), "flower": (1, 0.5, 0), "glow": (0.5, 0, 1), "tree": (0, 0.5, 0), "ground": (0.5, 0.5, 0.5),
+             "water": (0, 0, 0.5), "hill": (0.5, 0, 0), "moon": (0.5, 0.5, 1), "white": (1, 1, 1)}
+ID_RULES = (("ink", INK_PARTS + ("pupil_blk",)), ("glow", ("bulb", "glow", "fruit")), ("flower", ("petal",)),
+            ("mantis", ("mantis", "compound", "mand", "antler", "trunk", "wing", "claw")),
+            ("creature", ("fur", "muzzle", "ear", "eyewhite")), ("prop", ("vcam", "lens", "cam", "goggle", "pack")),
+            ("plant", ("stem", "reed", "cattail", "moss", "bush")), ("tree", ("bark", "tree")),
+            ("water", ("water",)), ("hill", ("hill",)), ("moon", ("moon",)), ("ground", ("ground", "speck")), ("white", ("card",)))
+
+
+def id_category(name: str) -> str:
+    low = name.lower()
+    for cat, keys in ID_RULES:
+        if any(k in low for k in keys):
+            return cat
+    return "char"
+
+
 def toon(name: str, color, shadow=None, emit: float = 0.0, steps: int = 2):
     """Материал «как нарисовано»: свет/тень — ровными заливками (Shader to RGB → ColorRamp constant)."""
     if name in bpy.data.materials:
         return bpy.data.materials[name]
+    if MODE == "ids":
+        return flat(name, ID_COLORS[id_category(name)])
     if MODE == "mult":
         low = name.lower()
         if MULT_ACCENT and any(k in low for k in ACCENT_PARTS):
@@ -69,6 +91,8 @@ def toon(name: str, color, shadow=None, emit: float = 0.0, steps: int = 2):
 def world_sky(top=None, low=None):
     if MODE == "mult":
         top = low = (1.0, 1.0, 1.0)
+    if MODE == "ids":
+        top = low = ID_COLORS["sky"]
     w = bpy.context.scene.world or bpy.data.worlds.new("World"); bpy.context.scene.world = w
     w.use_nodes = True; nt = w.node_tree; nt.nodes.clear()
     out = nt.nodes.new("ShaderNodeOutputWorld"); bg = nt.nodes.new("ShaderNodeBackground")
@@ -117,3 +141,15 @@ def render_settings(w: int, h: int, fps: int, samples: int = 4):
     sc.eevee.use_bloom = True; sc.eevee.bloom_intensity = 0.06; sc.eevee.bloom_threshold = 0.9
     sc.view_settings.view_transform = "Standard"; sc.view_settings.look = "None"
     sc.render.image_settings.file_format = "JPEG"; sc.render.image_settings.quality = 94
+    if MODE == "ids":      # чистые цвета категорий: без размытия свечения, без сглаживания, PNG без потерь + глубина (mist)
+        sc.eevee.use_bloom = False; sc.eevee.taa_render_samples = 1; sc.render.filter_size = 0.01
+        sc.render.image_settings.file_format = "PNG"
+        vl = bpy.context.view_layer; vl.use_pass_mist = True
+        w = sc.world or bpy.data.worlds.new("World"); sc.world = w; w.mist_settings.start = 1.0; w.mist_settings.depth = 30.0
+        w.mist_settings.falloff = "LINEAR"
+        sc.use_nodes = True; nt = sc.node_tree; nt.nodes.clear()
+        rl = nt.nodes.new("CompositorNodeRLayers"); comp = nt.nodes.new("CompositorNodeComposite")
+        nt.links.new(rl.outputs["Image"], comp.inputs["Image"])
+        fo = nt.nodes.new("CompositorNodeOutputFile"); fo.name = "mist_out"; fo.format.file_format = "PNG"
+        fo.format.color_mode = "BW"; fo.format.color_depth = "16"; fo.file_slots[0].path = "mist_"
+        nt.links.new(rl.outputs["Mist"], fo.inputs[0])
