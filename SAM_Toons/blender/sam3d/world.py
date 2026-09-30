@@ -158,3 +158,27 @@ def bush(x, y, w=1.2, seed=6):
     r = random.Random(seed); white = toon("bush_white", PAL["white"])
     for i in range(6):
         _sphere("bush", (x + r.uniform(-w / 2, w / 2), y + r.uniform(-0.2, 0.2), 0.05), w * r.uniform(0.18, 0.3), white, (1, 0.8, 0.8), 14)
+
+
+def speckle_ground(tex_path, tile=4.0, fade_from=8.0, fade_to=18.0):
+    """Земля стиля mult: белая, с крапинками бумаги из текстуры (быстро: никакой лишней геометрии для контура).
+    Вдали крапинки плавно исчезают — иначе они сливаются в серую дымку."""
+    g = bpy.data.objects.get("ground")
+    m = bpy.data.materials.new("ground_speckle"); m.use_nodes = True; nt = m.node_tree; nt.nodes.clear()
+    N = nt.nodes.new; L = nt.links.new
+    out = N("ShaderNodeOutputMaterial"); em = N("ShaderNodeEmission")
+    tc = N("ShaderNodeTexCoord"); mp = N("ShaderNodeMapping"); mp.inputs["Scale"].default_value = (1 / tile, 1 / tile, 1)
+    img = N("ShaderNodeTexImage"); img.image = bpy.data.images.load(str(tex_path)); img.extension = "REPEAT"
+    sep = N("ShaderNodeSeparateXYZ"); fade = N("ShaderNodeMapRange")
+    fade.inputs["From Min"].default_value = fade_from; fade.inputs["From Max"].default_value = fade_to
+    fade.inputs["To Min"].default_value = 1.0; fade.inputs["To Max"].default_value = 0.0
+    inv = N("ShaderNodeMath"); inv.operation = "SUBTRACT"; inv.inputs[0].default_value = 1.0
+    mul = N("ShaderNodeMath"); mul.operation = "MULTIPLY"
+    one = N("ShaderNodeMath"); one.operation = "SUBTRACT"; one.inputs[0].default_value = 1.0
+    L(tc.outputs["Object"], mp.inputs["Vector"]); L(mp.outputs["Vector"], img.inputs["Vector"])
+    L(img.outputs["Color"], inv.inputs[1])                     # тёмная крапинка → 1
+    L(tc.outputs["Object"], sep.inputs[0]); L(sep.outputs["Y"], fade.inputs["Value"])
+    L(inv.outputs[0], mul.inputs[0]); L(fade.outputs[0], mul.inputs[1])
+    L(mul.outputs[0], one.inputs[1]); L(one.outputs[0], em.inputs["Color"])
+    L(em.outputs[0], out.inputs[0])
+    g.data.materials.clear(); g.data.materials.append(m)

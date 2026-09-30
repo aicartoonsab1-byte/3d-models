@@ -75,6 +75,30 @@ def clip(name: str, root: Path, fps: int) -> Clip:
     return _clips[name]
 
 
+MOVES = {}
+
+
+def resolve_move(sg: dict) -> dict:
+    """{"move": "vlog", "dur": 3} → {"clip", "from", "to", "hold"} по библиотеке blender/moves.json.
+    dur короче куска — берётся начало; длиннее — последняя поза держится (hold)."""
+    if "move" not in sg:
+        return sg
+    if not MOVES:
+        import json
+        MOVES.update(json.loads((Path(__file__).resolve().parents[1] / "moves.json").read_text(encoding="utf-8")))
+    m = MOVES.get(sg["move"])
+    if not m:
+        raise KeyError(f"нет движения «{sg['move']}» в blender/moves.json")
+    out = {**sg, "clip": m["clip"], "from": m["from"] + sg.get("offset", 0.0), "to": m["to"]}
+    if "dur" in sg:
+        speed = sg.get("speed", 1.0); avail = (m["to"] - out["from"]) / speed
+        if sg["dur"] <= avail:
+            out["to"] = out["from"] + sg["dur"] * speed
+        else:
+            out["hold"] = sg["dur"] - avail
+    return out
+
+
 def bake(rig: bpy.types.Object, segments: list[dict], root: Path, fps: int, start_xy=(0.0, 0.0)) -> int:
     """Склеить сегменты в одно действие скелета rig. Возвращает число кадров.
 
@@ -82,6 +106,7 @@ def bake(rig: bpy.types.Object, segments: list[dict], root: Path, fps: int, star
     face — направление взгляда в сцене: 0 — к камере (−Y), 90 — вправо (+X), −90 — влево, 180 — от камеры.
     hold — сколько секунд держать последнюю позу после конца куска.
     """
+    segments = [resolve_move(sg) for sg in segments]
     rest = {b.name: b.matrix_local.copy() for b in rig.data.bones}
     hips_rest = rest["Hips"]; hips_rest_inv = hips_rest.inverted()
     base_leg = rig.data.bones["LeftUpLeg"].length + rig.data.bones["LeftLeg"].length

@@ -11,6 +11,7 @@
   python studio/sam.py ref <голос> <файл> [--text "что сказано"]  # образец голоса для клонирования (CosyVoice)
   python studio/sam.py vocab                   # словарь движка: позы, эмоции, предметы, звуки
   python studio/sam.py shot <папка> [--frames 1-50]  # сцена в Blender (shot.json): мокап, 3D «под рисунок» → build/shot.mp4
+  python studio/sam.py episode <фильм> [--draft|--stills] [--shots s1,s2]  # серия целиком в Blender (episode.json) → build/episode_*.mp4
 
 <фильм> — имя папки в films/ (например ufo_casino) или путь к папке с film.json.
 """
@@ -42,7 +43,7 @@ def cmd_check(d: Path, film: dict) -> bool:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["check", "voice", "stills", "render", "make", "serve", "voices", "vocab", "ref", "shot"])
+    ap.add_argument("cmd", choices=["check", "voice", "stills", "render", "make", "serve", "voices", "vocab", "ref", "shot", "episode"])
     ap.add_argument("film", nargs="?")
     ap.add_argument("src", nargs="?", help="для ref: аудиофайл с образцом голоса")
     ap.add_argument("--text", help="для ref: текст, произнесённый в образце")
@@ -50,6 +51,9 @@ def main() -> None:
     ap.add_argument("--half", action="store_true", help="рендер 960×540 (быстрый черновик)")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--frames", help="для shot: диапазон кадров (проба)")
+    ap.add_argument("--draft", action="store_true", help="для episode: черновик 480×270")
+    ap.add_argument("--stills", action="store_true", help="для episode: только ключевые кадры планов → build/episode_sheet.jpg")
+    ap.add_argument("--shots", help="для episode: перерисовать только эти планы (через запятую)")
     a = ap.parse_args()
 
     if a.cmd == "voices":
@@ -64,6 +68,10 @@ def main() -> None:
         from blender_shot import run_shot
         d = Path(a.film) if Path(a.film).exists() else ROOT / "films" / a.film
         return run_shot(d, a.frames) and None
+    if a.cmd == "episode":
+        from episode import run_episode
+        d = Path(a.film) if Path(a.film).exists() else ROOT / "films" / a.film
+        return run_episode(d, a.draft, a.shots.split(",") if a.shots else None, a.stills) and None
     if a.cmd == "vocab":
         from check import vocab
         return say(json.dumps(vocab(), ensure_ascii=False, indent=1))

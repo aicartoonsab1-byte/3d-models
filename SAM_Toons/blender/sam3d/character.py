@@ -336,3 +336,48 @@ def build_bean(name: str, mocap_dir: Path, fps: int, spec: dict) -> dict:
         lens = _sphere(f"{name}_lens_accent", t("LeftHand") + fwd * 0.035, 0.018, toon(f"{name}_lens_accent", PAL["white"]), (1, 1, 1), 10)
         _parent_bone(vc, rig, "LeftHand"); _parent_bone(lens, rig, "LeftHand")
     return {"rig": rig, "mouth": mouth, "eyes": eyes, "forward": fwd, "head": head}
+
+
+def build_claw(b: dict, side: str = "Right", s: float = 1.6):
+    """Клешня богомола на месте кисти (сначала невидима, scale=0): толстое бедро с шипами + загнутая голень-крюк."""
+    rig = b["rig"]; B = rig.data.bones
+    wr = B[f"{side}Hand"].head_local.copy(); d = (B[f"{side}Hand"].tail_local - B[f"{side}ForeArm"].head_local).normalized()
+    up = Vector((0, 0, 1)); side_v = d.cross(up).normalized()
+    L = 0.32 * s
+    p0 = wr - d * 0.02; p1 = wr + d * L * 0.6 + up * 0.04; p2 = wr + d * L
+    hook = [p2, p2 + up * 0.1 * s - d * 0.05 * s, p2 + up * 0.08 * s - d * 0.22 * s]
+    V = [p0, p1, p2] + hook[1:]; E = [(0, 1), (1, 2), (2, 3), (3, 4)]; RR = [0.06 * s, 0.075 * s, 0.05 * s, 0.035 * s, 0.015 * s]
+    # шипы по нижнему краю
+    for i in range(4):
+        base = p0.lerp(p2, 0.2 + i * 0.2); V += [base - up * 0.05 * s, base - up * 0.12 * s + d * 0.03 * s]
+        n = len(V); E += [(1 if i < 2 else 2, n - 2), (n - 2, n - 1)]; RR += [0.018 * s, 0.006 * s]
+    claw = skin_mesh(f"{rig.name}_claw", V, E, RR)
+    claw.data.materials.append(toon(f"{rig.name}_claw_mantis", PAL["green"], PAL["green_dk"]))
+    # пивот в запястье, чтобы клешня «вырастала» из руки
+    bpy.context.view_layer.update()
+    _active(claw); bpy.context.scene.cursor.location = wr
+    bpy.ops.object.origin_set(type="ORIGIN_CURSOR")
+    _parent_bone(claw, rig, f"{side}ForeArm")
+    claw.scale = (0.001, 0.001, 0.001)
+    b["claw"] = claw
+    return claw
+
+
+def arm_morph(b: dict, keys: list[dict], fps: int, side: str = "Right"):
+    """Превращение руки: keys=[{"t", "swell": 0..1, "claw": 0..1}].
+    swell — предплечье и кисть раздуваются (кости масштабируются, оболочка тянется за ними);
+    claw — кисть исчезает, из запястья «выскакивает» клешня (с небольшим перелётом масштаба — «хлопок»)."""
+    rig = b["rig"]; pb = rig.pose.bones
+    fa, hd = pb[f"{side}ForeArm"], pb[f"{side}Hand"]
+    claw = b.get("claw") or build_claw(b, side)
+    for k in keys:
+        f = k["t"] * fps + 1; sw = k.get("swell", 0.0); cl = k.get("claw", 0.0)
+        g = 1 + 1.3 * sw * (1 - cl)
+        fa.scale = (g, 1 + 0.15 * sw * (1 - cl), g); fa.keyframe_insert("scale", frame=f)
+        hs = (1 + 1.6 * sw) * (1 - cl) + 0.001
+        hd.scale = (hs, hs, hs); hd.keyframe_insert("scale", frame=f)
+        c = max(0.001, cl)
+        claw.scale = (c, c, c); claw.keyframe_insert("scale", frame=f)
+    for fc in claw.animation_data.action.fcurves:          # клешня выскакивает с перелётом — «хлопок»
+        for kp in fc.keyframe_points:
+            kp.interpolation = "BACK"

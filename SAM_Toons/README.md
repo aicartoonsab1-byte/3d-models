@@ -1,6 +1,6 @@
 # SAM_Toons
 
-Студия рисованных кодом мультфильмов. Стиль — тонкая чёрная линия на белом с красным акцентом, человечки-«фасолины»
+Студия рисованных кодом мультфильмов. Стиль — тонкая чёрная линия на белом, человечки-«фасолины»
 с большой круглой головой и глазами-точками. Анимация как у рисованных мультов: рисунок меняется через кадр (12,5 в секунду),
 между движениями — неподвижные паузы, камера едет плавно.
 Всё работает локально и бесплатно: рисует движок на JavaScript в безголовом браузере, озвучивают офлайн-TTS,
@@ -41,7 +41,12 @@ python studio/sam.py serve                    # живой плеер: http://12
 python studio/sam.py voices                   # какие голоса нашлись на этом ПК
 python studio/sam.py ref narrator запись.wav --text "что сказано"   # образец голоса для CosyVoice
 python studio/sam.py vocab                    # позы, эмоции, предметы, звуки
+python studio/sam.py episode swamp_ep1 --stills   # серия в Blender: ключевые кадры всех планов → build/episode_sheet.jpg
+python studio/sam.py episode swamp_ep1 --draft    # черновик серии 480×270
+python studio/sam.py episode swamp_ep1            # чистовик серии → build/episode_final.mp4 + субтитры
 ```
+
+Серия в Blender описывается файлом `episode.json` — [docs/EPISODE_FORMAT.md](docs/EPISODE_FORMAT.md).
 
 ## Как устроено
 
