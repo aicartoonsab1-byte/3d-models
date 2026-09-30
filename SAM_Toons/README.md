@@ -46,6 +46,14 @@ python studio/sam.py episode swamp_ep1 --draft    # черновик серии 
 python studio/sam.py episode swamp_ep1            # чистовик серии → build/episode_final.mp4 + субтитры
 ```
 
+Агенты (нужна [Ollama](https://ollama.com) и модели из `studio/agents.json`):
+```bash
+python studio/sam.py write swamp_ep2 --idea "Борис ищет воду, а находит озеро из желе"   # сценарий → script.md, правите руками
+python studio/sam.py direct swamp_ep2        # режиссёр: script.md → episode.json (сам исправляет ошибки проверки)
+python studio/sam.py critique swamp_ep2      # критик: смотрит кадры, ставит оценки, правит episode.json
+python studio/sam.py episode swamp_ep2       # рендер серии
+```
+
 Серия в Blender описывается файлом `episode.json` — [docs/EPISODE_FORMAT.md](docs/EPISODE_FORMAT.md).
 
 ## Как устроено

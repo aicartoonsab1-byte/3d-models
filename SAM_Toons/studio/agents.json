@@ -1,0 +1,8 @@
+{
+ "_comment": "Модели Ollama для агентов (скачать: ollama pull <модель>). Свои настройки — в agents.local.json рядом (не в git).",
+ "url": "http://127.0.0.1:11434",
+ "models": {"writer": "qwen3:8b", "director": "qwen3:8b", "critic": "qwen2.5vl:7b", "default": "qwen3:8b"},
+ "num_ctx": 16384,
+ "think": false,
+ "timeout": 900
+}

@@ -6,3 +6,4 @@ studio/engines.local.json
 models/CosyVoice/
 models/mocap/
 sounds/
+studio/agents.local.json
