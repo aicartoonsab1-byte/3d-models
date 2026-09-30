@@ -120,7 +120,7 @@ def code_version() -> str:
     return h.hexdigest()[:10]
 
 
-def run_episode(d: Path, draft: bool = False, only: list[str] | None = None, stills: bool = False) -> Path:
+def run_episode(d: Path, draft: bool = False, only: list[str] | None = None, stills: bool = False, veo: bool = False) -> Path:
     ep = json.loads((d / "episode.json").read_text(encoding="utf-8"))
     from episode_check import check_episode
     err, warn = check_episode(ep)
@@ -137,7 +137,7 @@ def run_episode(d: Path, draft: bool = False, only: list[str] | None = None, sti
     shots = ep["shots"]
     # 1) озвучка всех реплик серии (одна «сцена» = один план)
     film = {"fps": fps, "style": ep.get("voice_style", {}), "cast": cast,
-            "scenes": [{"id": s["id"], "beats": [{"say": {"who": l["who"], "text": l["text"], "mood": l.get("mood")}} for l in s.get("lines", [])]} for s in shots]}
+            "scenes": [{"id": s["id"], "beats": [{"say": {"who": l["who"], "text": l["text"], "mood": l.get("mood"), "how": l.get("how")}} for l in s.get("lines", [])]} for s in shots]}
     manifest = voice_film(d, film) if any(s.get("lines") for s in shots) else {"lines": {}}
     ver = code_version()
     tag = "draft" if draft else "final"
@@ -183,6 +183,11 @@ def run_episode(d: Path, draft: bool = False, only: list[str] | None = None, sti
             (sdir / "stamp").write_text(stamp)
         else:
             say(f"✓ план {sid}: {dur:.1f} с — из кэша")
+        if veo:     # принятый ролик Veo вместо плана Blender (звук всё равно наш)
+            from veo_studio import accepted_clip, conform
+            vc = accepted_clip(d, sid)
+            if vc:
+                video = conform(vc, sdir / "veo.mp4", dur, *size, fps); say(f"  {sid}: ролик Veo")
         videos.append(video)
         # 3) звук этого плана на общей дорожке
         for l in lines:
@@ -201,7 +206,7 @@ def run_episode(d: Path, draft: bool = False, only: list[str] | None = None, sti
     if stills:
         return contact_sheet(d, sheet)
     # 4) монтаж: планы подряд + общая звуковая дорожка + субтитры
-    out = d / "build" / (f"episode_{tag}.mp4")
+    out = d / "build" / (f"episode_{tag}{'_veo' if veo else ''}.mp4")
     lst = d / "build" / "concat.txt"
     lst.write_text("".join(f"file '{v.as_posix()}'\n" for v in videos), encoding="utf-8")
     audio = mix_timeline(d, timeline, offset, ep)

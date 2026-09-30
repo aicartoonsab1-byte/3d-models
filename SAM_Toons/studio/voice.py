@@ -105,8 +105,28 @@ def _piper_voice(model: str):
     return PiperVoice.load(str(MODELS / "piper" / f"{model}.onnx"))
 
 
+GEMINI_MOOD = {  # настроение → как сказать (Gemini TTS понимает описание словами)
+    "happy": "радостно, с улыбкой", "sad": "грустно, с тяжёлым вздохом", "angry": "сердито", "scared": "испуганно, срывающимся голосом",
+    "surprised": "изумлённо", "pray": "тихо, почти шёпотом", "sly": "хитро, с усмешкой", "tired": "устало, упавшим голосом",
+    "love": "умилённо, сюсюкая", "dizzy": "растерянно",
+}
+
+
+def gemini_style(e: dict, c: dict, mood: str, how: str | None) -> tuple[str, str]:
+    """Голос и манера для Gemini TTS: пресет (studio/gemini.json) + характер персонажа (cast.style) + настроение + ремарка."""
+    import gemini
+    v = gemini.cfg().get("voices", {}).get(e.get("preset", ""), {})
+    voice = c.get("gemini_voice") or e.get("voice") or v.get("voice", "Puck")
+    now = ", ".join(p for p in (how, GEMINI_MOOD.get(mood or "")) if p)          # как сказать именно эту реплику — главное
+    who = ". ".join(p for p in (v.get("style", ""), c.get("style", "")) if p)    # постоянная манера персонажа
+    return voice, (f"Скажи {now}" if now else "Скажи") + (f" (персонаж: {who})" if who else "")
+
+
 def available(e: dict) -> bool:
     kind = e["engine"]
+    if kind == "gemini":
+        import gemini
+        return gemini.available()
     if kind == "cosyvoice":
         return cosy_cfg() is not None and (VOICES / f"{e['ref']}.wav").exists()
     if kind == "piper":
@@ -132,7 +152,10 @@ def pick(preset_name: str) -> tuple[dict, dict]:
 
 def synth_raw(e: dict, text: str, out: Path) -> None:
     kind = e["engine"]
-    if kind == "piper":
+    if kind == "gemini":
+        import gemini
+        gemini.tts(text, e["_voice"], e["_style"], out)
+    elif kind == "piper":
         v = _piper_voice(e["model"])
         with wave.open(str(out), "wb") as wf:
             (v.synthesize_wav if hasattr(v, "synthesize_wav") else v.synthesize)(text, wf)
@@ -240,7 +263,10 @@ def voice_film(d: Path, film: dict, force: bool = False) -> dict:
         preset_name = c.get("voice") or ("narrator" if who == "narrator" else "man")
         pr, eng = pick(preset_name)
         mood = l.get("mood") or ""
-        cosy = eng["engine"] == "cosyvoice"
+        cosy = eng["engine"] in ("cosyvoice", "gemini")    # движки, которые сами играют интонацию: без Praat и сдвига высоты
+        if eng["engine"] == "gemini":
+            eng = {"pitch": 0, "tempo": 1.0, **eng}      # голос Gemini не сдвигаем (только если персонажу задано явно)
+            eng["_voice"], eng["_style"] = gemini_style(eng, c, mood, l.get("how"))
         # у движка в пресете могут быть свои pitch/tempo (клон голоса обычно не сдвигаем)
         pitch, tempo = eng.get("pitch", pr.get("pitch", 0)) + c.get("pitch", 0), eng.get("tempo", pr.get("tempo", 1.0)) * c.get("tempo", 1.0)
         instruct = COSY_MOOD.get(mood) if cosy else None
@@ -287,10 +313,10 @@ def voice_film(d: Path, film: dict, force: bool = False) -> dict:
                 alive = tmp / f"alive{i}.wav"
                 if lv.liven(p["raw"], alive, p["text"], p["liv"].get("range", 1.0), p["liv"].get("pitch", 0) + pitch):
                     p["raw"], pitch = alive, 0          # высоту уже сдвинул Praat (чище, чем asetrate)
-            post(p["raw"], cooked, pitch, 1.0 if p["eng"]["engine"] == "cosyvoice" else p["tempo"], p["fx"])
+            post(p["raw"], cooked, pitch, 1.0 if p["eng"]["engine"] in ("cosyvoice", "gemini") else p["tempo"], p["fx"])
             p["cooked"] = cooked
             e = p["eng"]
-            say(f"  [{i + 1}/{len(todo)}] {p['l']['id']} {p['l']['who']} ({e['engine']}:{e.get('ref') or e.get('model') or e.get('voice')}): {p['text']}")
+            say(f"  [{i + 1}/{len(todo)}] {p['l']['id']} {p['l']['who']} ({e['engine']}:{e.get('_voice') or e.get('ref') or e.get('model') or e.get('voice')}): {p['text']}")
         # замена голоса RVC пачками — по одной на модель
         by_model: dict[str, list[dict]] = {}
         for p in todo:

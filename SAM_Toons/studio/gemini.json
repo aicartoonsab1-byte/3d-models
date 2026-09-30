@@ -1,0 +1,20 @@
+{
+ "_comment": "Gemini API. Ключ — только в переменной окружения GEMINI_API_KEY. Имена моделей меняются часто: сверяйтесь со списком в Google AI Studio и правьте здесь (или в gemini.local.json).",
+ "models": {
+  "video": "veo-3.1-generate-preview",
+  "video_fast": "veo-3.1-fast-generate-preview",
+  "tts": "gemini-2.5-flash-preview-tts",
+  "judge": "gemini-2.5-flash",
+  "director": "gemini-2.5-pro"
+ },
+ "daily_video_seconds": 64,
+ "max_takes": 3,
+ "accept_score": 7,
+ "video_params": {"resolution": "720p"},
+ "video_timeout": 900,
+ "voices": {
+  "_comment": "Голоса Gemini TTS для пресетов studio/voices.json (engine: gemini). Стиль — как говорить, по-русски.",
+  "narrator": {"voice": "Charon", "style": "Сухо, невозмутимо, с едва заметной иронией, как рассказчик документального фильма"},
+  "man_young": {"voice": "Puck", "style": "Бодро и самоуверенно, как молодой блогер-стример, живо и с энтузиазмом"}
+ }
+}

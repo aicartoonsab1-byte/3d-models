@@ -7,3 +7,4 @@ models/CosyVoice/
 models/mocap/
 sounds/
 studio/agents.local.json
+studio/gemini.local.json

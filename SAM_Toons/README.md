@@ -54,6 +54,9 @@ python studio/sam.py critique swamp_ep2      # критик: смотрит ка
 python studio/sam.py episode swamp_ep2       # рендер серии
 ```
 
+Gemini (по желанию, нужен ключ в `GEMINI_API_KEY`): озвучка Gemini TTS и видео Veo — шоураннер отдаёт Veo лучшие планы,
+оценщик проверяет каждый дубль, лимит генераций соблюдается — [docs/GEMINI.md](docs/GEMINI.md).
+
 Серия в Blender описывается файлом `episode.json` — [docs/EPISODE_FORMAT.md](docs/EPISODE_FORMAT.md).
 
 ## Как устроено

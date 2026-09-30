@@ -3,6 +3,10 @@
  "narrator": {
   "engines": [
    {
+    "engine": "gemini",
+    "preset": "narrator"
+   },
+   {
     "engine": "cosyvoice",
     "ref": "narrator",
     "pitch": 0,
@@ -26,6 +30,10 @@
  },
  "man": {
   "engines": [
+   {
+    "engine": "gemini",
+    "preset": "man"
+   },
    {
     "engine": "cosyvoice",
     "ref": "man",
@@ -51,6 +59,10 @@
  "man_young": {
   "engines": [
    {
+    "engine": "gemini",
+    "preset": "man_young"
+   },
+   {
     "engine": "cosyvoice",
     "ref": "man_young",
     "pitch": 0,
@@ -74,6 +86,10 @@
  },
  "man_old": {
   "engines": [
+   {
+    "engine": "gemini",
+    "preset": "man_old"
+   },
    {
     "engine": "cosyvoice",
     "ref": "man_old",
@@ -99,6 +115,10 @@
  "woman": {
   "engines": [
    {
+    "engine": "gemini",
+    "preset": "woman"
+   },
+   {
     "engine": "cosyvoice",
     "ref": "woman",
     "pitch": 0,
@@ -122,6 +142,10 @@
  },
  "girl": {
   "engines": [
+   {
+    "engine": "gemini",
+    "preset": "girl"
+   },
    {
     "engine": "cosyvoice",
     "ref": "girl",
@@ -147,6 +171,10 @@
  "kid": {
   "engines": [
    {
+    "engine": "gemini",
+    "preset": "kid"
+   },
+   {
     "engine": "cosyvoice",
     "ref": "kid",
     "pitch": 0,
@@ -170,6 +198,10 @@
  },
  "alien": {
   "engines": [
+   {
+    "engine": "gemini",
+    "preset": "alien"
+   },
    {
     "engine": "cosyvoice",
     "ref": "alien",
@@ -198,6 +230,10 @@
  "robot": {
   "engines": [
    {
+    "engine": "gemini",
+    "preset": "robot"
+   },
+   {
     "engine": "cosyvoice",
     "ref": "robot",
     "pitch": 0,
@@ -224,6 +260,10 @@
  },
  "giant": {
   "engines": [
+   {
+    "engine": "gemini",
+    "preset": "giant"
+   },
    {
     "engine": "cosyvoice",
     "ref": "giant",

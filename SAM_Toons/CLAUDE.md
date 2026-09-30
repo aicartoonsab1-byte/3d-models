@@ -18,4 +18,7 @@
   кэш планов, шаги по контактам стоп, фон и сведение (`studio/episode.py`, `audio.mix_timeline`). Проверка кадров без рендера всей
   серии: `python studio/sam.py episode <серия> --stills` → `build/episode_sheet.jpg`. Сценарий серии — `script.md` рядом.
 - Звуки: сначала `sounds/<имя>/` (Freesound CC0, ключ только в переменной `FREESOUND_TOKEN`, никогда не коммитить), иначе синтез `sfx_*`.
+- Gemini (облако, по желанию пользователя) — `docs/GEMINI.md`: озвучка Gemini TTS (движок `gemini` первым в пресетах, без ключа — Piper),
+  видео Veo через шоураннера и оценщика (`studio/veo_studio.py`, `sam.py veo`). Ключ только в `GEMINI_API_KEY`; генерации Veo
+  лимитированы — бюджет `daily_video_seconds`, расход в `build/gemini_usage.json`. Здесь ключа нет — проверять в mock-режиме.
 - Тексты на русском, реплики до 140 символов.

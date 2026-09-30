@@ -21,7 +21,8 @@
    "voice": "man_young",
    "hold": "camera",
    "hair": "tuft",
-   "morph_side": "Left"
+   "morph_side": "Left",
+   "style": "самоуверенный экзобиолог-блогер, храбрится, пугается громко"
   },
   "narrator": {
    "voice": "narrator"
@@ -1408,5 +1409,17 @@
     }
    ]
   }
- ]
+ ],
+ "veo": {
+  "style": "Hand-drawn 2D doodle cartoon. Thin, slightly wobbly black ink lines on a pure white background. No color, no gray fills, no shading. Minimalist notebook animation, animated on twos. Keep exactly the drawing style, characters and layout of the first frame.",
+  "characters": {
+   "boris": "Boris: a bean-shaped little man with a huge perfectly round white head, two tiny black dot eyes, a small mouth, three short hair strands on top; thin body and limbs; often holds a small vlog camera.",
+   "capykanga": "A capybara with kangaroo hind legs; the other half of its face is a praying mantis head with a huge compound eye and mandibles.",
+   "mantis_trunk": "A praying mantis with an elephant trunk and elephant ears.",
+   "mantis_deer": "Praying mantises with deer antlers, running as a herd.",
+   "mantis_baby": "A tiny cute baby praying mantis with small wings.",
+   "flower": "A glowing flower on a long thin stem that turns its head like a sunflower."
+  },
+  "negative": "color, shading, gray fill, gradient, 3D render, photorealistic, text, subtitles, watermark, logo, extra limbs, morphing faces, talking lips"
+ }
 }
