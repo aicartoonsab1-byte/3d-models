@@ -122,6 +122,14 @@ def code_version() -> str:
 
 def run_episode(d: Path, draft: bool = False, only: list[str] | None = None, stills: bool = False) -> Path:
     ep = json.loads((d / "episode.json").read_text(encoding="utf-8"))
+    from episode_check import check_episode
+    err, warn = check_episode(ep)
+    for w in warn:
+        say("⚠ " + w)
+    if err:
+        for e in err:
+            say("✗ " + e)
+        raise SystemExit(f"episode.json: ошибок {len(err)} — исправьте до рендера")
     fps = ep.get("fps", 25)
     size = [480, 270] if draft else ep.get("size", [960, 540])
     style = {**ep.get("style", {}), **({"twos": True} if draft else {})}
