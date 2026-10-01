@@ -1,0 +1,192 @@
+<!doctype html><meta charset="utf-8"><title>Стиль: пиксельная графика</title>
+<script src="lab.js"></script>
+<script>
+// Стиль C — пиксель-арт: кадр рисуется в 320×180 из ограниченной палитры, градиенты — растровым дизерингом (Байер 4×4),
+// затем увеличивается в 4 раза без сглаживания. Анимация 12,5 кадра/с, как в старых играх.
+const LW = 320, LH = 180, S = W / LW;
+const C = {
+  sky0: "#1b1530", sky1: "#2b1d45", sky2: "#3d2a5c", sky3: "#5a3c6e", sky4: "#8a5a78", sky5: "#c9837a",
+  star: "#f4eccb", moon: "#efe4b0", moonD: "#c9bd88", mtn: "#2e2b52", mtnL: "#3f3a68", tree: "#1d2440", treeL: "#283258",
+  water: "#1a2b45", waterL: "#2a4566", shine: "#efe4b0", mud: "#2a2032", mudL: "#3b2d40", grass: "#2f5a46", grassL: "#4f8a5a",
+  reed: "#1f3d33", cat: "#7a4a2c", glow: "#f6e46a", glowD: "#c79a3a", skin: "#f3e6cc", skinD: "#c9b79a", ink: "#14101f",
+  pack: "#d9604a", packD: "#8f3528", pants: "#3b4a6b", capy: "#9a6a42", capyD: "#6b4528", capyL: "#c08a5a", mantis: "#7fc25a", mantisD: "#3f7a3a",
+};
+const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+let g;                                                    // контекст низкого разрешения
+const px = (x, y, c) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), 1, 1); };
+const rect = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+function disc(cx, cy, r, c) { for (let y = -r; y <= r; y++) { const w = Math.floor(Math.sqrt(r * r - y * y + r * 0.8)); rect(cx - w, cy + y, 2 * w + 1, 1, c); } }
+// дизеринг между двумя цветами: k 0..1
+function dith(x, y, w, h, c0, c1, kf) {
+  for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
+    const X = x + xx, Y = y + yy, k = kf(X, Y);
+    px(X, Y, k * 16 > BAYER[Y & 3][X & 3] ? c1 : c0);
+  }
+}
+
+function sky(t) {
+  const bands = [C.sky0, C.sky1, C.sky2, C.sky3, C.sky4, C.sky5], top = 0, bot = 112, n = bands.length - 1;
+  for (let i = 0; i < n; i++) {
+    const y0 = Math.round(top + (bot - top) * i / n), y1 = Math.round(top + (bot - top) * (i + 1) / n);
+    dith(0, y0, LW, y1 - y0, bands[i], bands[i + 1], (X, Y) => (Y - y0) / (y1 - y0));
+  }
+  const r = rng(5);
+  for (let i = 0; i < 70; i++) {                                      // звёзды мерцают
+    const x = Math.floor(r() * LW), y = Math.floor(r() * 70), ph = r() * 6;
+    if (Math.sin(frameNo(t) * 0.7 + ph) > -0.3) px(x, y, C.star);
+    if (r() < 0.12 && Math.sin(frameNo(t) * 0.5 + ph) > 0.6) { px(x - 1, y, C.sky4); px(x + 1, y, C.sky4); px(x, y - 1, C.sky4); px(x, y + 1, C.sky4); }
+  }
+}
+function moons(camx) {
+  const x = 250 - camx * 0.05;
+  disc(x, 34, 13, C.moon);
+  for (const [dx, dy, r] of [[-4, -3, 3], [5, 4, 2], [-1, 6, 2], [6, -5, 1]]) disc(x + dx, 34 + dy, r, C.moonD);
+  disc(x - 52, 22, 4, C.moonD); disc(x - 53, 21, 3, C.moon);
+}
+function mountains(camx) {
+  const r = rng(9), off = camx * 0.2;
+  let h = 30;
+  for (let x = -40; x < LW + 40; x++) {
+    const X = x + Math.floor(off);
+    const r2 = rng(Math.floor(X / 6) + 1000); h = 22 + Math.floor(Math.abs(Math.sin(X * 0.031) * 18 + Math.sin(X * 0.11) * 6 + r2() * 3));
+    rect(x, 112 - h, 1, h, C.mtn);
+    if ((X % 7) < 2 && Math.sin(X * 0.031) > 0) rect(x, 112 - h, 1, 2, C.mtnL);
+  }
+}
+function trees(camx, t) {                                    // разные деревья: высота, крона, оттенок
+  const off = camx * 0.5, r = rng(12);
+  for (let i = 0; i < 11; i++) {
+    const X0 = i * 38 + r() * 20, x = Math.round(((X0 - off) % 440 + 440) % 440 - 60), h = 16 + Math.floor(r() * 22), big = 5 + Math.floor(r() * 6);
+    const col = r() < 0.5 ? C.tree : "#202a4a";
+    rect(x, 118 - h, 2, h, col);
+    if (r() < 0.5) { rect(x - 4, 118 - h * 0.6, 4, 1, col); rect(x + 2, 118 - h * 0.45, 4, 1, col); }
+    const blobs = 2 + Math.floor(r() * 3);
+    for (let b = 0; b < blobs; b++) disc(x + Math.round((r() - 0.5) * big * 1.6), 118 - h - Math.round(r() * big), Math.max(3, big - Math.floor(r() * 3)), col);
+    if (r() < 0.6) disc(x - 2, 118 - h - big + 2, 2, C.treeL);
+  }
+}
+function swamp(t, camx) {
+  rect(0, 112, LW, 68, C.water);
+  dith(0, 112, LW, 12, C.water, C.waterL, (X, Y) => 1 - (Y - 112) / 12);
+  const mx = 250 - camx * 0.05;                                       // отражение луны: дрожащие полоски
+  for (let i = 0; i < 9; i++) {
+    const y = 116 + i * 3, w = 10 - i + (Math.sin(frameNo(t) * 0.9 + i) > 0 ? 2 : 0);
+    rect(mx - w / 2 + Math.round(Math.sin(frameNo(t) * 0.6 + i * 1.7) * 2), y, w, 1, i % 2 ? C.moonD : C.shine);
+  }
+  const r = rng(31);
+  for (let i = 0; i < 30; i++) {                                      // рябь
+    const x = Math.floor((r() * 400 - camx * 0.9 + frameNo(t) * 0.3 * (r() + 0.5)) % 360 + 360) % 360 - 20, y = 120 + Math.floor(r() * 26);
+    if ((frameNo(t) + i) % 6 < 4) rect(x, y, 3 + Math.floor(r() * 4), 1, C.waterL);
+  }
+}
+// берег, по которому идёт Борис (передний план, параллакс 1)
+function bank(camx, t) {
+  for (let x = 0; x < LW; x++) {
+    const X = x + Math.floor(camx), top = 146 + Math.round(Math.sin(X * 0.05) * 2 + Math.sin(X * 0.13));
+    rect(x, top, 1, LH - top, C.mud);
+    for (let y = top + 3; y < LH; y++) if (((X * 13 + y * 7) % 29) === 0) px(x, y, C.mudL);       // комья грязи
+    if (Math.sin(X * 0.7) > 0.2) px(x, top + 2 + (X % 3), C.mudL);
+    rect(x, top - 1, 1, 1, C.grass);
+    if ((X * 7) % 11 < 3) { rect(x, top - 3, 1, 2, C.grass); if ((X * 3) % 7 === 0) px(x, top - 4, C.grassL); }
+  }
+  dith(0, 160, LW, 20, C.mud, "#1c1524", (X, Y) => (Y - 160) / 20);                                // низ кадра темнее
+  const r = rng(51);
+  for (let i = 0; i < 9; i++) {                                                                      // лужи с отблеском, камни, грибы
+    const X0 = r() * 520, x = Math.round(((X0 - camx) % 520 + 520) % 520 - 100), y = 158 + Math.floor(r() * 16), kind = i % 3;
+    if (kind === 0) { rect(x, y, 14, 3, C.water); rect(x + 2, y, 10, 1, C.waterL); if ((frameNo(t) + i) % 8 < 5) px(x + 4 + (frameNo(t) % 5), y + 1, C.shine); }
+    else if (kind === 1) { rect(x, y, 5, 3, "#4a4258"); rect(x + 1, y, 3, 1, "#6a6178"); }
+    else { const on = Math.sin(frameNo(t) * 0.3 + i) > 0; rect(x + 1, y - 3, 1, 3, C.skinD); rect(x - 1, y - 4, 5, 2, on ? "#8fe6d0" : "#5fb0a4");
+      if (on) { px(x - 2, y - 4, "#3f7f84"); px(x + 4, y - 4, "#3f7f84"); } }
+  }
+}
+function reeds(camx, t, par, base, seed, n) {
+  const r = rng(seed);
+  for (let i = 0; i < n; i++) {
+    const X0 = r() * 600, x = Math.round(((X0 - camx * par) % 600 + 600) % 600 - 120), h = 14 + Math.floor(r() * 18);
+    const sw = Math.round(Math.sin(frameNo(t) * 0.25 + X0) * 1.4);
+    for (let y = 0; y < h; y++) px(x + Math.round(sw * y / h), base - y, C.reed);
+    if (r() < 0.6) rect(x + sw - 1, base - h - 4, 3, 5, C.cat);
+  }
+}
+function flower(x, y, t) {
+  const pulse = (frameNo(t) % 8) < 4;
+  for (let i = 0; i < 12; i++) px(x + Math.round(Math.sin(i * 0.4) * 1), y + i, C.grass);
+  if (pulse) for (const [dx, dy] of [[-4, 0], [4, 0], [0, -4], [0, 4], [-3, -3], [3, 3], [-3, 3], [3, -3]]) px(x + dx, y - 1 + dy, C.glowD);
+  disc(x, y - 1, 2, C.glow);
+  for (const [dx, dy] of [[-3, -1], [3, -1], [0, -4], [-2, 2], [2, 2]]) px(x + dx, y - 1 + dy, C.skin);
+}
+function fireflies(t, camx) {
+  const r = rng(77);
+  for (let i = 0; i < 14; i++) {
+    const bx = r() * 340, by = 90 + r() * 50, ph = r() * 6;
+    const x = Math.round(((bx + Math.sin(frameNo(t) * 0.12 + ph) * 8 - camx * 0.8) % 340 + 340) % 340 - 10), y = Math.round(by + Math.cos(frameNo(t) * 0.17 + ph) * 5);
+    if (Math.sin(frameNo(t) * 0.4 + ph) > -0.2) { px(x, y, C.glow); if (Math.sin(frameNo(t) * 0.4 + ph) > 0.7) { px(x + 1, y, C.glowD); px(x - 1, y, C.glowD); } }
+  }
+}
+
+// Борис: голова-шар, точки-глаза, хохолок, рюкзак; шаг из 4 фаз
+function boris(x, y, t, walking, surprised) {
+  const f = walking ? frameNo(t) % 4 : 0, bob = walking && (f % 2) ? -1 : 0;
+  x = Math.round(x); y = Math.round(y) + bob;
+  const legs = [[[-2, 0], [2, 0]], [[-3, -1], [1, 0]], [[-1, 0], [1, 0]], [[-1, 0], [3, -1]]][f];
+  for (const [lx, ly] of legs) rect(x + lx, y - 4 + ly, 2, 4 - ly, C.pants);
+  rect(x - 3, y - 10, 6, 6, C.skin); rect(x - 3, y - 5, 6, 1, C.skinD);                        // тело
+  rect(x - 6, y - 11, 3, 6, C.pack); rect(x - 6, y - 6, 3, 1, C.packD);                        // рюкзак
+  const arm = walking ? (f < 2 ? 1 : -1) : 0;
+  rect(x + 2, y - 9 + (surprised ? -4 : 0), 2, 4, C.skin);
+  if (surprised) rect(x + 3, y - 15, 1, 3, C.skin);
+  disc(x, y - 16, 6, C.skin); rect(x - 5, y - 13, 11, 2, C.skinD);                             // голова-шар
+  px(x + 2, y - 17, C.ink); px(x + 4, y - 17, C.ink);                                           // глаза
+  if (surprised) rect(x + 3, y - 14, 1, 2, C.ink); else px(x + 3, y - 14, C.ink);
+  for (const dx of [-1, 0, 1]) px(x + dx * 2, y - 23 - (dx === 0 ? 1 : 0), C.ink);               // хохолок
+  if (surprised && frameNo(t) % 6 < 5) { rect(x + 1, y - 34, 2, 6, C.glow); rect(x + 1, y - 27, 2, 2, C.glow); }   // «!»
+}
+// капибара-кенгуру: прыжки справа налево, на полпути поворачивает морду — половина богомол
+function capy(x, y, t, turned) {
+  x = Math.round(x); y = Math.round(y);
+  rect(x - 7, y - 9, 15, 7, C.capy); rect(x - 7, y - 3, 15, 1, C.capyD); rect(x - 5, y - 10, 10, 1, C.capyL);
+  rect(x + 4, y - 4, 4, 4, C.capyD); rect(x + 6, y, 4, 1, C.capyD);                           // мощная задняя лапа
+  rect(x - 5, y - 3, 2, 3, C.capyD);
+  rect(x + 8, y - 6, 4, 2, C.capy);                                                              // хвост
+  rect(x - 13, y - 12, 7, 6, C.capy); rect(x - 14, y - 10, 2, 3, C.capyD); px(x - 11, y - 11, C.ink);
+  rect(x - 9, y - 14, 2, 2, C.capyD);                                                            // ухо
+  if (turned) { rect(x - 13, y - 12, 3, 6, C.mantis); px(x - 13, y - 11, C.glow); px(x - 12, y - 11, C.mantisD);
+    px(x - 14, y - 15, C.mantisD); px(x - 15, y - 16, C.mantisD); px(x - 16, y - 17, C.mantisD); px(x - 14, y - 6, C.mantisD); }
+}
+
+let LO, SP;
+function outlined(fn, x, y) {
+  const main = g; const sg = SP.getContext("2d"); sg.clearRect(0, 0, 64, 64); g = sg;
+  fn(32, 48); g = main;
+  const im = sg.getImageData(0, 0, 64, 64), d = im.data, out = sg.createImageData(64, 64), o = out.data;
+  const a = (i, j) => (i >= 0 && j >= 0 && i < 64 && j < 64) ? d[(j * 64 + i) * 4 + 3] : 0;
+  for (let j = 0; j < 64; j++) for (let i = 0; i < 64; i++) {
+    const k = (j * 64 + i) * 4;
+    if (d[k + 3]) { o[k] = d[k]; o[k + 1] = d[k + 1]; o[k + 2] = d[k + 2]; o[k + 3] = 255; }
+    else if (a(i - 1, j) || a(i + 1, j) || a(i, j - 1) || a(i, j + 1)) { o[k] = 20; o[k + 1] = 16; o[k + 2] = 31; o[k + 3] = 255; }
+  }
+  sg.putImageData(out, 0, 0); g.drawImage(SP, Math.round(x) - 32, Math.round(y) - 48);
+}
+window.DRAW = function (ctx, t) {
+  g = LO.getContext("2d"); g.imageSmoothingEnabled = false; g.clearRect(0, 0, LW, LH);
+  const T = twos(t), walkEnd = 5.6, camx = Math.round(lerp(0, 60, ease(clamp(T / 8))));
+  sky(T); moons(camx); mountains(camx); trees(camx, T); swamp(T, camx);
+  reeds(camx, T, 0.8, 140, 3, 18);
+  // капибара скачет по кочкам на среднем плане
+  const ck = clamp((T - 1.5) / 4.5);
+  if (ck > 0 && ck < 1) {
+    const hopN = 5, hp = (ck * hopN) % 1, cx = lerp(330, 40, ck) - camx * 0.8, cy = 134 - Math.round(Math.sin(hp * Math.PI) * 14);
+    outlined((ox, oy) => capy(ox, oy, T, ck > 0.45 && ck < 0.75), cx, cy);
+    if (hp < 0.12 && ck > 0.05) { rect(cx - 6, 135, 3, 1, C.waterL); rect(cx + 4, 135, 3, 1, C.waterL); }      // всплеск
+  }
+  bank(camx, T);
+  flower(200 - camx, 140, T);
+  const bk = clamp(T / walkEnd), worldX = lerp(70, 186, bk);          // мир → экран: минус сдвиг камеры
+  outlined((ox, oy) => boris(ox, oy, T, T < walkEnd, T > walkEnd + 0.2), worldX - camx, 148);
+  reeds(camx, T, 1.3, 182, 8, 10);
+  fireflies(T, camx);
+  ctx.imageSmoothingEnabled = false; ctx.drawImage(LO, 0, 0, LW, LH, 0, 0, W, H);
+};
+LO = canvas(LW, LH); SP = canvas(64, 64);
+LAB.start();
+</script>
